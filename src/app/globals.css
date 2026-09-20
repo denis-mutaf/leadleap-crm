@@ -193,6 +193,31 @@
 .record-empty { color: var(--muted-foreground); } .record-feedback { position: fixed; right: 18px; bottom: 18px; max-width: 360px; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); box-shadow: 0 6px 18px rgba(28,31,38,.12); font-size: 13px; }
 @media (max-width: 900px) { .record-body { grid-template-columns: 300px minmax(0, 1fr); } .record-highlights { grid-template-columns: repeat(2, 1fr); } }
 @media (prefers-reduced-motion: reduce) { .record-actions *, .record-tabs *, .record-feed-item { transition: none; } }
+@media (max-width: 600px) {
+  .app-shell { display: block; min-height: 100vh; }
+  .nav { height: 48px; box-sizing: border-box; flex-direction: row; align-items: center; gap: 6px; overflow-x: auto; padding: 8px; border-right: 0; border-bottom: 1px solid var(--border); }
+  .nav-brand { flex: none; height: 28px; margin: 0 4px 0 0; padding: 0 6px; }
+  .nav nav { display: flex; flex: none; gap: 2px; }
+  .nav-item { flex: none; height: 28px; white-space: nowrap; }
+  .nav-item .pill, .nav-foot { display: none; }
+  .main-shell { min-height: calc(100vh - 48px); }
+  .record-page { min-height: calc(100vh - 48px); height: auto; overflow: visible; }
+  .record-header { height: 44px; padding: 0 10px; }
+  .record-main { min-height: calc(100vh - 92px); padding: 8px; overflow: visible; }
+  .record-highlights { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding-bottom: 8px; }
+  .record-highlight { height: 56px; padding: 7px 9px; }
+  .record-body { display: flex; flex-direction: column; overflow: visible; }
+  .record-left { flex: none; max-height: none; overflow: visible; padding: 10px 0; border-right: 0; border-bottom: 1px solid var(--border); }
+  .record-left section { padding-left: 10px; padding-right: 10px; }
+  .record-right { flex: none; min-height: 520px; overflow: visible; padding: 10px 0 0; }
+  .record-tabs { overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
+  .record-tabs button { flex: none; }
+  .record-actions { flex-direction: column; margin: 8px 0; }
+  .record-actions form { flex: none; width: 100%; }
+  .record-actions input[type="datetime-local"] { width: 100%; }
+  .record-feed { overflow: visible; padding: 0; }
+  .record-feedback { right: 8px; bottom: 8px; left: 8px; max-width: none; }
+}
 
 @layer base {
   * {
