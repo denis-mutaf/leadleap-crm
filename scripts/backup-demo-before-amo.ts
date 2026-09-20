@@ -145,8 +145,9 @@ async function main() {
   tables.messages = conversationIds.length
     ? await allRows(client, "messages", [["conversation_id", conversationIds]])
     : [];
+  const demoTaskIds = ids(tables.tasks);
   tables.audit_log = await allRows(client, "audit_log", [
-    ["entity_id", [...demoDealIds, ...contactIds]],
+    ["entity_id", [...demoDealIds, ...contactIds, ...demoTaskIds]],
   ]);
   for (const table of dictionaryTables)
     tables[table] = await allRows(client, table);
