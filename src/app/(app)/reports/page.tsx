@@ -154,11 +154,10 @@ export default async function ReportsPage() {
     })),
     mapWithLimit(reasons, 4, async (reason) => ({
       ...reason,
-      count: await countDeals(supabase, {
-        column: "lost_reason_id",
-        operator: "eq",
-        value: reason.id,
-      }),
+      count: await countDeals(supabase, [
+        { column: "lost_reason_id", operator: "eq", value: reason.id },
+        { column: "status", operator: "eq", value: "lost" },
+      ]),
     })),
     countDeals(supabase, { column: "source_id", operator: "is", value: null }),
     countDeals(supabase, [
