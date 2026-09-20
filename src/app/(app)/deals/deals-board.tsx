@@ -107,7 +107,10 @@ function dateLabel(value: string) {
     month: "2-digit",
   });
 }
-function makeMaps(props: Props): Maps {
+function makeMaps(
+  props: Props,
+  taskOverrides: Map<string, Task>,
+): Maps {
   const projectsByDeal = new Map<string, Project[]>();
   const tagsByDeal = new Map<string, Tag[]>();
   for (const link of props.projectLinks) {
@@ -133,6 +136,7 @@ function makeMaps(props: Props): Maps {
     (a, b) => new Date(a.due_at).getTime() - new Date(b.due_at).getTime(),
   ))
     if (!tasks.has(task.deal_id)) tasks.set(task.deal_id, task);
+  for (const task of taskOverrides.values()) tasks.set(task.deal_id, task);
   return {
     contacts: new Map(props.contacts.map((row) => [row.id, row])),
     owners: new Map(props.owners.map((row) => [row.id, row])),
@@ -352,6 +356,9 @@ export function DealsBoard(props: Props) {
   const [qualifiedDeals, setQualifiedDeals] = useState<Set<string>>(
     () => new Set(),
   );
+  const [taskOverrides, setTaskOverrides] = useState<Map<string, Task>>(
+    () => new Map(),
+  );
   const [gate, setGate] = useState<Gate | null>(null);
   const [gateForm, setGateForm] = useState<GateForm>({
     qualification: "",
@@ -362,7 +369,10 @@ export function DealsBoard(props: Props) {
     taskTypeId: props.taskTypes[0]?.id ?? "",
     taskAssigneeId: props.currentUserId,
   });
-  const maps = useMemo(() => makeMaps(props), [props]);
+  const maps = useMemo(
+    () => makeMaps(props, taskOverrides),
+    [props, taskOverrides],
+  );
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor),
@@ -444,6 +454,17 @@ export function DealsBoard(props: Props) {
     if (gate.lost) setLostCount((count) => count + 1);
     if (gate.needsQualification && gateForm.qualification) {
       setQualifiedDeals((current) => new Set(current).add(gate.deal.id));
+    }
+    if (gate.needsTask && taskDueAt) {
+      setTaskOverrides((current) => {
+        const next = new Map(current);
+        next.set(gate.deal.id, {
+          deal_id: gate.deal.id,
+          title: gateForm.taskTitle,
+          due_at: taskDueAt.toISOString(),
+        });
+        return next;
+      });
     }
     setColumns((current) => {
       const removed = current.map((column, index) =>
