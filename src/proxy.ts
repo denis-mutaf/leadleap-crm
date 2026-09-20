@@ -37,16 +37,20 @@ export async function proxy(request: NextRequest) {
 
   const isLoginPage = pathname === "/login";
 
-  if (!user && !isLoginPage) {
+  function redirectWithSession(path: string) {
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    return NextResponse.redirect(url);
+    url.pathname = path;
+    const redirect = NextResponse.redirect(url);
+    response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+    return redirect;
+  }
+
+  if (!user && !isLoginPage) {
+    return redirectWithSession("/login");
   }
 
   if (user && isLoginPage) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/deals";
-    return NextResponse.redirect(url);
+    return redirectWithSession("/deals");
   }
 
   return response;
