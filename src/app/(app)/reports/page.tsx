@@ -18,16 +18,22 @@ type CountRow = DictionaryRow & { count: number };
 
 async function countDeals(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  filter?: Filter,
+  filters?: Filter | Filter[],
 ) {
   let query = supabase
     .from("deals")
     .select("id", { count: "exact", head: true });
-  if (filter?.operator === "eq")
-    query = query.eq(filter.column, filter.value as string);
-  if (filter?.operator === "in")
-    query = query.in(filter.column, filter.value as string[]);
-  if (filter?.operator === "is") query = query.is(filter.column, null);
+  for (const filter of filters
+    ? Array.isArray(filters)
+      ? filters
+      : [filters]
+    : []) {
+    if (filter.operator === "eq")
+      query = query.eq(filter.column, filter.value as string);
+    if (filter.operator === "in")
+      query = query.in(filter.column, filter.value as string[]);
+    if (filter.operator === "is") query = query.is(filter.column, null);
+  }
   const result = await query;
   if (result.error) throw new Error(`Сделки: ${result.error.message}`);
   return result.count ?? 0;
@@ -133,11 +139,10 @@ export default async function ReportsPage() {
   ] = await Promise.all([
     mapWithLimit(openStages, 4, async (stage) => ({
       ...stage,
-      count: await countDeals(supabase, {
-        column: "stage_id",
-        operator: "eq",
-        value: stage.id,
-      }),
+      count: await countDeals(supabase, [
+        { column: "stage_id", operator: "eq", value: stage.id },
+        openFilter,
+      ]),
     })),
     mapWithLimit(sources, 4, async (source) => ({
       ...source,
@@ -156,12 +161,18 @@ export default async function ReportsPage() {
       }),
     })),
     countDeals(supabase, { column: "source_id", operator: "is", value: null }),
-    countDeals(supabase, {
-      column: "lost_reason_id",
-      operator: "is",
-      value: null,
-    }),
+    countDeals(supabase, [
+      { column: "lost_reason_id", operator: "is", value: null },
+      { column: "status", operator: "eq", value: "lost" },
+    ]),
   ]);
+  const stageTotal = stageCounts.reduce((sum, stage) => sum + stage.count, 0);
+  const reasonTotal = reasonCounts.reduce(
+    (sum, reason) => sum + reason.count,
+    0,
+  );
+  const stageResidual = open - stageTotal;
+  const reasonResidual = lost - reasonTotal - reasonWithoutValue;
   const maxStageCount = Math.max(1, ...stageCounts.map((stage) => stage.count));
   const sourceRows: CountRow[] = [
     ...sourceCounts,
@@ -181,6 +192,16 @@ export default async function ReportsPage() {
         ]
       : []),
   ].filter((row) => row.count > 0);
+  if (reasonResidual !== 0) {
+    reasonRows.push({
+      id: "unmatched-reason",
+      name:
+        reasonResidual > 0
+          ? "Не сопоставлено с причиной"
+          : "Проверка причин: расхождение",
+      count: Math.abs(reasonResidual),
+    });
+  }
 
   return (
     <div className="reports-page">
@@ -235,6 +256,13 @@ export default async function ReportsPage() {
               </span>
             </div>
           ))}
+          {stageResidual !== 0 && (
+            <div className="stage-residual" role="status">
+              {stageResidual > 0
+                ? `${stageResidual} сделок не сопоставлено с открытым этапом.`
+                : `Проверка этапов: распределено на ${Math.abs(stageResidual)} сделок больше, чем открыто.`}
+            </div>
+          )}
         </div>
       </section>
       <div className="report-grid">
