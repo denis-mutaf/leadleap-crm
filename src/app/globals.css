@@ -456,6 +456,214 @@
     transition: none;
   }
 }
+.reports-page {
+  min-height: 100vh;
+  padding: 28px 32px 48px;
+  color: var(--foreground);
+  background: var(--background);
+}
+.reports-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.reports-header h1 {
+  margin: 2px 0 0;
+  font-size: 24px;
+  line-height: 28px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.reports-eyebrow {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.snapshot-label,
+.reports-note,
+.section-subtitle {
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+.snapshot-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.reports-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--muted);
+}
+.reports-access {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--muted);
+}
+.reports-access svg {
+  color: var(--warning);
+  flex: none;
+}
+.reports-access strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+.reports-access p {
+  margin: 5px 0 0;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+.report-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.report-metric,
+.report-section {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+.report-metric {
+  min-height: 84px;
+  padding: 14px;
+}
+.report-metric span {
+  display: block;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+.report-metric strong {
+  display: block;
+  margin-top: 7px;
+  font-size: 22px;
+  line-height: 25px;
+  font-weight: 600;
+}
+.report-section {
+  padding: 18px;
+  margin-bottom: 20px;
+}
+.report-section h2 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 600;
+}
+.report-section-title p,
+.section-subtitle {
+  margin: 4px 0 16px;
+}
+.stage-list {
+  margin-top: 16px;
+}
+.stage-row {
+  display: grid;
+  grid-template-columns: minmax(145px, 220px) minmax(180px, 1fr) 58px;
+  align-items: center;
+  gap: 12px;
+  min-height: 36px;
+  font-size: 13px;
+}
+.stage-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stage-track {
+  position: relative;
+  height: 24px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--muted);
+}
+.stage-track i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  min-width: 2px;
+  background: var(--accent);
+  border-right: 1px solid #dfe1e4;
+}
+.stage-track b {
+  position: relative;
+  z-index: 1;
+  display: block;
+  padding: 4px 8px;
+  font-weight: 500;
+}
+.stage-percent {
+  color: var(--muted-foreground);
+  text-align: right;
+}
+.report-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.simple-list {
+  margin-top: 14px;
+}
+.simple-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 70px 60px;
+  align-items: center;
+  min-height: 36px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+.simple-row strong {
+  font-weight: 500;
+  text-align: right;
+}
+.simple-row em {
+  color: var(--muted-foreground);
+  font-style: normal;
+  text-align: right;
+}
+.empty-report {
+  margin: 14px 0 0;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+@media (max-width: 760px) {
+  .reports-page {
+    padding: 20px 16px 36px;
+  }
+  .reports-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .report-metrics,
+  .report-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .stage-row {
+    grid-template-columns: 110px minmax(100px, 1fr) 48px;
+    gap: 8px;
+  }
+}
+@media (max-width: 480px) {
+  .report-metrics,
+  .report-grid {
+    grid-template-columns: 1fr;
+  }
+  .report-section {
+    padding: 14px;
+  }
+}
 .deals-page {
   height: 100vh;
   display: flex;
