@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { DealRecordClient, type DealRecordData } from "./record-client";
 
 const FEED_LIMIT = 120;
+const emptyRows = <T,>() => ({ data: [] as T[], error: null, count: 0 });
 
 export default async function DealRecordPage({
   params,
@@ -36,6 +37,7 @@ export default async function DealRecordPage({
   const [
     contact,
     phones,
+    importedPhones,
     channels,
     owner,
     stage,
@@ -58,6 +60,11 @@ export default async function DealRecordPage({
       .eq("contact_id", deal.contact_id)
       .order("is_primary", { ascending: false }),
     supabase
+      .from("imported_contact_phones")
+      .select("contact_id, ordinal, raw_phone, label")
+      .eq("contact_id", deal.contact_id)
+      .order("ordinal"),
+    supabase
       .from("contact_channels")
       .select("id, channel, handle, external_id")
       .eq("contact_id", deal.contact_id),
@@ -73,20 +80,24 @@ export default async function DealRecordPage({
       .select("id, name, kind")
       .eq("id", deal.stage_id)
       .maybeSingle(),
-    supabase
-      .from("projects")
-      .select("id, code, name")
-      .in(
-        "id",
-        projectRows.data.map((row) => row.project_id),
-      ),
-    supabase
-      .from("tags")
-      .select("id, name")
-      .in(
-        "id",
-        tagRows.data.map((row) => row.tag_id),
-      ),
+    projectRows.data.length
+      ? supabase
+          .from("projects")
+          .select("id, code, name")
+          .in(
+            "id",
+            projectRows.data.map((row) => row.project_id),
+          )
+      : emptyRows<{ id: string; code: string; name: string }>(),
+    tagRows.data.length
+      ? supabase
+          .from("tags")
+          .select("id, name")
+          .in(
+            "id",
+            tagRows.data.map((row) => row.tag_id),
+          )
+      : emptyRows<{ id: string; name: string }>(),
     deal.source_id
       ? supabase
           .from("sources")
@@ -98,20 +109,26 @@ export default async function DealRecordPage({
       .from("tasks")
       .select(
         "id, deal_id, assignee_id, title, due_at, done_at, done_by, created_at, is_auto",
+        { count: "exact" },
       )
       .eq("deal_id", id)
       .order("due_at", { ascending: true })
       .limit(FEED_LIMIT),
     supabase
       .from("notes")
-      .select("id, deal_id, author_id, body, created_at")
+      .select(
+        "id, deal_id, author_id, body, created_at, amo_id, amo_note_type",
+        { count: "exact" },
+      )
       .eq("deal_id", id)
+      .or("amo_note_type.is.null,amo_note_type.not.in.(call_in,call_out)")
       .order("created_at", { ascending: false })
       .limit(FEED_LIMIT),
     supabase
       .from("calls")
       .select(
-        "id, direction, status, from_phone, to_phone, user_id, started_at, answered_at, duration_sec, recording_url",
+        "id, external_id, direction, status, from_phone, to_phone, user_id, started_at, answered_at, duration_sec, recording_url",
+        { count: "exact" },
       )
       .eq("deal_id", id)
       .order("started_at", { ascending: false })
@@ -120,6 +137,7 @@ export default async function DealRecordPage({
       .from("stage_transitions")
       .select(
         "id, from_stage_id, to_stage_id, from_status, to_status, changed_by, changed_at",
+        { count: "exact" },
       )
       .eq("deal_id", id)
       .order("changed_at", { ascending: false })
@@ -128,6 +146,7 @@ export default async function DealRecordPage({
   const responses = {
     contact,
     phones,
+    importedPhones,
     channels,
     owner,
     stage,
@@ -175,7 +194,17 @@ export default async function DealRecordPage({
   const data: DealRecordData = {
     deal,
     contact: contact.data,
-    phones: phones.data ?? [],
+    phones: [
+      ...(phones.data ?? []),
+      ...(importedPhones.data ?? []).map((phone) => ({
+        id: `imported-${phone.contact_id}-${phone.ordinal}`,
+        phone: phone.raw_phone,
+        is_primary: false,
+      })),
+    ].filter(
+      (phone, index, all) =>
+        all.findIndex((candidate) => candidate.phone === phone.phone) === index,
+    ),
     channels: channels.data ?? [],
     owner: owner.data,
     stage: stage.data,
@@ -189,6 +218,12 @@ export default async function DealRecordPage({
     people: people.data ?? [],
     transitionStages: transitionStages.data ?? [],
     currentUser: { id: profile.id, full_name: profile.full_name },
+    feedCounts: {
+      tasks: tasks.count ?? 0,
+      notes: notes.count ?? 0,
+      calls: calls.count ?? 0,
+      stages: transitions.count ?? 0,
+    },
   };
   return (
     <div className="record-page">

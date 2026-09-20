@@ -9,7 +9,7 @@ type Person = { id: string; full_name: string; role?: string };
 type Task = {
   id: string;
   deal_id: string;
-  assignee_id: string;
+  assignee_id: string | null;
   title: string;
   due_at: string;
   done_at: string | null;
@@ -23,9 +23,12 @@ type Note = {
   author_id: string | null;
   body: string;
   created_at: string;
+  amo_id: number | null;
+  amo_note_type: string | null;
 };
 type Call = {
   id: string;
+  external_id: string | null;
   direction: "in" | "out";
   status: string | null;
   from_phone: string | null;
@@ -105,6 +108,7 @@ export type DealRecordData = {
   people: Person[];
   transitionStages: { id: string; name: string }[];
   currentUser: Person;
+  feedCounts: { tasks: number; notes: number; calls: number; stages: number };
 };
 
 const labels: Record<string, string> = {
@@ -200,6 +204,16 @@ export function DealRecordClient({ data }: { data: DealRecordData }) {
   ]
     .filter((item) => tab === "all" || item.type === tab)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const shownCounts = {
+    calls: data.calls.length,
+    notes: data.notes.length,
+    tasks: data.tasks.length,
+    stages: data.transitions.length,
+  };
+  const activeLimit =
+    tab !== "all" ? shownCounts[tab as keyof typeof shownCounts] : 0;
+  const activeTotal =
+    tab !== "all" ? data.feedCounts[tab as keyof typeof data.feedCounts] : 0;
   function showError(error: { message: string } | null) {
     if (error) setFeedback(error.message);
   }
@@ -207,13 +221,11 @@ export function DealRecordClient({ data }: { data: DealRecordData }) {
     event.preventDefault();
     if (!note.trim() || saving) return;
     setSaving(true);
-    const result = await createClient()
-      .from("notes")
-      .insert({
-        deal_id: data.deal.id,
-        author_id: data.currentUser.id,
-        body: note.trim(),
-      });
+    const result = await createClient().from("notes").insert({
+      deal_id: data.deal.id,
+      author_id: data.currentUser.id,
+      body: note.trim(),
+    });
     setSaving(false);
     if (result.error) showError(result.error);
     else {
@@ -378,6 +390,11 @@ export function DealRecordClient({ data }: { data: DealRecordData }) {
               </button>
             ))}
           </div>
+          {activeTotal > activeLimit && (
+            <div className="record-feed-limit">
+              Показано {activeLimit} из {activeTotal}
+            </div>
+          )}
           <div className="record-actions">
             <form onSubmit={createNote}>
               <input
