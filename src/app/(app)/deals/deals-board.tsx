@@ -1,6 +1,7 @@
 "use client";
 import {
   DndContext,
+  rectIntersection,
   pointerWithin,
   DragEndEvent,
   DragOverlay,
@@ -14,7 +15,7 @@ import {
 } from "@dnd-kit/core";
 import { House, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 type Deal = {
@@ -85,6 +86,7 @@ type GateForm = {
   taskTypeId: string;
   taskAssigneeId: string;
 };
+type MobileConfirmation = { event: DragEndEvent; destination: string };
 type Maps = {
   contacts: Map<string, Contact>;
   owners: Map<string, Profile>;
@@ -357,6 +359,9 @@ export function DealsBoard(props: Props) {
   const [qualifiedDeals, setQualifiedDeals] = useState<Set<string>>(
     () => new Set(),
   );
+  const [mobileConfirmation, setMobileConfirmation] =
+    useState<MobileConfirmation | null>(null);
+  const bypassMobileConfirmation = useRef(false);
   const [taskOverrides, setTaskOverrides] = useState<Map<string, Task>>(
     () => new Map(),
   );
@@ -378,6 +383,8 @@ export function DealsBoard(props: Props) {
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor),
   );
+  const collisionDetectionStrategy = (args: Parameters<typeof pointerWithin>[0]) =>
+    args.pointerCoordinates ? pointerWithin(args) : rectIntersection(args);
   useEffect(() => {
     if (!feedback) return;
     const timeout = window.setTimeout(() => setFeedback(null), 2800);
@@ -385,11 +392,14 @@ export function DealsBoard(props: Props) {
   }, [feedback]);
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && gate && !pending) setGate(null);
+      if (event.key === "Escape" && !pending) {
+        if (gate) setGate(null);
+        if (mobileConfirmation) setMobileConfirmation(null);
+      }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [gate, pending]);
+  }, [gate, mobileConfirmation, pending]);
   const activeDeal = columns
     .flatMap((column) => column.deals)
     .find((deal) => deal.id === activeId);
@@ -556,12 +566,14 @@ export function DealsBoard(props: Props) {
       }));
       return;
     }
-    if (
-      window.innerWidth <= 600 &&
-      !window.confirm(`Перевести сделку в «${target.kettle ? "Общий котёл" : target.title}»?`)
-    ) {
+    if (window.innerWidth <= 600 && !bypassMobileConfirmation.current) {
+      setMobileConfirmation({
+        event,
+        destination: target.kettle ? "Общий котёл" : target.title,
+      });
       return;
     }
+    bypassMobileConfirmation.current = false;
     let targetStage = target;
     let targetIndexForState = targetIndex;
     const update: { stage_id?: string; owner_id?: string | null } = {};
@@ -642,7 +654,7 @@ export function DealsBoard(props: Props) {
     <>
       <DndContext
         sensors={sensors}
-        collisionDetection={pointerWithin}
+        collisionDetection={collisionDetectionStrategy}
         onDragStart={onDragStart}
         onDragCancel={onDragCancel}
         onDragEnd={onDragEnd}
@@ -665,6 +677,23 @@ export function DealsBoard(props: Props) {
         </div>
       )}
       {gate && <GateDialog gate={gate} form={gateForm} setForm={setGateForm} props={props} pending={pending} onCancel={() => setGate(null)} onSubmit={commitGate} />}
+      {mobileConfirmation && (
+        <div className="gate-scrim">
+          <div className="gate-dialog move-confirmation" role="dialog" aria-modal="true">
+            <header>
+              <div>
+                <h2>Подтвердить перенос</h2>
+                <p>Переместить сделку в «{mobileConfirmation.destination}»?</p>
+              </div>
+              <button className="gate-close" onClick={() => setMobileConfirmation(null)} aria-label="Закрыть">×</button>
+            </header>
+            <footer>
+              <button className="btn" onClick={() => setMobileConfirmation(null)} disabled={pending}>Отмена <kbd>Esc</kbd></button>
+              <button className="gate-primary" onClick={() => { const confirmation = mobileConfirmation; setMobileConfirmation(null); bypassMobileConfirmation.current = true; void onDragEnd(confirmation.event); }} disabled={pending}>Перевести <kbd>↵</kbd></button>
+            </footer>
+          </div>
+        </div>
+      )}
     </>
   );
 }
