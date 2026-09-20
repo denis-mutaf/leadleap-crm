@@ -1,4 +1,3 @@
-import { BarChart3, CheckSquare, Contact, Inbox, LayoutDashboard, Settings } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { USER_ROLE_LABELS } from "@/lib/types";
@@ -10,12 +9,12 @@ type NavEntry = AppNavItem & {
 };
 
 const NAV: NavEntry[] = [
-  { href: "/deals", label: "Сделки", icon: LayoutDashboard, roles: ["manager", "head", "admin"] },
-  { href: "/tasks", label: "Задачи", icon: CheckSquare, roles: ["manager", "head", "admin"] },
-  { href: "/inbox", label: "Инбокс", icon: Inbox, roles: ["manager", "head", "admin"] },
-  { href: "/contacts", label: "Контакты", icon: Contact, roles: ["manager", "head", "admin"] },
-  { href: "/reports", label: "Отчёты", icon: BarChart3, roles: ["head", "admin", "builder"] },
-  { href: "/settings", label: "Настройки", icon: Settings, roles: ["head", "admin"] },
+  { href: "/deals", label: "Сделки", icon: "deals", roles: ["manager", "head", "admin"] },
+  { href: "/tasks", label: "Задачи", icon: "tasks", roles: ["manager", "head", "admin"] },
+  { href: "/inbox", label: "Инбокс", icon: "inbox", roles: ["manager", "head", "admin"] },
+  { href: "/contacts", label: "Контакты", icon: "contacts", roles: ["manager", "head", "admin"] },
+  { href: "/reports", label: "Отчёты", icon: "reports", roles: ["head", "admin", "builder"] },
+  { href: "/settings", label: "Настройки", icon: "settings", roles: ["head", "admin"] },
 ];
 
 export default async function AppLayout({

@@ -1,14 +1,25 @@
 "use client";
 
-import type { LucideIcon } from "lucide-react";
+import { BarChart3, CheckSquare, Contact, Inbox, LayoutDashboard, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 export type AppNavItem = {
   href: string;
   label: string;
-  icon: LucideIcon;
+  icon: AppNavIcon;
 };
+
+export type AppNavIcon = "deals" | "tasks" | "inbox" | "contacts" | "reports" | "settings";
+
+const ICONS = {
+  deals: LayoutDashboard,
+  tasks: CheckSquare,
+  inbox: Inbox,
+  contacts: Contact,
+  reports: BarChart3,
+  settings: Settings,
+} satisfies Record<AppNavIcon, typeof LayoutDashboard>;
 
 function isActivePath(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/";
@@ -20,7 +31,8 @@ export function AppNav({ items }: { items: AppNavItem[] }) {
 
   return (
     <nav aria-label="Основная навигация">
-      {items.map(({ href, label, icon: Icon }) => {
+      {items.map(({ href, label, icon }) => {
+        const Icon = ICONS[icon];
         const active = isActivePath(pathname, href);
         return (
           <Link
