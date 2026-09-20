@@ -34,6 +34,8 @@ type Source = { id: string; name: string };
 type Project = { id: string; code: string; name: string };
 type Tag = { id: string; name: string };
 type Task = { deal_id: string; title: string; due_at: string };
+type LostReason = { id: string; name: string };
+type TaskType = { id: string; name: string };
 type Column = {
   id: string;
   title: string;
@@ -41,6 +43,10 @@ type Column = {
   deals: Deal[];
   kettle?: boolean;
   won?: boolean;
+  kind?: "open" | "won" | "lost";
+  position?: number;
+  requires_next_step?: boolean;
+  requires_qualification_tag?: boolean;
 };
 type Props = {
   columns: Column[];
@@ -54,6 +60,9 @@ type Props = {
   projectLinks: { deal_id: string; project_id?: string }[];
   tagLinks: { deal_id: string; tag_id?: string }[];
   tasks: Task[];
+  lostReasons: LostReason[];
+  taskTypes: TaskType[];
+  activeAssignees: Profile[];
 };
 type Maps = {
   contacts: Map<string, Contact>;
@@ -274,16 +283,20 @@ export function DealsBoard(props: Props) {
     const target = columns[targetIndex];
     const deal = source.deals.find((item) => item.id === dealId);
     if (!deal) return;
+    let targetStage = target;
+    let targetIndexForState = targetIndex;
     const update: { stage_id?: string; owner_id?: string | null } = {};
     if (target.kettle) {
       update.owner_id = null;
       if (deal.status === "won") {
-        const firstOpen = columns.slice(1).find((column) => !column.won);
+        const firstOpen = columns.slice(1).find((column) => column.kind === "open");
         if (!firstOpen) {
           setFeedback("Нет активного open-этапа для возврата сделки");
           return;
         }
         update.stage_id = firstOpen.id;
+        targetStage = firstOpen;
+        targetIndexForState = columns.indexOf(firstOpen);
       }
     } else {
       update.stage_id = target.id;
@@ -299,7 +312,7 @@ export function DealsBoard(props: Props) {
               total: column.total - 1,
               deals: column.deals.filter((item) => item.id !== dealId),
             }
-          : index === targetIndex
+          : index === targetIndexForState
             ? {
                 ...column,
                 total: column.total + 1,
@@ -309,21 +322,26 @@ export function DealsBoard(props: Props) {
       ),
     );
     setPending(true);
-    const result = await createClient()
-      .from("deals")
-      .update(update)
-      .eq("id", dealId)
-      .select(
-        "id, contact_id, owner_id, stage_id, status, object_text, source_id, budget, budget_currency, postponed_until",
-      )
-      .maybeSingle();
+    const result = await createClient().rpc("transition_crm_deal", {
+      p_deal_id: dealId,
+      p_stage_id: targetStage.kettle ? deal.stage_id : targetStage.id,
+      p_owner_id: targetStage.kettle ? null : update.owner_id ?? deal.owner_id,
+      p_lost_reason_id: null,
+      p_lost_comment: null,
+      p_qualification: null,
+      p_task_title: null,
+      p_task_due_at: null,
+      p_task_type_id: null,
+      p_task_assignee_id: null,
+    });
     if (result.error || !result.data) {
       setColumns(snapshot);
       setFeedback(result.error?.message ?? "Сделка не найдена или недоступна");
       setPending(false);
       return;
     }
-    const confirmed = result.data as Deal;
+    const transition = result.data as { id: string; stage_id: string; owner_id: string | null; status: Deal["status"] };
+    const confirmed = { ...deal, ...update, stage_id: transition.stage_id, owner_id: transition.owner_id, status: transition.status };
     setColumns((current) =>
       current.map((column) => ({
         ...column,
