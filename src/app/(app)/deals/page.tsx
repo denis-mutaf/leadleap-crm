@@ -289,6 +289,8 @@ export default async function DealsPage({
         lostReasons={(lostReasonsResponse.data ?? []) as LostReason[]}
         taskTypes={(taskTypesResponse.data ?? []) as TaskType[]}
         activeAssignees={(activeAssigneesResponse.data ?? []) as Profile[]}
+        lostStageId={lostStage?.id ?? null}
+        lostStageTitle={lostStage?.name ?? "Отказ"}
       />
       {(page > 0 || hasNextPage) && (
         <nav className="deals-pagination" aria-label="Страницы сделок">

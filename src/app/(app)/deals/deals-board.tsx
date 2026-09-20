@@ -63,6 +63,26 @@ type Props = {
   lostReasons: LostReason[];
   taskTypes: TaskType[];
   activeAssignees: Profile[];
+  lostStageId: string | null;
+  lostStageTitle: string;
+};
+type Gate = {
+  deal: Deal;
+  target: Column;
+  sourceIndex: number;
+  targetIndex: number;
+  lost: boolean;
+  needsQualification: boolean;
+  needsTask: boolean;
+};
+type GateForm = {
+  qualification: "КВАЛ" | "неквал" | "";
+  reasonId: string;
+  comment: string;
+  taskTitle: string;
+  taskDueAt: string;
+  taskTypeId: string;
+  taskAssigneeId: string;
 };
 type Maps = {
   contacts: Map<string, Contact>;
@@ -241,11 +261,74 @@ function BoardColumn({ column, maps }: { column: Column; maps: Maps }) {
     </section>
   );
 }
+function LostDropZone({ count, enabled }: { count: number; enabled: boolean }) {
+  const { setNodeRef, isOver } = useDroppable({ id: "lost", disabled: !enabled });
+  return (
+    <section ref={setNodeRef} className={`closed-column ${isOver ? "drop-target" : ""}`} aria-label={`Отказ: ${count}`}>
+      <span className="dot dot-grey" />
+      <span className="closed-column-label">Отказ</span>
+      <span className="pill">{count}</span>
+    </section>
+  );
+}
+function GateDialog({
+  gate,
+  form,
+  setForm,
+  props,
+  pending,
+  onCancel,
+  onSubmit,
+}: {
+  gate: Gate;
+  form: GateForm;
+  setForm: React.Dispatch<React.SetStateAction<GateForm>>;
+  props: Props;
+  pending: boolean;
+  onCancel: () => void;
+  onSubmit: () => void;
+}) {
+  return (
+    <div className="gate-scrim">
+      <div className="gate-dialog" role="dialog" aria-modal="true">
+        <header>
+          <div>
+            <h2>{gate.lost ? "Закрыть сделку как отказ" : gate.needsQualification ? "Клиент квалифицирован?" : "Нужен следующий шаг"}</h2>
+            <p>{gate.lost ? "Укажите причину — история сделки сохранится." : gate.needsQualification ? "Отмечайте после разговора — это видно всему отделу." : `Сделка не перейдёт в ${gate.target.title}, пока не назначен следующий шаг.`}</p>
+          </div>
+          <button className="gate-close" onClick={onCancel} aria-label="Закрыть">×</button>
+        </header>
+        {gate.lost ? (
+          <>
+            <label>Причина<select value={form.reasonId} onChange={(event) => setForm({ ...form, reasonId: event.target.value })}><option value="">Выберите причину</option>{props.lostReasons.map((reason) => <option key={reason.id} value={reason.id}>{reason.name}</option>)}</select></label>
+            <label>Комментарий<textarea value={form.comment} onChange={(event) => setForm({ ...form, comment: event.target.value })} /></label>
+          </>
+        ) : (
+          <>
+            {gate.needsQualification && <div className="qual-options"><button className={form.qualification === "КВАЛ" ? "selected" : ""} onClick={() => setForm({ ...form, qualification: "КВАЛ" })}>Квалифицирован</button><button className={form.qualification === "неквал" ? "selected" : ""} onClick={() => setForm({ ...form, qualification: "неквал" })}>Не квалифицирован</button></div>}
+            {gate.needsTask && <><label>Тип задачи<select value={form.taskTypeId} onChange={(event) => setForm({ ...form, taskTypeId: event.target.value })}>{props.taskTypes.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}</select></label><label>Что сделать<input value={form.taskTitle} onChange={(event) => setForm({ ...form, taskTitle: event.target.value })} /></label><label>Дата и время<input type="datetime-local" value={form.taskDueAt} onChange={(event) => setForm({ ...form, taskDueAt: event.target.value })} /></label><label>Исполнитель<select value={form.taskAssigneeId} onChange={(event) => setForm({ ...form, taskAssigneeId: event.target.value })}>{props.activeAssignees.map((person) => <option key={person.id} value={person.id}>{person.full_name}</option>)}</select></label></>}
+          </>
+        )}
+        <footer><button className="btn" onClick={onCancel} disabled={pending}>Отмена <kbd>Esc</kbd></button><button className="gate-primary" onClick={onSubmit} disabled={pending}>{gate.lost ? "Закрыть как отказ" : "Перевести"} <kbd>↵</kbd></button></footer>
+      </div>
+    </div>
+  );
+}
 export function DealsBoard(props: Props) {
   const [columns, setColumns] = useState(props.columns);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [gate, setGate] = useState<Gate | null>(null);
+  const [gateForm, setGateForm] = useState<GateForm>({
+    qualification: "",
+    reasonId: "",
+    comment: "",
+    taskTitle: "",
+    taskDueAt: "",
+    taskTypeId: props.taskTypes[0]?.id ?? "",
+    taskAssigneeId: props.currentUserId,
+  });
   const maps = useMemo(() => makeMaps(props), [props]);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -256,6 +339,13 @@ export function DealsBoard(props: Props) {
     const timeout = window.setTimeout(() => setFeedback(null), 2800);
     return () => window.clearTimeout(timeout);
   }, [feedback]);
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape" && gate && !pending) setGate(null);
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [gate, pending]);
   const activeDeal = columns
     .flatMap((column) => column.deals)
     .find((deal) => deal.id === activeId);
@@ -268,6 +358,63 @@ export function DealsBoard(props: Props) {
   function onDragCancel() {
     setActiveId(null);
   }
+  async function commitGate() {
+    if (!gate || (gate.lost && !gateForm.reasonId)) return;
+    if (gate.needsQualification && !gateForm.qualification) return;
+    if (
+      gate.needsTask &&
+      (!gateForm.taskTitle || !gateForm.taskDueAt || !gateForm.taskTypeId || !gateForm.taskAssigneeId)
+    ) return;
+    setPending(true);
+    const ownerId = gate.lost
+      ? gate.deal.owner_id
+      : gate.deal.owner_id ?? props.currentUserId;
+    const result = await createClient().rpc("transition_crm_deal", {
+      p_deal_id: gate.deal.id,
+      p_stage_id: gate.target.id,
+      p_owner_id: ownerId,
+      p_lost_reason_id: gate.lost ? gateForm.reasonId : null,
+      p_lost_comment: gate.lost ? gateForm.comment || null : null,
+      p_qualification: gateForm.qualification || null,
+      p_task_title: gate.needsTask ? gateForm.taskTitle : null,
+      p_task_due_at: gate.needsTask ? gateForm.taskDueAt : null,
+      p_task_type_id: gate.needsTask ? gateForm.taskTypeId : null,
+      p_task_assignee_id: gate.needsTask ? gateForm.taskAssigneeId : null,
+    });
+    if (result.error || !result.data) {
+      setFeedback(result.error?.message ?? "Сделка недоступна");
+      setPending(false);
+      return;
+    }
+    const transition = result.data as {
+      id: string;
+      stage_id: string;
+      owner_id: string | null;
+      status: Deal["status"];
+    };
+    const confirmed = {
+      ...gate.deal,
+      stage_id: transition.stage_id,
+      owner_id: transition.owner_id,
+      status: transition.status,
+    };
+    setColumns((current) => {
+      const removed = current.map((column, index) =>
+        index === gate.sourceIndex
+          ? { ...column, total: column.total - 1, deals: column.deals.filter((item) => item.id !== gate.deal.id) }
+          : column,
+      );
+      if (gate.lost) return removed;
+      return removed.map((column, index) =>
+        index === gate.targetIndex
+          ? { ...column, total: column.total + 1, deals: [confirmed, ...column.deals] }
+          : column,
+      );
+    });
+    setGate(null);
+    setPending(false);
+    setFeedback("Сделка перемещена");
+  }
   async function onDragEnd(event: DragEndEvent) {
     setActiveId(null);
     if (pending) return;
@@ -277,12 +424,57 @@ export function DealsBoard(props: Props) {
       column.deals.some((deal) => deal.id === dealId),
     );
     const targetIndex = columns.findIndex((column) => column.id === targetId);
-    if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex)
+    const droppingLost = targetId === "lost" && props.lostStageId !== null;
+    if (sourceIndex < 0 || (!droppingLost && targetIndex < 0) || (!droppingLost && sourceIndex === targetIndex))
       return;
     const source = columns[sourceIndex];
-    const target = columns[targetIndex];
+    const target = droppingLost
+      ? {
+          id: props.lostStageId as string,
+          title: props.lostStageTitle,
+          total: props.lostCount,
+          deals: [],
+          kind: "lost" as const,
+        }
+      : columns[targetIndex];
     const deal = source.deals.find((item) => item.id === dealId);
     if (!deal) return;
+    const needsQualification =
+      !droppingLost &&
+      target.kind === "open" &&
+      target.requires_qualification_tag === true &&
+      !(maps.tagsByDeal.get(dealId) ?? []).some(
+        (tag) => tag.name === "КВАЛ" || tag.name === "неквал",
+      );
+    const needsTask =
+      !droppingLost && target.kind === "open" && target.requires_next_step === true && !maps.tasks.has(dealId);
+    if (droppingLost || needsQualification || needsTask) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(10, 0, 0, 0);
+      setGate({
+        deal,
+        target,
+        sourceIndex,
+        targetIndex: droppingLost ? -1 : targetIndex,
+        lost: droppingLost,
+        needsQualification,
+        needsTask,
+      });
+      setGateForm((current) => ({
+        ...current,
+        qualification: "",
+        reasonId: "",
+        comment: "",
+        taskTitle: "",
+        taskDueAt: needsTask
+          ? new Date(tomorrow.getTime() - tomorrow.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+          : "",
+        taskTypeId: props.taskTypes[0]?.id ?? "",
+        taskAssigneeId: deal.owner_id ?? props.currentUserId,
+      }));
+      return;
+    }
     let targetStage = target;
     let targetIndexForState = targetIndex;
     const update: { stage_id?: string; owner_id?: string | null } = {};
@@ -296,7 +488,9 @@ export function DealsBoard(props: Props) {
         }
         update.stage_id = firstOpen.id;
         targetStage = firstOpen;
-        targetIndexForState = columns.indexOf(firstOpen);
+        // The card is visually returned to the kettle, while the RPC reopens it
+        // on the first active open stage with no owner.
+        targetIndexForState = targetIndex;
       }
     } else {
       update.stage_id = target.id;
@@ -365,14 +559,7 @@ export function DealsBoard(props: Props) {
           {columns.map((column) => (
             <BoardColumn key={column.id} column={column} maps={maps} />
           ))}
-          <section
-            className="closed-column"
-            aria-label={`Отказ: ${props.lostCount}`}
-          >
-            <span className="dot dot-grey" />
-            <span className="closed-column-label">Отказ</span>
-            <span className="pill">{props.lostCount}</span>
-          </section>
+          <LostDropZone count={props.lostCount} enabled={props.lostStageId !== null} />
         </div>
         <DragOverlay>
           {activeDeal ? (
@@ -385,6 +572,7 @@ export function DealsBoard(props: Props) {
           {feedback}
         </div>
       )}
+      {gate && <GateDialog gate={gate} form={gateForm} setForm={setGateForm} props={props} pending={pending} onCancel={() => setGate(null)} onSubmit={commitGate} />}
     </>
   );
 }
