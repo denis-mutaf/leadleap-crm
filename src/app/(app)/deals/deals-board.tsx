@@ -15,7 +15,7 @@ import {
 } from "@dnd-kit/core";
 import { House, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 type Deal = {
@@ -86,7 +86,11 @@ type GateForm = {
   taskTypeId: string;
   taskAssigneeId: string;
 };
-type MobileConfirmation = { event: DragEndEvent; destination: string };
+type MobileConfirmation = {
+  dealId: string;
+  targetId: string;
+  destination: string;
+};
 type Maps = {
   contacts: Map<string, Contact>;
   owners: Map<string, Profile>;
@@ -361,7 +365,6 @@ export function DealsBoard(props: Props) {
   );
   const [mobileConfirmation, setMobileConfirmation] =
     useState<MobileConfirmation | null>(null);
-  const bypassMobileConfirmation = useRef(false);
   const [taskOverrides, setTaskOverrides] = useState<Map<string, Task>>(
     () => new Map(),
   );
@@ -494,11 +497,12 @@ export function DealsBoard(props: Props) {
     setPending(false);
     setFeedback("Сделка перемещена");
   }
-  async function onDragEnd(event: DragEndEvent) {
-    setActiveId(null);
+  async function moveDeal(
+    dealId: string,
+    targetId: string,
+    allowMobileConfirmation = false,
+  ) {
     if (pending) return;
-    const dealId = String(event.active.id);
-    const targetId = event.over?.id ? String(event.over.id) : null;
     const sourceIndex = columns.findIndex((column) =>
       column.deals.some((deal) => deal.id === dealId),
     );
@@ -566,14 +570,14 @@ export function DealsBoard(props: Props) {
       }));
       return;
     }
-    if (window.innerWidth <= 600 && !bypassMobileConfirmation.current) {
+    if (window.innerWidth <= 600 && !allowMobileConfirmation) {
       setMobileConfirmation({
-        event,
+        dealId,
+        targetId,
         destination: target.kettle ? "Общий котёл" : target.title,
       });
       return;
     }
-    bypassMobileConfirmation.current = false;
     let targetStage = target;
     let targetIndexForState = targetIndex;
     const update: { stage_id?: string; owner_id?: string | null } = {};
@@ -650,6 +654,11 @@ export function DealsBoard(props: Props) {
     setFeedback("Сделка перемещена");
     setPending(false);
   }
+  function onDragEnd(event: DragEndEvent) {
+    setActiveId(null);
+    const targetId = event.over?.id ? String(event.over.id) : null;
+    if (targetId) void moveDeal(String(event.active.id), targetId);
+  }
   return (
     <>
       <DndContext
@@ -689,7 +698,17 @@ export function DealsBoard(props: Props) {
             </header>
             <footer>
               <button className="btn" onClick={() => setMobileConfirmation(null)} disabled={pending}>Отмена <kbd>Esc</kbd></button>
-              <button className="gate-primary" onClick={() => { const confirmation = mobileConfirmation; setMobileConfirmation(null); bypassMobileConfirmation.current = true; void onDragEnd(confirmation.event); }} disabled={pending}>Перевести <kbd>↵</kbd></button>
+              <button
+                className="gate-primary"
+                onClick={() => {
+                  const confirmation = mobileConfirmation;
+                  setMobileConfirmation(null);
+                  void moveDeal(confirmation.dealId, confirmation.targetId, true);
+                }}
+                disabled={pending}
+              >
+                Перевести <kbd>↵</kbd>
+              </button>
             </footer>
           </div>
         </div>
