@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "amo:stage:dry-run": "node --no-warnings --experimental-strip-types scripts/stage-amo-snapshot.ts",
+    "amo:audit:normalization": "node --no-warnings --experimental-strip-types scripts/audit-amo-normalization.ts",
+    "amo:backup:demo": "node --no-warnings --experimental-strip-types scripts/backup-demo-before-amo.ts",
+    "amo:prepare:dictionaries": "node --no-warnings --experimental-strip-types scripts/prepare-amo-dictionaries.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
