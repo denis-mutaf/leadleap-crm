@@ -158,6 +158,9 @@ export default async function DealsPage({
   const sourceIds = allDeals.flatMap((deal) =>
     deal.source_id ? [deal.source_id] : [],
   );
+  const ownerIds = allDeals.flatMap((deal) =>
+    deal.owner_id ? [deal.owner_id] : [],
+  );
   const [contacts, owners, projectRows, sources, tagRows, tasks] =
     await Promise.all([
       loadByIds(
@@ -166,16 +169,12 @@ export default async function DealsPage({
           supabase.from("contacts").select("id, full_name").in("id", ids),
         "Контакты",
       ),
-      supabase
-        .from("profiles")
-        .select("id, full_name, role")
-        .eq("is_active", true)
-        .in("role", ["manager", "head", "admin"])
-        .order("full_name")
-        .then((r) => {
-          if (r.error) throw new Error("Ответственные: " + r.error.message);
-          return r.data ?? [];
-        }),
+      loadByIds(
+        [...new Set(ownerIds)],
+        (ids) =>
+          supabase.from("profiles").select("id, full_name").in("id", ids),
+        "Ответственные",
+      ),
       loadByIds(
         dealIds,
         (ids) =>
@@ -223,6 +222,7 @@ export default async function DealsPage({
     modalSourcesResponse,
     modalProjectsResponse,
     modalTagsResponse,
+    modalOwnersResponse,
   ] = await Promise.all([
     loadByIds(
       [...new Set(projectIds)],
@@ -245,6 +245,12 @@ export default async function DealsPage({
       .eq("is_active", true)
       .order("position"),
     supabase.from("tags").select("id, name").order("name"),
+    supabase
+      .from("profiles")
+      .select("id, full_name")
+      .eq("is_active", true)
+      .in("role", ["manager", "head", "admin"])
+      .order("full_name"),
   ]);
   if (modalSourcesResponse.error)
     throw new Error("Источники: " + modalSourcesResponse.error.message);
@@ -252,6 +258,8 @@ export default async function DealsPage({
     throw new Error("Проекты: " + modalProjectsResponse.error.message);
   if (modalTagsResponse.error)
     throw new Error("Теги: " + modalTagsResponse.error.message);
+  if (modalOwnersResponse.error)
+    throw new Error("Ответственные: " + modalOwnersResponse.error.message);
   const projects = projectsResponse;
   const tags = tagsResponse;
   const shown = allDeals.length;
@@ -277,7 +285,7 @@ export default async function DealsPage({
           sources={(modalSourcesResponse.data ?? []) as Source[]}
           projects={(modalProjectsResponse.data ?? []) as Project[]}
           tags={(modalTagsResponse.data ?? []) as Tag[]}
-          owners={owners as Profile[]}
+          owners={(modalOwnersResponse.data ?? []) as Profile[]}
         />
       </div>
       <div className="filterbar">

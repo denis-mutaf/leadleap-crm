@@ -27,14 +27,13 @@ export function CreateDealModal({
   owners: Owner[];
 }) {
   const router = useRouter();
+  const defaultStageId = stages.find((s) => s.kind === "open")?.id ?? "";
   const [open, setOpen] = useState(false),
     [fullName, setFullName] = useState(""),
     [phone, setPhone] = useState(""),
     [sourceId, setSourceId] = useState(""),
     [projectIds, setProjectIds] = useState<string[]>([]),
-    [stageId, setStageId] = useState(
-      stages.find((s) => s.kind === "open")?.id ?? "",
-    ),
+    [stageId, setStageId] = useState(defaultStageId),
     [ownerId, setOwnerId] = useState(""),
     [title, setTitle] = useState(""),
     [objectText, setObjectText] = useState(""),
@@ -61,6 +60,7 @@ export function CreateDealModal({
     }, 350);
     return () => window.clearTimeout(timer);
   }, [open, phone, digits.length]);
+  // reset is intentionally stable in behavior; Escape closes the current form snapshot.
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -71,6 +71,7 @@ export function CreateDealModal({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, saving]);
   function reset() {
     request.current += 1;
@@ -78,6 +79,7 @@ export function CreateDealModal({
     setPhone("");
     setSourceId("");
     setProjectIds([]);
+    setStageId(defaultStageId);
     setOwnerId("");
     setTitle("");
     setObjectText("");
@@ -85,6 +87,7 @@ export function CreateDealModal({
     setNote("");
     setCandidates([]);
     setSelectedContact(null);
+    setSearching(false);
     setError(null);
   }
   function close() {
@@ -131,20 +134,28 @@ export function CreateDealModal({
       setSaving(false);
       return;
     }
-    const result = r.data as { kind?: string; deal_id?: string };
-    if (result.kind === "created" && result.deal_id) {
-      router.push(`/deals/${result.deal_id}`);
+    const result = r.data;
+    if (!result || typeof result !== "object") {
+      setError("Неожиданный ответ сервера");
+      setSaving(false);
       return;
     }
-    if (result.kind === "duplicate") {
+    const payload = result as { kind?: unknown; deal_id?: unknown };
+    if (payload.kind === "created" && typeof payload.deal_id === "string") {
+      router.push(`/deals/${payload.deal_id}`);
+      return;
+    }
+    if (payload.kind === "duplicate") {
       setError(
         "Найден существующий контакт. Выберите его ниже, чтобы добавить сделку.",
       );
       setSaving(false);
+      const n = ++request.current;
       const duplicateSearch = await createClient().rpc(
         "find_contacts_by_phone",
         { p_phone: phone },
       );
+      if (n !== request.current) return;
       if (duplicateSearch.error) setError(duplicateSearch.error.message);
       else setCandidates((duplicateSearch.data ?? []) as Candidate[]);
       return;
@@ -201,15 +212,16 @@ export function CreateDealModal({
                   <label>
                     Телефон *
                     <input
-                  value={phone}
-                  onChange={(e) => {
-                    request.current += 1;
-                    setPhone(e.target.value);
+                      value={phone}
+                      onChange={(e) => {
+                        request.current += 1;
+                        setPhone(e.target.value);
                         setSearching(
                           e.target.value.replace(/\D/g, "").length >= 8,
                         );
                         setSelectedContact(null);
                         setCandidates([]);
+                        setError(null);
                       }}
                       placeholder="+373 60000000"
                     />
