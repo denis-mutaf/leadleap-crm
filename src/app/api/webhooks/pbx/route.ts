@@ -49,44 +49,96 @@ async function findContactByPhone(
 ): Promise<{ contactId: string; fullName: string } | null> {
   const normalized = normalizePhone(rawPhone);
   if (!normalized) return null;
-  const { data: phoneRow } = await db
+  const last8 = normalized.replace(/\D/g, "").slice(-8);
+  const { data: phoneRows, error: phoneError } = await db
     .from("contact_phones")
     .select("contact_id")
-    .eq("phone", normalized)
-    .maybeSingle();
-  if (!phoneRow) return null;
-  const { data: contact } = await db
+    .or(`phone.eq.${normalized},phone.like.%${last8}`);
+  if (phoneError) throw new Error(`contact_phones lookup failed: ${phoneError.message}`);
+
+  const { data: importedRows, error: importedError } = await db
+    .from("imported_contact_phones")
+    .select("contact_id, normalized_phone")
+    .or(`normalized_phone.eq.${normalized},normalized_phone.like.%${last8}`);
+  if (importedError) {
+    throw new Error(`imported_contact_phones lookup failed: ${importedError.message}`);
+  }
+
+  const candidateIds = new Set<string>([
+    ...(phoneRows ?? []).map((row) => row.contact_id as string),
+    ...(importedRows ?? [])
+      .filter((row) => normalizePhone(row.normalized_phone as string) === normalized)
+      .map((row) => row.contact_id as string),
+  ]);
+  if (candidateIds.size === 0) return null;
+
+  // Resolve merges before deciding whether the number is ambiguous: two old
+  // cards that point at one survivor are still one logical contact.
+  const resolvedIds = new Set<string>();
+  for (const candidateId of candidateIds) {
+    let currentId = candidateId;
+    const visited = new Set<string>();
+    let reachedTerminal = false;
+    while (!visited.has(currentId)) {
+      visited.add(currentId);
+      const { data: current, error } = await db
+        .from("contacts")
+        .select("id, merged_into")
+        .eq("id", currentId)
+        .maybeSingle();
+      if (error) throw new Error(`contact merge lookup failed: ${error.message}`);
+      if (!current) break;
+      if (!current.merged_into) {
+        resolvedIds.add(current.id as string);
+        reachedTerminal = true;
+        break;
+      }
+      currentId = current.merged_into as string;
+    }
+    if (!reachedTerminal) {
+      throw new Error(`Contact merge cycle detected at ${currentId}`);
+    }
+  }
+  if (resolvedIds.size > 1) {
+    throw new Error(`Ambiguous phone match: ${resolvedIds.size} contacts`);
+  }
+  const contactId = [...resolvedIds][0];
+  if (!contactId) return null;
+  const { data: contact, error: contactError } = await db
     .from("contacts")
     .select("id, full_name")
-    .eq("id", phoneRow.contact_id)
-    .maybeSingle();
-  if (!contact) return null;
+    .eq("id", contactId)
+    .single();
+  if (contactError) throw new Error(`contact lookup failed: ${contactError.message}`);
   return { contactId: contact.id as string, fullName: contact.full_name as string };
 }
 
 async function openDeals(db: Db, contactId: string) {
-  const { data } = await db
+  const { data, error } = await db
     .from("deals")
     .select("id, title, owner_id")
     .eq("contact_id", contactId)
     .eq("status", "open")
     .order("created_at", { ascending: true });
+  if (error) throw new Error(`open deals lookup failed: ${error.message}`);
   return (data ?? []) as { id: string; title: string | null; owner_id: string | null }[];
 }
 
 async function firstStageId(db: Db): Promise<string | null> {
-  const { data } = await db
+  const { data, error } = await db
     .from("stages")
     .select("id")
     .eq("is_active", true)
     .order("position", { ascending: true })
     .limit(1)
     .maybeSingle();
+  if (error) throw new Error(`first stage lookup failed: ${error.message}`);
   return (data?.id as string | undefined) ?? null;
 }
 
 async function phoneSourceId(db: Db): Promise<string | null> {
-  const { data } = await db.from("sources").select("id").eq("code", "phone").maybeSingle();
+  const { data, error } = await db.from("sources").select("id").eq("code", "phone").maybeSingle();
+  if (error) throw new Error(`phone source lookup failed: ${error.message}`);
   return (data?.id as string | undefined) ?? null;
 }
 
@@ -129,7 +181,10 @@ async function ensureContactAndDeal(
     .single();
   if (contactError) throw contactError;
   const contactId = contact.id as string;
-  await db.from("contact_phones").insert({ contact_id: contactId, phone: normalized, is_primary: true });
+  const { error: phoneError } = await db
+    .from("contact_phones")
+    .insert({ contact_id: contactId, phone: normalized, is_primary: true });
+  if (phoneError) throw phoneError;
   const { data: deal, error: dealError } = await db
     .from("deals")
     .insert({
