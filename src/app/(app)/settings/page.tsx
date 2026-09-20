@@ -2,11 +2,9 @@ import { Info } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import type { Stage, StageKind } from "@/lib/types";
+import type { Stage } from "@/lib/types";
 import styles from "./settings.module.css";
-
-type Counts = { total: number };
-type Row = Stage & { counts: Counts };
+import { StageTable } from "./stage-settings-table";
 
 async function countDeals(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -41,9 +39,6 @@ async function mapWithLimit<T, R>(
   return results;
 }
 
-const kindLabel = (kind: StageKind) =>
-  kind === "won" ? "Успешный" : kind === "lost" ? "Неуспешный" : "Открытый";
-
 export default async function SettingsPage() {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
@@ -75,7 +70,11 @@ export default async function SettingsPage() {
         <div>
           <p className={styles.eyebrow}>Настройки</p>
           <h1>Воронка и этапы</h1>
-          <p className={styles.subtitle}>Правила доступны для просмотра.</p>
+          <p className={styles.subtitle}>
+            {profile.role === "admin"
+              ? "Правила доступны для просмотра и изменения."
+              : "Правила доступны для просмотра."}
+          </p>
         </div>
         <span className={styles.role}>
           {profile.role === "admin" ? "Администратор" : "Руководитель"}
@@ -91,10 +90,12 @@ export default async function SettingsPage() {
               базы с учётом RLS.
             </p>
           </div>
-          <span className={styles.readOnly}>Только чтение</span>
+          <span className={styles.readOnly}>
+            {profile.role === "admin" ? "Администратор" : "Только чтение"}
+          </span>
         </div>
         <div className={styles.tableWrap}>
-          <StageTable rows={active} />
+          <StageTable rows={active} canEdit={profile.role === "admin"} />
         </div>
       </section>
 
@@ -113,7 +114,7 @@ export default async function SettingsPage() {
             </div>
           </div>
           <div className={styles.tableWrap}>
-            <StageTable rows={historical} />
+            <StageTable rows={historical} canEdit={profile.role === "admin"} />
           </div>
         </section>
       )}
@@ -121,87 +122,10 @@ export default async function SettingsPage() {
       <aside className={styles.note}>
         <Info size={16} aria-hidden="true" />
         <p>
-          <strong>Только просмотр.</strong> Здесь нельзя менять правила, порядок
-          или удалять этапы.
+          <strong>Важно.</strong> Этап со сделками удалить нельзя — сначала
+          переведите сделки на другой этап. История переходов сохраняется.
         </p>
       </aside>
     </div>
-  );
-}
-
-function StageTable({ rows }: { rows: Row[] }) {
-  return (
-    <table className={styles.table}>
-      <thead>
-        <tr>
-          <th>Этап</th>
-          <th>Вид</th>
-          <th>Следующий шаг</th>
-          <th>КВАЛ-тег</th>
-          <th>Поля квалификации</th>
-          <th className={styles.countHead}>Сделки</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((stage) => (
-          <tr key={stage.id}>
-            <td>
-              <span
-                className={`${styles.dot} ${
-                  stage.kind === "won"
-                    ? styles.dotWon
-                    : stage.kind === "lost"
-                      ? styles.dotLost
-                      : ""
-                }`}
-              />
-              {stage.name}
-            </td>
-            <td>
-              <span
-                className={`${styles.kind} ${
-                  stage.kind === "won"
-                    ? styles.kindWon
-                    : stage.kind === "lost"
-                      ? styles.kindLost
-                      : ""
-                }`}
-              >
-                {kindLabel(stage.kind)}
-              </span>
-            </td>
-            <td>
-              <Gate value={stage.requires_next_step} />
-            </td>
-            <td>
-              <Gate
-                value={stage.requires_qualification_tag}
-                detail="ручная метка КВАЛ/неквал"
-              />
-            </td>
-            <td>
-              <Gate
-                value={stage.requires_qualification}
-                detail="бюджет, оплата и другие поля"
-              />
-            </td>
-            <td className={styles.count}>
-              <strong>{stage.counts.total.toLocaleString("ru-RU")}</strong>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
-
-function Gate({ value, detail }: { value: boolean; detail?: string }) {
-  return (
-    <span className={styles.gate}>
-      <span className={value ? styles.on : styles.off}>
-        {value ? "Да" : "Нет"}
-      </span>
-      {detail && <small>{detail}</small>}
-    </span>
   );
 }
