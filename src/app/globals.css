@@ -122,13 +122,22 @@
 }
 
 .app-shell { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: 100vh; }
-.nav { background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 8px; }
+.nav { min-width: 0; background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 8px; }
+.nav nav { min-width: 0; }
 .nav-brand { height: 28px; display: flex; align-items: center; padding: 0 8px; margin-bottom: 12px; font-weight: 500; }
 .nav-item { height: 28px; display: flex; align-items: center; gap: 8px; padding: 0 8px; border-radius: 6px; color: var(--foreground); text-decoration: none; }
 .nav-item:hover, .nav-item.is-active { background: var(--accent); font-weight: 500; }
 .nav-foot { margin-top: auto; padding: 8px 0; display: flex; align-items: center; gap: 8px; border-top: 1px solid var(--border); }
 .nav-person { min-width: 0; display: flex; flex-direction: column; font-size: 12px; line-height: 16px; } .nav-person strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; } .nav-person small { color: var(--muted-foreground); }
 .main-shell { min-width: 0; min-height: 100vh; }
+@media (max-width: 600px) {
+  .app-shell { display: flex; flex-direction: column; min-width: 0; overflow-x: hidden; }
+  .nav { width: 100%; border-right: 0; border-bottom: 1px solid var(--border); padding: 8px; }
+  .nav nav { display: flex; gap: 4px; width: 100%; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: thin; }
+  .nav-item { flex: 0 0 auto; white-space: nowrap; }
+  .nav-foot { display: none; }
+  .main-shell { width: 100%; min-width: 0; }
+}
 .deals-page { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 .page-header, .toolbar, .filterbar { display: flex; align-items: center; gap: 8px; padding: 0 12px; border-bottom: 1px solid var(--border); flex: none; }
 .page-header { height: 48px; } .toolbar { height: 49px; } .filterbar { height: 51px; }
