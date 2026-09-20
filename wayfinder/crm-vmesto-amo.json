@@ -1,0 +1,504 @@
+{
+ "map": "CRM вместо AmoCRM для застройщика",
+ "destination": "к 1 октября 2026 отдел продаж ISRAGRUP работает в своей CRM: лиды из каналов, одна воронка на два проекта, история из Amo перенесена",
+ "cutter": "не мешает менеджеру работать 1 октября — вне охвата",
+ "tracker": ".scratch/crm-vmesto-amo/map.md",
+ "lanes": [
+  {
+   "id": "start",
+   "title": "СТАРТ — доступ, закон, окружение"
+  },
+  {
+   "id": "channels",
+   "title": "ВЕТКА 1 · Каналы: звонки, мессенджеры, формы"
+  },
+  {
+   "id": "funnel",
+   "title": "ВЕТКА 2 · Лид, воронка, карточка"
+  },
+  {
+   "id": "people",
+   "title": "ВЕТКА 3 · Люди и права"
+  },
+  {
+   "id": "data",
+   "title": "ВЕТКА 4 · Переезд из Amo"
+  },
+  {
+   "id": "build",
+   "title": "СБОРКА"
+  },
+  {
+   "id": "fog",
+   "title": "ТУМАН — ещё не сформулировано"
+  },
+  {
+   "id": "out",
+   "title": "ВНЕ ОХВАТА"
+  }
+ ],
+ "nodes": [
+  {
+   "id": "t01",
+   "lane": "start",
+   "type": "task",
+   "title": "Доступ к выгрузке из Amo",
+   "ticket": 1,
+   "external": true,
+   "url": ".scratch/crm-vmesto-amo/issues/01-dostup-k-amo.md"
+  },
+  {
+   "id": "t20",
+   "lane": "start",
+   "type": "done",
+   "title": "Закон Молдовы о хранении данных",
+   "ticket": 20,
+   "url": ".scratch/crm-vmesto-amo/issues/20-zakon-o-hranenii-dannyh.md"
+  },
+  {
+   "id": "t23",
+   "lane": "start",
+   "type": "done",
+   "title": "Стек: Next.js, TypeScript, Tailwind",
+   "ticket": 23,
+   "url": ".scratch/crm-vmesto-amo/issues/23-stek.md"
+  },
+  {
+   "id": "t24",
+   "lane": "start",
+   "type": "done",
+   "title": "База: Postgres на Supabase",
+   "ticket": 24,
+   "url": ".scratch/crm-vmesto-amo/issues/24-baza-dannyh.md"
+  },
+  {
+   "id": "t25",
+   "lane": "start",
+   "type": "done",
+   "title": "Хостинг: Vercel + Supabase в ЕЭЗ",
+   "ticket": 25,
+   "url": ".scratch/crm-vmesto-amo/issues/25-hosting-i-deploy.md"
+  },
+  {
+   "id": "t26",
+   "lane": "start",
+   "type": "done",
+   "title": "Вход по почте и паролю",
+   "ticket": 26,
+   "url": ".scratch/crm-vmesto-amo/issues/26-avtorizatsiya.md"
+  },
+  {
+   "id": "t28",
+   "lane": "start",
+   "type": "done",
+   "title": "Язык интерфейса: русский",
+   "ticket": 28,
+   "url": ".scratch/crm-vmesto-amo/issues/28-yazyki-interfeysa.md"
+  },
+  {
+   "id": "t29",
+   "lane": "start",
+   "type": "done",
+   "title": "Резервные копии: суточные Supabase",
+   "ticket": 29,
+   "url": ".scratch/crm-vmesto-amo/issues/29-rezervnye-kopii.md"
+  },
+  {
+   "id": "t21",
+   "lane": "start",
+   "type": "done",
+   "title": "Окружение поднято",
+   "ticket": 21,
+   "url": ".scratch/crm-vmesto-amo/issues/21-podnyat-okruzhenie.md"
+  },
+  {
+   "id": "t36",
+   "lane": "channels",
+   "type": "done",
+   "title": "Инвентаризация каналов",
+   "ticket": 36,
+   "url": ".scratch/crm-vmesto-amo/issues/36-inventarizatsiya-kanalov.md"
+  },
+  {
+   "id": "t05",
+   "lane": "channels",
+   "type": "done",
+   "title": "Телефония Moldcell и её API",
+   "ticket": 5,
+   "url": ".scratch/crm-vmesto-amo/issues/05-telefoniya-i-api.md"
+  },
+  {
+   "id": "t07",
+   "lane": "channels",
+   "type": "done",
+   "title": "Легальные шлюзы мессенджеров",
+   "ticket": 7,
+   "url": ".scratch/crm-vmesto-amo/issues/07-legalnye-shlyuzy-messendzherov.md"
+  },
+  {
+   "id": "t06",
+   "lane": "channels",
+   "type": "done",
+   "title": "Что считается звонком в CRM",
+   "ticket": 6,
+   "url": ".scratch/crm-vmesto-amo/issues/06-chto-schitaetsya-zvonkom.md"
+  },
+  {
+   "id": "t08",
+   "lane": "channels",
+   "type": "done",
+   "title": "Единый инбокс переписки",
+   "ticket": 8,
+   "url": ".scratch/crm-vmesto-amo/issues/08-obshchiy-inboks-ili-lichnye.md"
+  },
+  {
+   "id": "t09",
+   "lane": "channels",
+   "type": "task",
+   "title": "Подключить форму сайта",
+   "ticket": 9,
+   "url": ".scratch/crm-vmesto-amo/issues/09-forma-sayta-vebhuk.md"
+  },
+  {
+   "id": "t27",
+   "lane": "channels",
+   "type": "grilling",
+   "title": "Интеграционный слой каналов",
+   "ticket": 27,
+   "url": ".scratch/crm-vmesto-amo/issues/27-integratsionnyy-sloy.md"
+  },
+  {
+   "id": "t11",
+   "lane": "funnel",
+   "type": "done",
+   "title": "Стадии воронки: одна на два проекта",
+   "ticket": 11,
+   "url": ".scratch/crm-vmesto-amo/issues/11-stadii-voronki.md"
+  },
+  {
+   "id": "t10",
+   "lane": "funnel",
+   "type": "done",
+   "title": "Источник лида для маркетолога",
+   "ticket": 10,
+   "url": ".scratch/crm-vmesto-amo/issues/10-istochnik-lida-dlya-marketologa.md"
+  },
+  {
+   "id": "t12",
+   "lane": "funnel",
+   "type": "done",
+   "title": "Лид падает в общий котёл",
+   "ticket": 12,
+   "url": ".scratch/crm-vmesto-amo/issues/12-komu-padaet-lid.md"
+  },
+  {
+   "id": "t13",
+   "lane": "funnel",
+   "type": "done",
+   "title": "Дедупликация по телефону",
+   "ticket": 13,
+   "url": ".scratch/crm-vmesto-amo/issues/13-deduplikatsiya.md"
+  },
+  {
+   "id": "t17",
+   "lane": "funnel",
+   "type": "done",
+   "title": "CRM заканчивается на сделке",
+   "ticket": 17,
+   "url": ".scratch/crm-vmesto-amo/issues/17-gde-konchaetsya-crm.md"
+  },
+  {
+   "id": "t45",
+   "lane": "funnel",
+   "type": "grilling",
+   "title": "Этапы Amo и что такое квалификация",
+   "ticket": 45,
+   "external": true,
+   "influences": [
+    "t32"
+   ],
+   "url": ".scratch/crm-vmesto-amo/issues/45-etapy-i-kvalifikatsiya.md"
+  },
+  {
+   "id": "t14",
+   "lane": "funnel",
+   "type": "prototype",
+   "title": "Экран менеджера в первую секунду",
+   "ticket": 14,
+   "url": ".scratch/crm-vmesto-amo/issues/14-ekran-menedzhera.md"
+  },
+  {
+   "id": "t22",
+   "lane": "funnel",
+   "type": "prototype",
+   "title": "Экран сделки",
+   "ticket": 22,
+   "url": ".scratch/crm-vmesto-amo/issues/22-ekran-sdelki.md"
+  },
+  {
+   "id": "t19",
+   "lane": "people",
+   "type": "done",
+   "title": "Что продажник не видит",
+   "ticket": 19,
+   "url": ".scratch/crm-vmesto-amo/issues/19-prava-prodazhnika.md"
+  },
+  {
+   "id": "t46",
+   "lane": "people",
+   "type": "grilling",
+   "title": "Пользователи, приёмка, хранение",
+   "ticket": 46,
+   "external": true,
+   "influences": [
+    "t43"
+   ],
+   "url": ".scratch/crm-vmesto-amo/issues/46-polzovateli-i-priyomka.md"
+  },
+  {
+   "id": "t03",
+   "lane": "data",
+   "type": "research",
+   "title": "Что теряется при экспорте из Amo",
+   "ticket": 3,
+   "blockedBy": [
+    "t01"
+   ],
+   "url": ".scratch/crm-vmesto-amo/issues/03-chto-teryaetsya-pri-eksporte.md"
+  },
+  {
+   "id": "t02",
+   "lane": "data",
+   "type": "grilling",
+   "title": "Что переносим из воронки Amo",
+   "ticket": 2,
+   "blockedBy": [
+    "t03"
+   ],
+   "url": ".scratch/crm-vmesto-amo/issues/02-chto-perenosim-iz-voronki.md"
+  },
+  {
+   "id": "t04",
+   "lane": "data",
+   "type": "task",
+   "title": "Перенос истории из Amo",
+   "ticket": 4,
+   "blockedBy": [
+    "t02"
+   ],
+   "url": ".scratch/crm-vmesto-amo/issues/04-perenos-istoricheskih-dannyh.md"
+  },
+  {
+   "id": "t30",
+   "lane": "build",
+   "type": "done",
+   "title": "Схема данных и гейты в базе",
+   "ticket": 30,
+   "url": ".scratch/crm-vmesto-amo/issues/30-shema-dannyh.md"
+  },
+  {
+   "id": "t31",
+   "lane": "build",
+   "type": "done",
+   "title": "Каркас: проект, база, вход, роли",
+   "ticket": 31,
+   "url": ".scratch/crm-vmesto-amo/issues/31-karkas.md"
+  },
+  {
+   "id": "t32",
+   "lane": "build",
+   "type": "task",
+   "title": "Воронка и карточка сделки",
+   "ticket": 32,
+   "blockedBy": [
+    "t14"
+   ],
+   "url": ".scratch/crm-vmesto-amo/issues/32-voronka-i-kartochka.md"
+  },
+  {
+   "id": "t37",
+   "lane": "build",
+   "type": "task",
+   "title": "Пользовательские поля",
+   "ticket": 37,
+   "url": ".scratch/crm-vmesto-amo/issues/37-polzovatelskie-polya.md"
+  },
+  {
+   "id": "t34",
+   "lane": "build",
+   "type": "task",
+   "title": "Каналы: звонки, инбокс, формы",
+   "ticket": 34,
+   "blockedBy": [
+    "t09",
+    "t27"
+   ],
+   "url": ".scratch/crm-vmesto-amo/issues/34-kanaly.md"
+  },
+  {
+   "id": "t38",
+   "lane": "build",
+   "type": "task",
+   "title": "Дисциплина воронки в интерфейсе",
+   "ticket": 38,
+   "blockedBy": [
+    "t32"
+   ],
+   "url": ".scratch/crm-vmesto-amo/issues/38-distsiplina-voronki.md"
+  },
+  {
+   "id": "t39",
+   "lane": "build",
+   "type": "task",
+   "title": "SLA и уведомления",
+   "ticket": 39,
+   "blockedBy": [
+    "t32"
+   ],
+   "url": ".scratch/crm-vmesto-amo/issues/39-sla-i-uvedomleniya.md"
+  },
+  {
+   "id": "t40",
+   "lane": "build",
+   "type": "task",
+   "title": "Отчётность: конверсия и когорты",
+   "ticket": 40,
+   "blockedBy": [
+    "t32"
+   ],
+   "url": ".scratch/crm-vmesto-amo/issues/40-otchyotnost.md"
+  },
+  {
+   "id": "t44",
+   "lane": "build",
+   "type": "task",
+   "title": "Слияние дублей",
+   "ticket": 44,
+   "blockedBy": [
+    "t32"
+   ],
+   "url": ".scratch/crm-vmesto-amo/issues/44-sliyanie-dubley.md"
+  },
+  {
+   "id": "t42",
+   "lane": "build",
+   "type": "task",
+   "title": "Мобильная версия менеджера",
+   "ticket": 42,
+   "blockedBy": [
+    "t32"
+   ],
+   "url": ".scratch/crm-vmesto-amo/issues/42-mobilnaya-versiya.md"
+  },
+  {
+   "id": "t43",
+   "lane": "build",
+   "type": "task",
+   "title": "Права и дашборд застройщика",
+   "ticket": 43,
+   "blockedBy": [
+    "t40"
+   ],
+   "url": ".scratch/crm-vmesto-amo/issues/43-prava-i-dashbord.md"
+  },
+  {
+   "id": "t41",
+   "lane": "build",
+   "type": "task",
+   "title": "Meta CAPI: офлайн-конверсии",
+   "ticket": 41,
+   "blockedBy": [
+    "t40",
+    "t34"
+   ],
+   "url": ".scratch/crm-vmesto-amo/issues/41-meta-capi.md"
+  },
+  {
+   "id": "t35",
+   "lane": "build",
+   "type": "task",
+   "title": "Переезд и обучение",
+   "ticket": 35,
+   "blockedBy": [
+    "t32",
+    "t34",
+    "t04"
+   ],
+   "url": ".scratch/crm-vmesto-amo/issues/35-pereezd-i-obuchenie.md"
+  },
+  {
+   "id": "fog1",
+   "lane": "fog",
+   "type": "fog",
+   "title": "Сделки в работе в день переключения"
+  },
+  {
+   "id": "fog2",
+   "lane": "fog",
+   "type": "fog",
+   "title": "Обучение и первая неделя"
+  },
+  {
+   "id": "fog3",
+   "lane": "fog",
+   "type": "fog",
+   "title": "Стык с бухгалтерией"
+  },
+  {
+   "id": "fog4",
+   "lane": "fog",
+   "type": "fog",
+   "title": "Комплаенс до запуска: реестр обработки"
+  },
+  {
+   "id": "fog5",
+   "lane": "fog",
+   "type": "fog",
+   "title": "Telegram и текущие заявки с сайта"
+  },
+  {
+   "id": "t15",
+   "lane": "out",
+   "type": "out",
+   "title": "Квартиры и шахматка",
+   "ticket": 15,
+   "url": ".scratch/crm-vmesto-amo/issues/15-spravochnik-kvartir.md"
+  },
+  {
+   "id": "t16",
+   "lane": "out",
+   "type": "out",
+   "title": "Бронь",
+   "ticket": 16,
+   "url": ".scratch/crm-vmesto-amo/issues/16-bron.md"
+  },
+  {
+   "id": "t18",
+   "lane": "out",
+   "type": "out",
+   "title": "Цены EUR/MDL",
+   "ticket": 18,
+   "url": ".scratch/crm-vmesto-amo/issues/18-tseny-eur-mdl.md"
+  },
+  {
+   "id": "t33",
+   "lane": "out",
+   "type": "out",
+   "title": "Сделка, квартиры и бронь",
+   "ticket": 33,
+   "url": ".scratch/crm-vmesto-amo/issues/33-sdelka-i-bron.md"
+  },
+  {
+   "id": "out1",
+   "lane": "out",
+   "type": "out",
+   "title": "Договоры, риелторы, автораспределение"
+  },
+  {
+   "id": "out2",
+   "lane": "out",
+   "type": "out",
+   "title": "Румынский, ЛК клиента, ипотечный калькулятор"
+  }
+ ]
+}

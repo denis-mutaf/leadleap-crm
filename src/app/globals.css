@@ -1,0 +1,134 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* ===== Тема Attio — снята с продукта app.attio.com, а не с лендинга.
+   Источник: 99 кадров интерфейса из публичной справки attio.com/help, 20.09.2026.
+   Значения замерены по пикселям в research/attio-product-shots/.
+   Расхождения с лендингом, найденные замером и потому обязательные:
+     1) primary — синяя заливка #3b6ce8 с рамкой #3561d0, а не графитовый градиент;
+     2) серые нейтральные (#999, #727272, #606164), без холодной синевы лендинга;
+     3) высота контрола 28px, а не 40px.  ===== */
+
+:root {
+  --background: #ffffff;
+  --foreground: #242529;          /* замер: текст ячейки таблицы */
+
+  --card: #ffffff;
+  --card-foreground: #242529;
+  --popover: #ffffff;
+  --popover-foreground: #242529;
+
+  --primary: #3b6ce8;             /* замер: «Add Person» */
+  --primary-foreground: #ffffff;
+  --primary-border: #3561d0;      /* у primary есть своя тёмная рамка */
+
+  --secondary: #fbfbfb;           /* замер: фон кнопок Sort / Filter */
+  --secondary-foreground: #242529;
+
+  --muted: #f7f8f9;
+  --muted-foreground: #999999;    /* замер: «Add calculation» */
+
+  --accent: #f1f2f3;              /* наведение на строку и пункт меню */
+  --accent-foreground: #242529;
+
+  --destructive: #e5484d;
+  --success: #30a46c;
+  --warning: #d97706;             /* замер: «Tomorrow», «In 2 days» в ленте */
+
+  --border: #eeeff1;              /* замер: линия сетки таблицы, 1px */
+  --input: #edeef0;               /* замер: рамка вторичной кнопки */
+  --ring: #3b6ce8;
+
+  --radius: 6px;                  /* замер: скругление кнопки тулбара */
+
+  --chart-1: #3b6ce8;
+  --chart-2: #30a46c;
+  --chart-3: #d97706;
+  --chart-4: #8b5cf6;
+  --chart-5: #ec4899;
+
+  --sidebar: #fcfcfc;             /* замер: фон страницы записи, чуть ниже белого */
+  --sidebar-foreground: #242529;
+  --sidebar-primary: #3b6ce8;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f1f2f3;
+  --sidebar-accent-foreground: #242529;
+  --sidebar-border: #eeeff1;
+  --sidebar-ring: #3b6ce8;
+
+  /* ===== Плотность. Того, чего нет в shadcn и чего не было в токенах с лендинга.
+     Именно она отличает интерфейс Attio от воздушного дефолта shadcn. ===== */
+  --h-header: 48px;               /* шапка страницы с названием списка */
+  --h-toolbar: 49px;              /* полоса действий под шапкой */
+  --h-filters: 51px;              /* полоса сортировки и фильтров */
+  --h-row: 36px;                  /* строка таблицы */
+  --h-row-header: 39px;           /* шапка колонок */
+  --h-control: 28px;              /* кнопка, селект, поле ввода */
+  --h-control-sm: 26px;           /* чип-фильтр */
+  --px-cell: 12px;                /* боковой отступ ячейки */
+}
+
+/* Тёмная тема Attio не снята — в справке кадры только светлые.
+   Пустой блок намеренно: чужие значения сюда не подставляем. */
+.dark {
+  color-scheme: light;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}

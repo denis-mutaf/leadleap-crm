@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<title>CRM вместо AmoCRM для застройщика</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #FFFFFF; }
+  body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+  ::selection { background: #E5E7EB; }
+  .page { position: relative; width: 1440px; height: 3420px; background: #FFFFFF; overflow: hidden; }
+  svg.wires { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+  .card {
+    position: absolute; z-index: 1; border-radius: 0;
+    padding: 10px 12px; font-size: 15px; line-height: 1.35; color: #111111;
+    overflow: hidden; overflow-wrap: break-word; text-decoration: none;
+    transition: opacity 150ms ease-out;
+  }
+  .card.frozen { outline: 2px dashed #FCA5A5; outline-offset: 3px; }
+  .card:focus-visible { outline: 2px solid #111111; outline-offset: 5px; }
+  .card.stopper:focus-visible { outline: 2px solid #111111; outline-offset: 6px; }
+  svg.wires polyline { transition: opacity 150ms ease-out; }
+  header.board-head { position: relative; height: 232px; }
+  .head-main { position: absolute; left: 40px; top: 32px; width: 740px; }
+  .head-main h1 { margin: 0 0 12px; font-size: 40px; line-height: 1.2; font-weight: 600; color: #111111; }
+  .head-main .dest { margin: 0 0 6px; font-size: 16px; line-height: 1.4; color: #111111; }
+  .head-main .cutter { margin: 0 0 6px; font-size: 16px; line-height: 1.4; color: #6B7280; }
+  .head-main .counts { margin: 0 0 8px; font-size: 14px; line-height: 1.4; color: #9CA3AF; }
+  .head-main .tracker { font-size: 14px; line-height: 1.4; color: #374151; }
+  .legend {
+    position: absolute; right: 40px; top: 32px; width: 560px;
+    background: #FFFFFF; border: 1px solid #D1D5DB; border-radius: 8px; padding: 14px 16px;
+  }
+  .legend-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+  .legend .chip { display: block; font-size: 13px; line-height: 1.35; color: #111111; padding: 4px 8px; border-radius: 6px; }
+  .legend p { margin: 4px 0 0; font-size: 12px; line-height: 1.4; color: #6B7280; }
+  .lane { position: absolute; display: flex; align-items: center; gap: 16px; }
+  .lane span {
+    flex: none; font-size: 18px; line-height: 36px; font-weight: 600;
+    letter-spacing: .02em; color: #374151; white-space: nowrap;
+  }
+  .lane i { display: block; flex: 1; height: 1px; background: #E5E7EB; }
+  footer.board-foot {
+    position: absolute; left: 40px; top: 3392px;
+    font-size: 12px; line-height: 16px; color: #9CA3AF;
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <svg class="wires" width="1440" height="3420" viewBox="0 0 1440 3420" aria-hidden="true">
+      <defs>
+        <marker id="arr-gray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#374151"></path>
+        </marker>
+        <marker id="arr-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#DC2626"></path>
+        </marker>
+      </defs>
+      <polyline points="545,1432 545,1468 720,1468 720,2058 740,2058" fill="none" stroke="#374151" stroke-width="2" stroke-dasharray="8 6" marker-end="url(#arr-gray)" data-from="t45" data-to="t32"/>
+      <polyline points="545,1656 545,1692 728,1692 728,2370 740,2370" fill="none" stroke="#374151" stroke-width="2" stroke-dasharray="8 6" marker-end="url(#arr-gray)" data-from="t46" data-to="t43"/>
+      <polyline points="195,360 195,392 20,392 20,1834 40,1834" fill="none" stroke="#DC2626" stroke-width="3" marker-end="url(#arr-red)" data-from="t01" data-to="t03"/>
+      <polyline points="350,1834 390,1834" fill="none" stroke="#374151" stroke-width="2" marker-end="url(#arr-gray)" data-from="t03" data-to="t02"/>
+      <polyline points="700,1834 740,1834" fill="none" stroke="#374151" stroke-width="2" marker-end="url(#arr-gray)" data-from="t02" data-to="t04"/>
+      <polyline points="895,1432 895,1476 1070,1476 1070,2058 1050,2058" fill="none" stroke="#374151" stroke-width="2" marker-end="url(#arr-gray)" data-from="t14" data-to="t32"/>
+      <polyline points="700,1006 712,1006 712,2136 195,2136 195,2168" fill="none" stroke="#374151" stroke-width="2" marker-end="url(#arr-gray)" data-from="t09" data-to="t34"/>
+      <polyline points="895,1052 895,1088 28,1088 28,2214 40,2214" fill="none" stroke="#374151" stroke-width="2" marker-end="url(#arr-gray)" data-from="t27" data-to="t34"/>
+      <polyline points="895,2104 895,2128 545,2128 545,2168" fill="none" stroke="#374151" stroke-width="2" marker-end="url(#arr-gray)" data-from="t32" data-to="t38"/>
+      <polyline points="895,2104 895,2168" fill="none" stroke="#374151" stroke-width="2" marker-end="url(#arr-gray)" data-from="t32" data-to="t39"/>
+      <polyline points="895,2104 895,2152 1078,2152 1078,2214 1090,2214" fill="none" stroke="#374151" stroke-width="2" marker-end="url(#arr-gray)" data-from="t32" data-to="t40"/>
+      <polyline points="895,2104 895,2120 370,2120 370,2370 350,2370" fill="none" stroke="#374151" stroke-width="2" marker-end="url(#arr-gray)" data-from="t32" data-to="t44"/>
+      <polyline points="895,2104 895,2160 378,2160 378,2370 390,2370" fill="none" stroke="#374151" stroke-width="2" marker-end="url(#arr-gray)" data-from="t32" data-to="t42"/>
+      <polyline points="1245,2260 1245,2292 1062,2292 1062,2370 1050,2370" fill="none" stroke="#374151" stroke-width="2" marker-end="url(#arr-gray)" data-from="t40" data-to="t43"/>
+      <polyline points="1245,2260 1245,2324" fill="none" stroke="#374151" stroke-width="2" marker-end="url(#arr-gray)" data-from="t40" data-to="t41"/>
+      <polyline points="350,2214 362,2214 362,2284 1245,2284 1245,2324" fill="none" stroke="#374151" stroke-width="2" marker-end="url(#arr-gray)" data-from="t34" data-to="t41"/>
+      <polyline points="895,2104 895,2112 12,2112 12,2526 40,2526" fill="none" stroke="#374151" stroke-width="2" marker-end="url(#arr-gray)" data-from="t32" data-to="t35"/>
+      <polyline points="195,2260 195,2308 28,2308 28,2526 40,2526" fill="none" stroke="#374151" stroke-width="2" marker-end="url(#arr-gray)" data-from="t34" data-to="t35"/>
+      <polyline points="895,1880 895,1916 4,1916 4,2526 40,2526" fill="none" stroke="#374151" stroke-width="2" marker-end="url(#arr-gray)" data-from="t04" data-to="t35"/>
+    </svg>
+    <header class="board-head">
+      <div class="head-main">
+        <h1>CRM вместо AmoCRM для застройщика</h1>
+        <p class="dest">Пункт назначения: к 1 октября 2026 отдел продаж ISRAGRUP работает в своей CRM: лиды из каналов, одна воронка на два проекта, история из Amo перенесена</p>
+        <p class="cutter">Резак: не мешает менеджеру работать 1 октября — вне охвата</p>
+        <p class="counts">53 шага · 21 закрыто · 1 стоппер · 5 в тумане</p>
+        <a class="tracker" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/map.md">карта в трекере</a>
+      </div>
+      <aside class="legend">
+        <div class="legend-grid">
+          <span class="chip" style="background:#FFFFFF;border:2px solid #22C55E">📌 по умолчанию</span>
+          <span class="chip" style="background:#BBF7D0;border:none">✅ закрыт</span>
+          <span class="chip" style="background:#DDD6FE;border:none">🛠 задача</span>
+          <span class="chip" style="background:#E5E7EB;border:none">🔎 исследование</span>
+          <span class="chip" style="background:#FEF08A;border:none">💬 прожарка</span>
+          <span class="chip" style="background:#BFDBFE;border:none">🧪 прототип</span>
+          <span class="chip" style="background:#F3F4F6;border:2px dashed #9CA3AF">🌫 туман</span>
+          <span class="chip" style="background:#FECACA;border:none">🚫 вне охвата</span>
+          <span class="chip" style="background:#FFFFFF;border:3px solid #DC2626">🛑 стоппер — держит других</span>
+        </div>
+        <p>Стрелка A → B: B нельзя решить, пока не закрыт A</p>
+        <p>Красный пунктир по контуру — шаг заморожен стоппером</p>
+      </aside>
+    </header>
+    <div class="lane" style="left:40px;top:232px;width:1360px"><span>СТАРТ — доступ, закон, окружение</span><i></i></div>
+    <div class="lane" style="left:40px;top:768px;width:1360px"><span>ВЕТКА 1 · Каналы: звонки, мессенджеры, формы</span><i></i></div>
+    <div class="lane" style="left:40px;top:1148px;width:1360px"><span>ВЕТКА 2 · Лид, воронка, карточка</span><i></i></div>
+    <div class="lane" style="left:40px;top:1528px;width:1360px"><span>ВЕТКА 3 · Люди и права</span><i></i></div>
+    <div class="lane" style="left:40px;top:1752px;width:1360px"><span>ВЕТКА 4 · Переезд из Amo</span><i></i></div>
+    <div class="lane" style="left:40px;top:1976px;width:1360px"><span>СБОРКА</span><i></i></div>
+    <div class="lane" style="left:40px;top:2668px;width:1360px"><span>ТУМАН — ещё не сформулировано</span><i></i></div>
+    <div class="lane" style="left:40px;top:3048px;width:1360px"><span>ВНЕ ОХВАТА</span><i></i></div>
+    <a class="card stopper" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/01-dostup-k-amo.md" data-node="t01" style="left:40px;top:268px;width:310px;height:92px;background:#DDD6FE;border:3px solid #DC2626">🛑 #1 Доступ к выгрузке из Amo — держит 4 шагов</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/20-zakon-o-hranenii-dannyh.md" data-node="t20" style="left:390px;top:268px;width:310px;height:92px;background:#BBF7D0;border:none">✅ #20 Закон Молдовы о хранении данных</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/23-stek.md" data-node="t23" style="left:740px;top:268px;width:310px;height:92px;background:#BBF7D0;border:none">✅ #23 Стек: Next.js, TypeScript, Tailwind</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/24-baza-dannyh.md" data-node="t24" style="left:1090px;top:268px;width:310px;height:92px;background:#BBF7D0;border:none">✅ #24 База: Postgres на Supabase</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/25-hosting-i-deploy.md" data-node="t25" style="left:40px;top:424px;width:310px;height:92px;background:#BBF7D0;border:none">✅ #25 Хостинг: Vercel + Supabase в ЕЭЗ</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/26-avtorizatsiya.md" data-node="t26" style="left:390px;top:424px;width:310px;height:92px;background:#BBF7D0;border:none">✅ #26 Вход по почте и паролю</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/28-yazyki-interfeysa.md" data-node="t28" style="left:740px;top:424px;width:310px;height:92px;background:#BBF7D0;border:none">✅ #28 Язык интерфейса: русский</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/29-rezervnye-kopii.md" data-node="t29" style="left:1090px;top:424px;width:310px;height:92px;background:#BBF7D0;border:none">✅ #29 Резервные копии: суточные Supabase</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/21-podnyat-okruzhenie.md" data-node="t21" style="left:40px;top:580px;width:310px;height:92px;background:#BBF7D0;border:none">✅ #21 Окружение поднято</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/36-inventarizatsiya-kanalov.md" data-node="t36" style="left:40px;top:804px;width:310px;height:92px;background:#BBF7D0;border:none">✅ #36 Инвентаризация каналов</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/05-telefoniya-i-api.md" data-node="t05" style="left:390px;top:804px;width:310px;height:92px;background:#BBF7D0;border:none">✅ #5 Телефония Moldcell и её API</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/07-legalnye-shlyuzy-messendzherov.md" data-node="t07" style="left:740px;top:804px;width:310px;height:92px;background:#BBF7D0;border:none">✅ #7 Легальные шлюзы мессенджеров</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/06-chto-schitaetsya-zvonkom.md" data-node="t06" style="left:1090px;top:804px;width:310px;height:92px;background:#BBF7D0;border:none">✅ #6 Что считается звонком в CRM</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/08-obshchiy-inboks-ili-lichnye.md" data-node="t08" style="left:40px;top:960px;width:310px;height:92px;background:#BBF7D0;border:none">✅ #8 Единый инбокс переписки</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/09-forma-sayta-vebhuk.md" data-node="t09" style="left:390px;top:960px;width:310px;height:92px;background:#DDD6FE;border:none">🛠 #9 Подключить форму сайта</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/27-integratsionnyy-sloy.md" data-node="t27" style="left:740px;top:960px;width:310px;height:92px;background:#FEF08A;border:none">💬 #27 Интеграционный слой каналов</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/11-stadii-voronki.md" data-node="t11" style="left:40px;top:1184px;width:310px;height:92px;background:#BBF7D0;border:none">✅ #11 Стадии воронки: одна на два проекта</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/10-istochnik-lida-dlya-marketologa.md" data-node="t10" style="left:390px;top:1184px;width:310px;height:92px;background:#BBF7D0;border:none">✅ #10 Источник лида для маркетолога</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/12-komu-padaet-lid.md" data-node="t12" style="left:740px;top:1184px;width:310px;height:92px;background:#BBF7D0;border:none">✅ #12 Лид падает в общий котёл</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/13-deduplikatsiya.md" data-node="t13" style="left:1090px;top:1184px;width:310px;height:92px;background:#BBF7D0;border:none">✅ #13 Дедупликация по телефону</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/17-gde-konchaetsya-crm.md" data-node="t17" style="left:40px;top:1340px;width:310px;height:92px;background:#BBF7D0;border:none">✅ #17 CRM заканчивается на сделке</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/45-etapy-i-kvalifikatsiya.md" data-node="t45" style="left:390px;top:1340px;width:310px;height:92px;background:#FEF08A;border:none">💬 #45 Этапы Amo и что такое квалификация</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/14-ekran-menedzhera.md" data-node="t14" style="left:740px;top:1340px;width:310px;height:92px;background:#BFDBFE;border:none">🧪 #14 Экран менеджера в первую секунду</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/22-ekran-sdelki.md" data-node="t22" style="left:1090px;top:1340px;width:310px;height:92px;background:#BFDBFE;border:none">🧪 #22 Экран сделки</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/19-prava-prodazhnika.md" data-node="t19" style="left:40px;top:1564px;width:310px;height:92px;background:#BBF7D0;border:none">✅ #19 Что продажник не видит</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/46-polzovateli-i-priyomka.md" data-node="t46" style="left:390px;top:1564px;width:310px;height:92px;background:#FEF08A;border:none">💬 #46 Пользователи, приёмка, хранение</a>
+    <a class="card frozen" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/03-chto-teryaetsya-pri-eksporte.md" data-node="t03" style="left:40px;top:1788px;width:310px;height:92px;background:#E5E7EB;border:none">🔎 #3 Что теряется при экспорте из Amo</a>
+    <a class="card frozen" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/02-chto-perenosim-iz-voronki.md" data-node="t02" style="left:390px;top:1788px;width:310px;height:92px;background:#FEF08A;border:none">💬 #2 Что переносим из воронки Amo</a>
+    <a class="card frozen" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/04-perenos-istoricheskih-dannyh.md" data-node="t04" style="left:740px;top:1788px;width:310px;height:92px;background:#DDD6FE;border:none">🛠 #4 Перенос истории из Amo</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/30-shema-dannyh.md" data-node="t30" style="left:40px;top:2012px;width:310px;height:92px;background:#BBF7D0;border:none">✅ #30 Схема данных и гейты в базе</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/31-karkas.md" data-node="t31" style="left:390px;top:2012px;width:310px;height:92px;background:#BBF7D0;border:none">✅ #31 Каркас: проект, база, вход, роли</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/32-voronka-i-kartochka.md" data-node="t32" style="left:740px;top:2012px;width:310px;height:92px;background:#DDD6FE;border:none">🛠 #32 Воронка и карточка сделки</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/37-polzovatelskie-polya.md" data-node="t37" style="left:1090px;top:2012px;width:310px;height:92px;background:#DDD6FE;border:none">🛠 #37 Пользовательские поля</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/34-kanaly.md" data-node="t34" style="left:40px;top:2168px;width:310px;height:92px;background:#DDD6FE;border:none">🛠 #34 Каналы: звонки, инбокс, формы</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/38-distsiplina-voronki.md" data-node="t38" style="left:390px;top:2168px;width:310px;height:92px;background:#DDD6FE;border:none">🛠 #38 Дисциплина воронки в интерфейсе</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/39-sla-i-uvedomleniya.md" data-node="t39" style="left:740px;top:2168px;width:310px;height:92px;background:#DDD6FE;border:none">🛠 #39 SLA и уведомления</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/40-otchyotnost.md" data-node="t40" style="left:1090px;top:2168px;width:310px;height:92px;background:#DDD6FE;border:none">🛠 #40 Отчётность: конверсия и когорты</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/44-sliyanie-dubley.md" data-node="t44" style="left:40px;top:2324px;width:310px;height:92px;background:#DDD6FE;border:none">🛠 #44 Слияние дублей</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/42-mobilnaya-versiya.md" data-node="t42" style="left:390px;top:2324px;width:310px;height:92px;background:#DDD6FE;border:none">🛠 #42 Мобильная версия менеджера</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/43-prava-i-dashbord.md" data-node="t43" style="left:740px;top:2324px;width:310px;height:92px;background:#DDD6FE;border:none">🛠 #43 Права и дашборд застройщика</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/41-meta-capi.md" data-node="t41" style="left:1090px;top:2324px;width:310px;height:92px;background:#DDD6FE;border:none">🛠 #41 Meta CAPI: офлайн-конверсии</a>
+    <a class="card frozen" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/35-pereezd-i-obuchenie.md" data-node="t35" style="left:40px;top:2480px;width:310px;height:92px;background:#DDD6FE;border:none">🛠 #35 Переезд и обучение</a>
+    <div class="card" tabindex="0" data-node="fog1" style="left:40px;top:2704px;width:310px;height:92px;background:#F3F4F6;border:2px dashed #9CA3AF">🌫 Сделки в работе в день переключения</div>
+    <div class="card" tabindex="0" data-node="fog2" style="left:390px;top:2704px;width:310px;height:92px;background:#F3F4F6;border:2px dashed #9CA3AF">🌫 Обучение и первая неделя</div>
+    <div class="card" tabindex="0" data-node="fog3" style="left:740px;top:2704px;width:310px;height:92px;background:#F3F4F6;border:2px dashed #9CA3AF">🌫 Стык с бухгалтерией</div>
+    <div class="card" tabindex="0" data-node="fog4" style="left:1090px;top:2704px;width:310px;height:92px;background:#F3F4F6;border:2px dashed #9CA3AF">🌫 Комплаенс до запуска: реестр обработки</div>
+    <div class="card" tabindex="0" data-node="fog5" style="left:40px;top:2860px;width:310px;height:92px;background:#F3F4F6;border:2px dashed #9CA3AF">🌫 Telegram и текущие заявки с сайта</div>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/15-spravochnik-kvartir.md" data-node="t15" style="left:40px;top:3084px;width:310px;height:92px;background:#FECACA;border:none">🚫 #15 Квартиры и шахматка</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/16-bron.md" data-node="t16" style="left:390px;top:3084px;width:310px;height:92px;background:#FECACA;border:none">🚫 #16 Бронь</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/18-tseny-eur-mdl.md" data-node="t18" style="left:740px;top:3084px;width:310px;height:92px;background:#FECACA;border:none">🚫 #18 Цены EUR/MDL</a>
+    <a class="card" target="_blank" rel="noopener" href=".scratch/crm-vmesto-amo/issues/33-sdelka-i-bron.md" data-node="t33" style="left:1090px;top:3084px;width:310px;height:92px;background:#FECACA;border:none">🚫 #33 Сделка, квартиры и бронь</a>
+    <div class="card" tabindex="0" data-node="out1" style="left:40px;top:3240px;width:310px;height:92px;background:#FECACA;border:none">🚫 Договоры, риелторы, автораспределение</div>
+    <div class="card" tabindex="0" data-node="out2" style="left:390px;top:3240px;width:310px;height:92px;background:#FECACA;border:none">🚫 Румынский, ЛК клиента, ипотечный калькулятор</div>
+    <footer class="board-foot">сгенерировано 2026-09-20T18:24:01.088Z · crm-vmesto-amo.json</footer>
+  </div>
+<script>
+(function () {
+  var cards = Array.prototype.slice.call(document.querySelectorAll('[data-node]'));
+  var lines = Array.prototype.slice.call(document.querySelectorAll('polyline[data-from]'));
+  if (!cards.length) return;
+  function paint(id) {
+    var keep = {};
+    lines.forEach(function (l) {
+      var f = l.getAttribute('data-from'), t = l.getAttribute('data-to');
+      if (f === id || t === id) { keep[f] = true; keep[t] = true; }
+    });
+    keep[id] = true;
+    cards.forEach(function (c) { c.style.opacity = keep[c.getAttribute('data-node')] ? '1' : '.35'; });
+    lines.forEach(function (l) {
+      var on = l.getAttribute('data-from') === id || l.getAttribute('data-to') === id;
+      l.style.opacity = on ? '1' : '.35';
+    });
+  }
+  function clear() {
+    cards.forEach(function (c) { c.style.opacity = ''; });
+    lines.forEach(function (l) { l.style.opacity = ''; });
+  }
+  cards.forEach(function (c) {
+    var id = c.getAttribute('data-node');
+    c.addEventListener('mouseenter', function () { paint(id); });
+    c.addEventListener('mouseleave', clear);
+    c.addEventListener('focus', function () { paint(id); });
+    c.addEventListener('blur', clear);
+  });
+})();
+</script>
+</body>
+</html>
