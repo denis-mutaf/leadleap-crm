@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { DealsBoard } from "./deals-board";
+import { CreateDealModal } from "./create-deal-modal";
 
 const PAGE_SIZE = 24;
 const CHUNK_SIZE = 100;
@@ -150,12 +151,14 @@ export default async function DealsPage({
   );
   const [contacts, owners, projectRows, sources, tagRows, tasks] =
     await Promise.all([
-      loadByIds(
-        allDeals.map((deal) => deal.contact_id),
-        (ids) =>
-          supabase.from("contacts").select("id, full_name").in("id", ids),
-        "Контакты",
-      ),
+      supabase
+        .from("contacts")
+        .select("id, full_name")
+        .order("full_name")
+        .then((response) => {
+          if (response.error) throw new Error("Контакты: " + response.error.message);
+          return response.data ?? [];
+        }),
       loadByIds(
         ownerIds,
         (ids) =>
@@ -233,6 +236,7 @@ export default async function DealsPage({
         <span className="toolbar-label">Воронка</span>
         <span className="header-spacer" />
         <span className="summary">Сделки в воронке</span>
+        <CreateDealModal stages={stages} contacts={contacts as Contact[]} currentUserId={profile.id} />
       </div>
       <div className="filterbar">
         <span className="static-filter">Сортировка</span>
