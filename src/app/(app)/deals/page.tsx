@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 
 const PAGE_SIZE = 24;
 const CHUNK_SIZE = 100;
-type Stage = { id: string; name: string; position: number };
+type Stage = { id: string; name: string; position: number; kind: "open" | "won" | "lost" };
 type Deal = { id: string; contact_id: string; owner_id: string | null; stage_id: string; status: "open" | "postponed" | "won" | "lost"; object_text: string | null; source_id: string | null; budget: number | null; budget_currency: string; postponed_until: string | null };
 type Contact = { id: string; full_name: string };
 type Profile = { id: string; full_name: string };
@@ -69,13 +69,14 @@ function DealCard({ deal, maps }: { deal: Deal; maps: Maps }) {
   );
 }
 
-function Column({ title, total, deals, maps, kettle = false }: { title: string; total: number; deals: Deal[]; maps: Maps; kettle?: boolean }) {
-  return <section className={kettle ? "kettle" : "kanban-column"}><div className="column-head"><span className={"dot " + (kettle ? "dot-amber" : "dot-blue")} /><strong>{title}</strong><span className="pill">{total}</span>{!kettle && <MoreHorizontal size={15} className="column-more" />}</div>{deals.map((deal) => <DealCard key={deal.id} deal={deal} maps={maps} />)}</section>;
+function Column({ title, total, deals, maps, kettle = false, won = false }: { title: string; total: number; deals: Deal[]; maps: Maps; kettle?: boolean; won?: boolean }) {
+  const dotColor = kettle ? "dot-amber" : won ? "dot-green" : "dot-blue";
+  return <section className={kettle ? "kettle" : "kanban-column"}><div className="column-head"><span className={"dot " + dotColor} /><strong>{title}</strong><span className="pill">{total}</span>{!kettle && <MoreHorizontal size={15} className="column-more" />}</div>{deals.map((deal) => <DealCard key={deal.id} deal={deal} maps={maps} />)}</section>;
 }
 
 async function loadColumn(supabase: Awaited<ReturnType<typeof createClient>>, stageId: string | null, page: number): Promise<ColumnData> {
-  let query = supabase.from("deals").select("id, contact_id, owner_id, stage_id, status, object_text, source_id, budget, budget_currency, postponed_until", { count: "exact" }).not("status", "in", "(won,lost)").order("updated_at", { ascending: false }).range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
-  query = stageId ? query.eq("stage_id", stageId).not("owner_id", "is", null) : query.is("owner_id", null);
+  let query = supabase.from("deals").select("id, contact_id, owner_id, stage_id, status, object_text, source_id, budget, budget_currency, postponed_until", { count: "exact" }).order("updated_at", { ascending: false }).range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
+  query = stageId ? query.eq("stage_id", stageId).not("owner_id", "is", null) : query.is("owner_id", null).not("status", "in", "(won,lost)");
   const response = await query;
   if (response.error) throw new Error("Сделки: " + response.error.message);
   return { deals: (response.data ?? []) as Deal[], total: response.count ?? 0 };
@@ -88,10 +89,15 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
   const pageValue = Number.parseInt((await searchParams).page ?? "0", 10);
   const page = Number.isFinite(pageValue) && pageValue > 0 ? pageValue : 0;
   const supabase = await createClient();
-  const stagesResponse = await supabase.from("stages").select("id, name, position").eq("is_active", true).eq("kind", "open").order("position");
+  const stagesResponse = await supabase.from("stages").select("id, name, position, kind").eq("is_active", true).order("position");
   if (stagesResponse.error) throw new Error("Этапы: " + stagesResponse.error.message);
-  const stages = (stagesResponse.data ?? []) as Stage[];
+  const allStages = (stagesResponse.data ?? []) as Stage[];
+  const stages = allStages.filter((stage) => stage.kind !== "lost");
+  const lostStage = allStages.find((stage) => stage.kind === "lost");
   const [kettle, ...columns] = await Promise.all([loadColumn(supabase, null, page), ...stages.map((stage) => loadColumn(supabase, stage.id, page))]);
+  const lostResponse = lostStage ? await supabase.from("deals").select("id", { count: "exact", head: true }).eq("stage_id", lostStage.id) : null;
+  if (lostResponse?.error) throw new Error("Отказ: " + lostResponse.error.message);
+  const lostCount = lostResponse?.count ?? 0;
   const allDeals = [kettle.deals, ...columns.map((column) => column.deals)].flat();
   const dealIds = allDeals.map((deal) => deal.id);
   const sourceIds = allDeals.flatMap((deal) => deal.source_id ? [deal.source_id] : []);
@@ -119,5 +125,5 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
   const shown = allDeals.length;
   const total = kettle.total + columns.reduce((sum, column) => sum + column.total, 0);
   const hasNextPage = [kettle, ...columns].some((column) => (page + 1) * PAGE_SIZE < column.total);
-  return <div className="deals-page"><header className="page-header"><Funnel size={16} /><span>Сделки</span><span className="header-spacer" /><span className="avatar">{initials(profile.full_name)}</span></header><div className="toolbar"><span className="toolbar-label">Воронка</span><span className="header-spacer" /><span className="summary">Открытые сделки</span></div><div className="filterbar"><span className="static-filter">Сортировка</span><span className="separator" /><span className="static-filter">Фильтр</span><span className="header-spacer" /><span className="summary">Страница {page + 1} · показано {shown} из {total}</span></div><div className="board"><Column title="Общий котёл" total={kettle.total} deals={kettle.deals} maps={maps} kettle />{stages.map((stage, index) => <Column key={stage.id} title={stage.name} total={columns[index].total} deals={columns[index].deals} maps={maps} />)}</div>{(page > 0 || hasNextPage) && <nav className="deals-pagination" aria-label="Страницы сделок">{page > 0 && <Link href={`/deals?page=${page - 1}`}>Предыдущая</Link>}{hasNextPage && <Link href={`/deals?page=${page + 1}`}>Следующая</Link>}</nav>}</div>;
+  return <div className="deals-page"><header className="page-header"><Funnel size={16} /><span>Сделки</span><span className="header-spacer" /><span className="avatar">{initials(profile.full_name)}</span></header><div className="toolbar"><span className="toolbar-label">Воронка</span><span className="header-spacer" /><span className="summary">Сделки в воронке</span></div><div className="filterbar"><span className="static-filter">Сортировка</span><span className="separator" /><span className="static-filter">Фильтр</span><span className="header-spacer" /><span className="summary">Страница {page + 1} · показано {shown} из {total}</span></div><div className="board"><Column title="Общий котёл" total={kettle.total} deals={kettle.deals} maps={maps} kettle />{stages.map((stage, index) => <Column key={stage.id} title={stage.name} total={columns[index].total} deals={columns[index].deals} maps={maps} won={stage.kind === "won"} />)}{lostStage && <section className="closed-column" aria-label={`${lostStage.name}: ${lostCount}`}><span className="dot dot-grey" /><span className="closed-column-label">{lostStage.name}</span><span className="pill">{lostCount}</span></section>}</div>{(page > 0 || hasNextPage) && <nav className="deals-pagination" aria-label="Страницы сделок">{page > 0 && <Link href={`/deals?page=${page - 1}`}>Предыдущая</Link>}{hasNextPage && <Link href={`/deals?page=${page + 1}`}>Следующая</Link>}</nav>}</div>;
 }
