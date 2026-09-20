@@ -74,31 +74,43 @@ async function loadColumn(
   page: number,
 ): Promise<ColumnData> {
   const countQuery = stageId
-    ? supabase.from("deals").select("id", { count: "exact", head: true }).eq("stage_id", stageId).not("owner_id", "is", null)
-    : supabase.from("deals").select("id", { count: "exact", head: true }).is("owner_id", null).not("status", "in", "(won,lost)");
+    ? supabase
+        .from("deals")
+        .select("id", { count: "exact", head: true })
+        .eq("stage_id", stageId)
+        .not("owner_id", "is", null)
+    : supabase
+        .from("deals")
+        .select("id", { count: "exact", head: true })
+        .is("owner_id", null)
+        .not("status", "in", "(won,lost)");
   const countResponse = await countQuery;
-  if (countResponse.error) throw new Error("Сделки: " + countResponse.error.message);
+  if (countResponse.error)
+    throw new Error("Сделки: " + countResponse.error.message);
   const total = countResponse.count ?? 0;
   const offset = page * PAGE_SIZE;
   if (offset >= total) return { deals: [], total };
   const query = stageId
     ? supabase
-    .from("deals")
-    .select(
-      "id, contact_id, owner_id, stage_id, status, object_text, source_id, budget, budget_currency, postponed_until",
-      { count: "exact" },
-    )
-    .eq("stage_id", stageId)
-    .not("owner_id", "is", null)
-    .order("updated_at", { ascending: false })
-    .range(offset, Math.min(offset + PAGE_SIZE, total) - 1)
+        .from("deals")
+        .select(
+          "id, contact_id, owner_id, stage_id, status, object_text, source_id, budget, budget_currency, postponed_until",
+          { count: "exact" },
+        )
+        .eq("stage_id", stageId)
+        .not("owner_id", "is", null)
+        .order("updated_at", { ascending: false })
+        .range(offset, Math.min(offset + PAGE_SIZE, total) - 1)
     : supabase
-    .from("deals")
-    .select("id, contact_id, owner_id, stage_id, status, object_text, source_id, budget, budget_currency, postponed_until", { count: "exact" })
-    .is("owner_id", null)
-    .not("status", "in", "(won,lost)")
-    .order("updated_at", { ascending: false })
-    .range(offset, Math.min(offset + PAGE_SIZE, total) - 1);
+        .from("deals")
+        .select(
+          "id, contact_id, owner_id, stage_id, status, object_text, source_id, budget, budget_currency, postponed_until",
+          { count: "exact" },
+        )
+        .is("owner_id", null)
+        .not("status", "in", "(won,lost)")
+        .order("updated_at", { ascending: false })
+        .range(offset, Math.min(offset + PAGE_SIZE, total) - 1);
   const response = await query;
   if (response.error) throw new Error("Сделки: " + response.error.message);
   return { deals: (response.data ?? []) as Deal[], total };
@@ -143,17 +155,27 @@ export default async function DealsPage({
     ...columns.map((column) => column.deals),
   ].flat();
   const dealIds = allDeals.map((deal) => deal.id);
+  const sourceIds = allDeals.flatMap((deal) =>
+    deal.source_id ? [deal.source_id] : [],
+  );
   const [contacts, owners, projectRows, sources, tagRows, tasks] =
     await Promise.all([
+      loadByIds(
+        allDeals.map((deal) => deal.contact_id),
+        (ids) =>
+          supabase.from("contacts").select("id, full_name").in("id", ids),
+        "Контакты",
+      ),
       supabase
-        .from("contacts")
-        .select("id, full_name")
+        .from("profiles")
+        .select("id, full_name, role")
+        .eq("is_active", true)
+        .in("role", ["manager", "head", "admin"])
         .order("full_name")
-        .then((response) => {
-          if (response.error) throw new Error("Контакты: " + response.error.message);
-          return response.data ?? [];
+        .then((r) => {
+          if (r.error) throw new Error("Ответственные: " + r.error.message);
+          return r.data ?? [];
         }),
-      supabase.from("profiles").select("id, full_name, role").eq("is_active", true).in("role", ["manager", "head", "admin"]).order("full_name").then((r) => { if (r.error) throw new Error("Ответственные: " + r.error.message); return r.data ?? []; }),
       loadByIds(
         dealIds,
         (ids) =>
@@ -163,7 +185,11 @@ export default async function DealsPage({
             .in("deal_id", ids),
         "Проекты сделок",
       ),
-      supabase.from("sources").select("id, name").eq("is_active", true).order("name").then((r) => { if (r.error) throw new Error("Источники: " + r.error.message); return r.data ?? []; }),
+      loadByIds(
+        [...new Set(sourceIds)],
+        (ids) => supabase.from("sources").select("id, name").in("id", ids),
+        "Источники",
+      ),
       loadByIds(
         dealIds,
         (ids) =>
@@ -185,14 +211,49 @@ export default async function DealsPage({
         "Задачи",
       ),
     ]);
-  const [projectsResponse, tagsResponse] = await Promise.all([
-    supabase.from("projects").select("id, code, name").eq("is_active", true).order("position"),
-    supabase.from("tags").select("id, name").eq("is_active", true).order("name"),
+  const projectIds = (projectRows as LinkRow[]).flatMap((row) =>
+    row.project_id ? [row.project_id] : [],
+  );
+  const tagIds = (tagRows as LinkRow[]).flatMap((row) =>
+    row.tag_id ? [row.tag_id] : [],
+  );
+  const [
+    projectsResponse,
+    tagsResponse,
+    modalSourcesResponse,
+    modalProjectsResponse,
+    modalTagsResponse,
+  ] = await Promise.all([
+    loadByIds(
+      [...new Set(projectIds)],
+      (ids) => supabase.from("projects").select("id, code, name").in("id", ids),
+      "Проекты",
+    ),
+    loadByIds(
+      [...new Set(tagIds)],
+      (ids) => supabase.from("tags").select("id, name").in("id", ids),
+      "Теги",
+    ),
+    supabase
+      .from("sources")
+      .select("id, name")
+      .eq("is_active", true)
+      .order("name"),
+    supabase
+      .from("projects")
+      .select("id, code, name")
+      .eq("is_active", true)
+      .order("position"),
+    supabase.from("tags").select("id, name").order("name"),
   ]);
-  if (projectsResponse.error) throw new Error("Проекты: " + projectsResponse.error.message);
-  if (tagsResponse.error) throw new Error("Теги: " + tagsResponse.error.message);
-  const projects = projectsResponse.data ?? [];
-  const tags = tagsResponse.data ?? [];
+  if (modalSourcesResponse.error)
+    throw new Error("Источники: " + modalSourcesResponse.error.message);
+  if (modalProjectsResponse.error)
+    throw new Error("Проекты: " + modalProjectsResponse.error.message);
+  if (modalTagsResponse.error)
+    throw new Error("Теги: " + modalTagsResponse.error.message);
+  const projects = projectsResponse;
+  const tags = tagsResponse;
   const shown = allDeals.length;
   const total =
     kettle.total + columns.reduce((sum, column) => sum + column.total, 0);
@@ -211,7 +272,13 @@ export default async function DealsPage({
         <span className="toolbar-label">Воронка</span>
         <span className="header-spacer" />
         <span className="summary">Сделки в воронке</span>
-        <CreateDealModal stages={stages} sources={sources as Source[]} projects={projects as Project[]} tags={tags as Tag[]} owners={owners as Profile[]} />
+        <CreateDealModal
+          stages={stages}
+          sources={(modalSourcesResponse.data ?? []) as Source[]}
+          projects={(modalProjectsResponse.data ?? []) as Project[]}
+          tags={(modalTagsResponse.data ?? []) as Tag[]}
+          owners={owners as Profile[]}
+        />
       </div>
       <div className="filterbar">
         <span className="static-filter">Сортировка</span>
