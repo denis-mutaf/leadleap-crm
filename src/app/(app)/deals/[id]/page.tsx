@@ -8,6 +8,18 @@ import { DealRecordClient, type DealRecordData } from "./record-client";
 const FEED_LIMIT = 120;
 const emptyRows = <T,>() => ({ data: [] as T[], error: null, count: 0 });
 
+function phoneDedupKeys(raw: string) {
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return [];
+  const normalized =
+    digits.length === 8
+      ? `373${digits}`
+      : digits.length === 9 && digits.startsWith("0")
+        ? `373${digits.slice(1)}`
+        : digits;
+  return [`normalized:${normalized}`, `last8:${normalized.slice(-8)}`];
+}
+
 export default async function DealRecordPage({
   params,
 }: {
@@ -191,20 +203,26 @@ export default async function DealRecordPage({
     : { data: [], error: null };
   if (transitionStages.error)
     throw new Error(`Этапы ленты: ${transitionStages.error.message}`);
+  const phonesForRecord = [
+    ...(phones.data ?? []),
+    ...(importedPhones.data ?? []).map((phone) => ({
+      id: `imported-${phone.contact_id}-${phone.ordinal}`,
+      phone: phone.raw_phone,
+      is_primary: false,
+    })),
+  ].filter((phone, index, all) => {
+    const keys = phoneDedupKeys(phone.phone);
+    if (!keys.length)
+      return all.findIndex((candidate) => candidate.phone === phone.phone) === index;
+    const duplicate = all.slice(0, index).some((candidate) =>
+      phoneDedupKeys(candidate.phone).some((key) => keys.includes(key)),
+    );
+    return !duplicate;
+  });
   const data: DealRecordData = {
     deal,
     contact: contact.data,
-    phones: [
-      ...(phones.data ?? []),
-      ...(importedPhones.data ?? []).map((phone) => ({
-        id: `imported-${phone.contact_id}-${phone.ordinal}`,
-        phone: phone.raw_phone,
-        is_primary: false,
-      })),
-    ].filter(
-      (phone, index, all) =>
-        all.findIndex((candidate) => candidate.phone === phone.phone) === index,
-    ),
+    phones: phonesForRecord,
     channels: channels.data ?? [],
     owner: owner.data,
     stage: stage.data,
