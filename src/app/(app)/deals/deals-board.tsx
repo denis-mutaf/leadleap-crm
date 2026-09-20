@@ -439,15 +439,23 @@ export function DealsBoard(props: Props) {
       : columns[targetIndex];
     const deal = source.deals.find((item) => item.id === dealId);
     if (!deal) return;
+    const isForward =
+      !droppingLost &&
+      (source.kettle || (target.position ?? 0) > (source.position ?? 0));
     const needsQualification =
       !droppingLost &&
+      isForward &&
       target.kind === "open" &&
       target.requires_qualification_tag === true &&
       !(maps.tagsByDeal.get(dealId) ?? []).some(
         (tag) => tag.name === "КВАЛ" || tag.name === "неквал",
       );
     const needsTask =
-      !droppingLost && target.kind === "open" && target.requires_next_step === true && !maps.tasks.has(dealId);
+      !droppingLost &&
+      isForward &&
+      target.kind === "open" &&
+      target.requires_next_step === true &&
+      !maps.tasks.has(dealId);
     if (droppingLost || needsQualification || needsTask) {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
