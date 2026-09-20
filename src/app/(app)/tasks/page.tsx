@@ -1,4 +1,6 @@
-import { Check, CheckCircle2, Circle } from "lucide-react";
+import Link from "next/link";
+import { Circle } from "lucide-react";
+import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -19,6 +21,7 @@ type Related = {
   name?: string;
   code?: string;
   stage_id?: string | null;
+  contact_id?: string | null;
 };
 type ViewTask = TaskRow & {
   typeName: string;
@@ -83,20 +86,42 @@ async function relationRows<T extends Related>(
   return result.data ?? [];
 }
 
-export default async function TasksPage() {
+export default async function TasksPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   const profile = await getCurrentProfile();
   if (!profile) return null;
+  if (profile.role === "builder") redirect("/reports");
   const supabase = await createClient();
+  const params = await searchParams;
+  const requestedPage = Number.parseInt(params.page ?? "1", 10);
+  const page =
+    Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+  const pageSize = 100;
+  const countResult = await supabase
+    .from("tasks")
+    .select("id", { count: "exact", head: true })
+    .eq("assignee_id", profile.id)
+    .is("done_at", null);
+  if (countResult.error)
+    throw new Error(`Количество задач: ${countResult.error.message}`);
+  const totalCount = countResult.count ?? 0;
+  const totalPages = Math.ceil(totalCount / pageSize);
+  const safePage = totalPages > 0 ? Math.min(page, totalPages) : 1;
+  const from = (safePage - 1) * pageSize;
+  const to = from + pageSize - 1;
   const result = await supabase
     .from("tasks")
     .select(
-      "id, deal_id, contact_id, assignee_id, type_id, title, due_at, done_at, result_text",
-      { count: "exact" },
+      "id, deal_id, contact_id, assignee_id, type_id, title, due_at, done_at",
     )
     .eq("assignee_id", profile.id)
+    .is("done_at", null)
     .order("due_at", { ascending: true })
     .order("id", { ascending: true })
-    .range(0, 99);
+    .range(from, to);
   if (result.error) throw new Error(`Задачи: ${result.error.message}`);
   const rows = (result.data ?? []) as TaskRow[];
   const typeIds = unique(rows.map((row) => row.type_id));
@@ -188,43 +213,40 @@ export default async function TasksPage() {
       overdueLabel: delta > 0 ? `просрочено ${delta} дн` : undefined,
     };
   });
+  const groupForTask = (task: ViewTask) => {
+    const date = localDate(new Date(task.due_at));
+    if (date < today) return "overdue";
+    if (date === today) return "today";
+    if (date === tomorrow) return "tomorrow";
+    if (date <= weekEnd) return "week";
+    return "later";
+  };
   const groups = [
     {
       key: "overdue",
       label: "Просрочено",
       tone: "danger",
-      tasks: viewTasks.filter(
-        (task) => localDate(new Date(task.due_at)) < today,
-      ),
+      tasks: viewTasks.filter((task) => groupForTask(task) === "overdue"),
     },
     {
       key: "today",
       label: "Сегодня",
-      tasks: viewTasks.filter(
-        (task) => localDate(new Date(task.due_at)) === today,
-      ),
+      tasks: viewTasks.filter((task) => groupForTask(task) === "today"),
     },
     {
       key: "tomorrow",
       label: "Завтра",
-      tasks: viewTasks.filter(
-        (task) => localDate(new Date(task.due_at)) === tomorrow,
-      ),
+      tasks: viewTasks.filter((task) => groupForTask(task) === "tomorrow"),
     },
     {
       key: "week",
       label: "На этой неделе",
-      tasks: viewTasks.filter((task) => {
-        const date = localDate(new Date(task.due_at));
-        return date > tomorrow && date <= weekEnd;
-      }),
+      tasks: viewTasks.filter((task) => groupForTask(task) === "week"),
     },
     {
       key: "later",
       label: "Позже",
-      tasks: viewTasks.filter(
-        (task) => localDate(new Date(task.due_at)) > weekEnd,
-      ),
+      tasks: viewTasks.filter((task) => groupForTask(task) === "later"),
     },
   ].filter((group) => group.tasks.length);
   const groupCount = (key: string) =>
@@ -235,7 +257,7 @@ export default async function TasksPage() {
         <h1>Задачи</h1>
         <span className="header-spacer" />
         <span className="tasks-total">
-          Показано {rows.length} из {result.count ?? rows.length}
+          Показано {rows.length} из {totalCount}
         </span>
       </header>
       <div className="tasks-toolbar">
@@ -270,14 +292,9 @@ export default async function TasksPage() {
               <b>{group.tasks.length}</b>
             </div>
             {group.tasks.map((task) => (
-              <div
-                className={`task-row ${task.done_at ? "is-done" : ""}`}
-                key={task.id}
-              >
-                <span
-                  className={`task-check ${task.done_at ? "is-complete" : ""}`}
-                >
-                  {task.done_at ? <Check size={11} /> : <Circle size={15} />}
+              <div className="task-row" key={task.id}>
+                <span className="task-check">
+                  <Circle size={15} />
                 </span>
                 <span className="task-type" title={task.typeName}>
                   {task.typeName.slice(0, 1)}
@@ -306,17 +323,26 @@ export default async function TasksPage() {
                 </span>
               </div>
             ))}
-            {group.tasks
-              .filter((task) => task.done_at && task.result_text?.trim())
-              .map((task) => (
-                <div className="task-result" key={`${task.id}-result`}>
-                  <CheckCircle2 size={14} />
-                  {task.result_text}
-                </div>
-              ))}
           </section>
         ))}
         {!groups.length && <div className="tasks-empty">Задач пока нет</div>}
+        {totalPages > 1 && (
+          <nav className="tasks-pagination" aria-label="Страницы задач">
+            {safePage > 1 ? (
+              <Link href={`/tasks?page=${safePage - 1}`}>← Назад</Link>
+            ) : (
+              <span />
+            )}
+            <span>
+              Страница {safePage} из {totalPages}
+            </span>
+            {safePage < totalPages ? (
+              <Link href={`/tasks?page=${safePage + 1}`}>Вперёд →</Link>
+            ) : (
+              <span />
+            )}
+          </nav>
+        )}
       </main>
     </div>
   );
