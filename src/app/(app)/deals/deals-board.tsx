@@ -1,6 +1,7 @@
 "use client";
 import {
   DndContext,
+  pointerWithin,
   DragEndEvent,
   DragOverlay,
   DragStartEvent,
@@ -555,6 +556,12 @@ export function DealsBoard(props: Props) {
       }));
       return;
     }
+    if (
+      window.innerWidth <= 600 &&
+      !window.confirm(`Перевести сделку в «${target.kettle ? "Общий котёл" : target.title}»?`)
+    ) {
+      return;
+    }
     let targetStage = target;
     let targetIndexForState = targetIndex;
     const update: { stage_id?: string; owner_id?: string | null } = {};
@@ -635,6 +642,7 @@ export function DealsBoard(props: Props) {
     <>
       <DndContext
         sensors={sensors}
+        collisionDetection={pointerWithin}
         onDragStart={onDragStart}
         onDragCancel={onDragCancel}
         onDragEnd={onDragEnd}
