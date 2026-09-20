@@ -72,20 +72,35 @@ async function loadColumn(
   stageId: string | null,
   page: number,
 ): Promise<ColumnData> {
-  let query = supabase
+  const countQuery = stageId
+    ? supabase.from("deals").select("id", { count: "exact", head: true }).eq("stage_id", stageId).not("owner_id", "is", null)
+    : supabase.from("deals").select("id", { count: "exact", head: true }).is("owner_id", null).not("status", "in", "(won,lost)");
+  const countResponse = await countQuery;
+  if (countResponse.error) throw new Error("Сделки: " + countResponse.error.message);
+  const total = countResponse.count ?? 0;
+  const offset = page * PAGE_SIZE;
+  if (offset >= total) return { deals: [], total };
+  const query = stageId
+    ? supabase
     .from("deals")
     .select(
       "id, contact_id, owner_id, stage_id, status, object_text, source_id, budget, budget_currency, postponed_until",
       { count: "exact" },
     )
+    .eq("stage_id", stageId)
+    .not("owner_id", "is", null)
     .order("updated_at", { ascending: false })
-    .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
-  query = stageId
-    ? query.eq("stage_id", stageId).not("owner_id", "is", null)
-    : query.is("owner_id", null).not("status", "in", "(won,lost)");
+    .range(offset, Math.min(offset + PAGE_SIZE, total) - 1)
+    : supabase
+    .from("deals")
+    .select("id, contact_id, owner_id, stage_id, status, object_text, source_id, budget, budget_currency, postponed_until", { count: "exact" })
+    .is("owner_id", null)
+    .not("status", "in", "(won,lost)")
+    .order("updated_at", { ascending: false })
+    .range(offset, Math.min(offset + PAGE_SIZE, total) - 1);
   const response = await query;
   if (response.error) throw new Error("Сделки: " + response.error.message);
-  return { deals: (response.data ?? []) as Deal[], total: response.count ?? 0 };
+  return { deals: (response.data ?? []) as Deal[], total };
 }
 
 export default async function DealsPage({
