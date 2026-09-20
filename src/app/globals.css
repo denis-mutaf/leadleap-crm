@@ -518,6 +518,8 @@
   display: grid;
   place-items: center;
   background: rgba(0, 0, 0, 0.1);
+  overflow: auto;
+  animation: create-deal-fade-in 120ms ease-out;
 }
 .create-deal-modal {
   width: min(440px, calc(100vw - 32px));
@@ -530,12 +532,22 @@
     0 2px 4px -1px rgba(0, 0, 0, 0.02);
 }
 .create-deal-modal-wide {
-  width: min(680px, calc(100vw - 32px));
+  width: min(560px, calc(100vw - 32px));
   max-height: min(720px, calc(100vh - 32px));
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  animation: create-deal-rise-in 140ms ease-out;
+}
+.create-deal-modal-wide form {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
 }
 .create-deal-scroll {
+  min-height: 0;
+  flex: 1;
   overflow-y: auto;
 }
 .create-deal-header {
@@ -616,6 +628,7 @@
   gap: 10px;
 }
 .create-deal-footer {
+  flex: none;
   display: flex;
   justify-content: flex-end;
   gap: 8px;
@@ -634,6 +647,14 @@
   margin: -4px 20px 12px;
   color: var(--destructive);
   font-size: 13px;
+}
+@keyframes create-deal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes create-deal-rise-in {
+  from { opacity: 0; transform: translateY(6px) scale(.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 .create-deal-fields fieldset {
   display: grid;
@@ -701,6 +722,23 @@
   justify-content: flex-end;
   gap: 6px;
 }
+@media (min-width: 641px) {
+  .create-deal-fields > label,
+  .create-deal-fields > .create-deal-grid > label {
+    grid-template-columns: 140px minmax(0, 1fr);
+    align-items: center;
+  }
+  .create-deal-fields > label > textarea,
+  .create-deal-fields > label > input,
+  .create-deal-fields > label > select,
+  .create-deal-fields > .create-deal-grid > label > input,
+  .create-deal-fields > .create-deal-grid > label > select {
+    grid-column: 2;
+  }
+  .create-deal-fields > .create-deal-grid {
+    grid-template-columns: 1fr;
+  }
+}
 @media (max-width: 640px) {
   .create-deal-grid {
     grid-template-columns: 1fr;
@@ -714,6 +752,8 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .create-deal-overlay,
+  .create-deal-modal-wide,
   .create-deal-overlay *,
   .create-deal-modal * {
     transition: none;
