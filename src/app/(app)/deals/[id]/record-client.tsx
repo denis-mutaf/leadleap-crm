@@ -279,10 +279,16 @@ export function DealRecordClient({ data }: { data: DealRecordData }) {
         done_by: data.currentUser.id,
       })
       .eq("id", completionTask.id)
+      .is("done_at", null)
       .select("id, result_text, done_at, done_by")
       .maybeSingle();
     setSaving(false);
-    if (result.error || !result.data)
+    if (
+      result.error ||
+      !result.data ||
+      !result.data.result_text?.trim() ||
+      !result.data.done_at
+    )
       showError(result.error ?? { message: "Задача недоступна" });
     else {
       setCompletionTask(null);
