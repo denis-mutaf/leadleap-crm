@@ -137,6 +137,7 @@
 .kettle, .kanban-column { width: 268px; flex: 0 0 268px; min-height: calc(100vh - 160px); } .kettle { border-right: 1px solid var(--border); padding-right: 12px; }
 .column-head { height: 39px; display: flex; align-items: flex-start; gap: 8px; position: relative; padding: 4px 0; color: #606164; font-size: 14px; } .column-head strong { font-weight: 500; max-width: 180px; } .column-more { margin-left: auto; color: var(--muted-foreground); }
 .deal-card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; min-height: 116px; box-shadow: 0 1px 1px rgba(0,0,0,.02); } .deal-card-warning { border-left: 2px solid var(--warning); }
+.deal-card { cursor: grab; transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease; touch-action: none; } .deal-card:active { cursor: grabbing; } .deal-card-dragging { opacity: .35; border-style: dashed; } .deal-card-overlay { cursor: grabbing; box-shadow: 0 14px 30px rgba(28, 31, 38, .18); transform: rotate(1deg); } .drop-target { background: color-mix(in srgb, var(--accent) 35%, transparent); border-radius: 6px; }
 .deal-title, .deal-object, .deal-footer { display: flex; align-items: center; gap: 6px; } .deal-title { font-size: 14px; font-weight: 500; } .deal-object { margin-top: 7px; color: #606164; font-size: 13px; } .deal-tags { display: flex; gap: 4px; margin-top: 7px; flex-wrap: wrap; } .deal-money { margin-top: 8px; font-size: 14px; font-weight: 500; } .deal-footer { border-top: 1px solid var(--border); margin-top: 9px; padding-top: 8px; }
 .task-state { margin-left: auto; font-size: 11px; color: var(--muted-foreground); white-space: nowrap; } .task-state.warning { color: var(--warning); } .task-state.danger { color: var(--destructive); } .task-state.ok { color: var(--success); } .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .btn, .btn-ghost { height: 28px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid var(--input); border-radius: var(--radius); background: var(--secondary); color: var(--foreground); font: inherit; font-size: 13px; }
@@ -168,6 +169,8 @@
 .deals-pagination a:hover {
   background: var(--accent);
 }
+.dnd-feedback { position: fixed; right: 18px; bottom: 18px; max-width: 360px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--foreground); box-shadow: 0 6px 18px rgba(28,31,38,.12); font-size: 13px; }
+@media (prefers-reduced-motion: reduce) { .deal-card { transition: none; } }
 
 @layer base {
   * {
