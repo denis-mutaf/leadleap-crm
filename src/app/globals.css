@@ -171,6 +171,24 @@
   background: var(--accent);
 }
 .dnd-feedback { position: fixed; right: 18px; bottom: 18px; max-width: 360px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--foreground); box-shadow: 0 6px 18px rgba(28,31,38,.12); font-size: 13px; }
+.gate-scrim { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 16px; background: rgba(28,31,38,.28); }
+.gate-dialog {
+  width: min(440px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  box-shadow: 0 18px 48px rgba(28, 31, 38, .2);
+}
+.gate-dialog header { display: flex; justify-content: space-between; gap: 16px; padding: 20px; border-bottom: 1px solid var(--border); }
+.gate-dialog h2 { margin: 0; font-size: 18px; font-weight: 600; }
+.gate-dialog p { margin: 6px 0 0; color: var(--muted-foreground); font-size: 13px; }
+.gate-close { border: 0; background: transparent; color: var(--muted-foreground); cursor: pointer; font-size: 20px; }
+.gate-dialog label { display:flex; flex-direction:column; gap:6px; padding:10px 20px 0; color:var(--muted-foreground); font-size:13px; } .gate-dialog input,.gate-dialog select,.gate-dialog textarea { min-height:32px; padding:6px 8px; border:1px solid var(--input); border-radius:var(--radius); background:var(--background); color:var(--foreground); font:inherit; } .gate-dialog textarea { min-height:72px; resize:vertical; }
+.qual-options { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:18px 20px 4px; } .qual-options button { min-height:64px; border:1px solid var(--border); border-radius:6px; background:var(--background); color:var(--foreground); font:inherit; cursor:pointer; } .qual-options button.selected { border-color:var(--primary); background:var(--accent); }
+.gate-dialog footer { display:flex; justify-content:flex-end; gap:8px; margin-top:18px; padding:14px 20px; border-top:1px solid var(--border); background:var(--secondary); } .gate-primary { height:28px; padding:0 10px; border:1px solid var(--primary); border-radius:var(--radius); background:var(--primary); color:white; font:inherit; font-size:13px; cursor:pointer; } .gate-primary:disabled { opacity:.5; cursor:not-allowed; } kbd { margin-left:4px; padding:1px 4px; border:1px solid currentColor; border-radius:3px; font-size:10px; opacity:.65; }
+@media (max-width:600px) { .gate-dialog footer { flex-direction:column-reverse; } .gate-dialog footer button { width:100%; justify-content:center; } .qual-options { grid-template-columns:1fr; } }
 @media (prefers-reduced-motion: reduce) { .deal-card { transition: none; } }
 
 .record-page { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }

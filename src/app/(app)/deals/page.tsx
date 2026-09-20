@@ -12,6 +12,8 @@ type Stage = {
   name: string;
   position: number;
   kind: "open" | "won" | "lost";
+  requires_next_step: boolean;
+  requires_qualification_tag: boolean;
 };
 type Deal = {
   id: string;
@@ -32,6 +34,8 @@ type Source = { id: string; name: string };
 type Tag = { id: string; name: string };
 type LinkRow = { deal_id: string; project_id?: string; tag_id?: string };
 type Task = { deal_id: string; title: string; due_at: string };
+type LostReason = { id: string; name: string };
+type TaskType = { id: string; name: string };
 type ColumnData = { deals: Deal[]; total: number };
 
 function chunks<T>(values: T[], size: number): T[][] {
@@ -116,7 +120,7 @@ export default async function DealsPage({
   const supabase = await createClient();
   const stagesResponse = await supabase
     .from("stages")
-    .select("id, name, position, kind")
+    .select("id, name, position, kind, requires_next_step, requires_qualification_tag")
     .eq("is_active", true)
     .order("position");
   if (stagesResponse.error)
@@ -215,6 +219,14 @@ export default async function DealsPage({
       "Теги",
     ),
   ]);
+  const [lostReasonsResponse, taskTypesResponse, activeAssigneesResponse] = await Promise.all([
+    supabase.from("lost_reasons").select("id, name").eq("is_active", true).order("position"),
+    supabase.from("task_types").select("id, name").eq("is_active", true).order("name"),
+    supabase.from("profiles").select("id, full_name").eq("is_active", true).in("role", ["manager", "head", "admin"]).order("full_name"),
+  ]);
+  if (lostReasonsResponse.error) throw new Error("Причины отказа: " + lostReasonsResponse.error.message);
+  if (taskTypesResponse.error) throw new Error("Типы задач: " + taskTypesResponse.error.message);
+  if (activeAssigneesResponse.error) throw new Error("Исполнители: " + activeAssigneesResponse.error.message);
   const shown = allDeals.length;
   const total =
     kettle.total + columns.reduce((sum, column) => sum + column.total, 0);
@@ -258,6 +270,10 @@ export default async function DealsPage({
             total: columns[index].total,
             deals: columns[index].deals,
             won: stage.kind === "won",
+            kind: stage.kind,
+            position: stage.position,
+            requires_next_step: stage.requires_next_step,
+            requires_qualification_tag: stage.requires_qualification_tag,
           })),
         ]}
         lostCount={lostCount}
@@ -270,6 +286,11 @@ export default async function DealsPage({
         projectLinks={projectRows as LinkRow[]}
         tagLinks={tagRows as LinkRow[]}
         tasks={tasks as Task[]}
+        lostReasons={(lostReasonsResponse.data ?? []) as LostReason[]}
+        taskTypes={(taskTypesResponse.data ?? []) as TaskType[]}
+        activeAssignees={(activeAssigneesResponse.data ?? []) as Profile[]}
+        lostStageId={lostStage?.id ?? null}
+        lostStageTitle={lostStage?.name ?? "Отказ"}
       />
       {(page > 0 || hasNextPage) && (
         <nav className="deals-pagination" aria-label="Страницы сделок">
