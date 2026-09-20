@@ -1,0 +1,191 @@
+.page {
+  min-height: 100vh;
+  padding: 28px 32px 48px;
+  color: var(--foreground);
+  background: var(--background);
+}
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+.eyebrow {
+  margin: 0 0 4px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.header h1,
+.card h2 {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.header h1 {
+  font-size: 20px;
+}
+.subtitle,
+.cardHeader p {
+  margin: 6px 0 0;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+.role,
+.readOnly {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  padding: 5px 10px;
+  white-space: nowrap;
+}
+.card {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+.card + .card {
+  margin-top: 20px;
+}
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.card h2 {
+  font-size: 15px;
+}
+.tableWrap {
+  overflow-x: auto;
+}
+.table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.table th {
+  height: 38px;
+  padding: 0 14px;
+  color: var(--muted-foreground);
+  background: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+.table td {
+  height: 48px;
+  padding: 6px 14px;
+  border-top: 1px solid var(--border);
+  vertical-align: middle;
+}
+.table tbody tr:hover {
+  background: var(--accent);
+}
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 9px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+.dotWon {
+  background: var(--success);
+}
+.dotLost {
+  background: var(--destructive);
+}
+.kind {
+  display: inline-flex;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.kindWon {
+  background: #e9f8f0;
+  color: #18794e;
+}
+.kindLost {
+  background: #fff0f0;
+  color: #c62a2f;
+}
+.gate {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted-foreground);
+}
+.gate > span {
+  min-width: 28px;
+  border-radius: 999px;
+  padding: 3px 7px;
+  text-align: center;
+  font-size: 11px;
+}
+.on {
+  background: #e9f8f0;
+  color: #18794e;
+}
+.off {
+  background: var(--muted);
+  color: #888;
+}
+.gate small,
+.count small {
+  display: block;
+  color: var(--muted-foreground);
+  font-size: 10px;
+}
+.countHead,
+.count {
+  text-align: right !important;
+}
+.count strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+}
+.historical {
+  opacity: 0.82;
+}
+.note {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+.note p {
+  margin: 0;
+}
+.note strong {
+  color: var(--foreground);
+}
+@media (max-width: 720px) {
+  .page {
+    padding: 20px 16px 32px;
+  }
+  .header {
+    display: block;
+  }
+  .role {
+    display: inline-block;
+    margin-top: 12px;
+  }
+  .cardHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
