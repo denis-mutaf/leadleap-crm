@@ -222,7 +222,7 @@ export default async function DealsPage({
   const [lostReasonsResponse, taskTypesResponse, activeAssigneesResponse] = await Promise.all([
     supabase.from("lost_reasons").select("id, name").eq("is_active", true).order("position"),
     supabase.from("task_types").select("id, name").eq("is_active", true).order("name"),
-    supabase.from("profiles").select("id, full_name").eq("is_active", true).order("full_name"),
+    supabase.from("profiles").select("id, full_name").eq("is_active", true).in("role", ["manager", "head", "admin"]).order("full_name"),
   ]);
   if (lostReasonsResponse.error) throw new Error("Причины отказа: " + lostReasonsResponse.error.message);
   if (taskTypesResponse.error) throw new Error("Типы задач: " + taskTypesResponse.error.message);

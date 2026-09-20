@@ -293,15 +293,44 @@ function GateDialog({
       <div className="gate-dialog" role="dialog" aria-modal="true">
         <header>
           <div>
-            <h2>{gate.lost ? "Закрыть сделку как отказ" : gate.needsQualification ? "Клиент квалифицирован?" : "Нужен следующий шаг"}</h2>
-            <p>{gate.lost ? "Укажите причину — история сделки сохранится." : gate.needsQualification ? "Отмечайте после разговора — это видно всему отделу." : `Сделка не перейдёт в ${gate.target.title}, пока не назначен следующий шаг.`}</p>
+            <h2>
+              {gate.lost
+                ? "Закрыть сделку как отказ"
+                : gate.needsQualification
+                  ? "Клиент квалифицирован?"
+                  : "Нужен следующий шаг"}
+            </h2>
+            <p>
+              {gate.lost
+                ? "Укажите причину — история сделки сохранится."
+                : gate.needsQualification
+                  ? "Отмечайте после разговора — это видно всему отделу."
+                  : `Сделка не перейдёт в ${gate.target.title}, пока не назначен следующий шаг.`}
+            </p>
           </div>
           <button className="gate-close" onClick={onCancel} aria-label="Закрыть">×</button>
         </header>
         {gate.lost ? (
           <>
-            <label>Причина<select value={form.reasonId} onChange={(event) => setForm({ ...form, reasonId: event.target.value })}><option value="">Выберите причину</option>{props.lostReasons.map((reason) => <option key={reason.id} value={reason.id}>{reason.name}</option>)}</select></label>
-            <label>Комментарий<textarea value={form.comment} onChange={(event) => setForm({ ...form, comment: event.target.value })} /></label>
+            <label>
+              Причина
+              <select
+                value={form.reasonId}
+                onChange={(event) => setForm({ ...form, reasonId: event.target.value })}
+              >
+                <option value="">Выберите причину</option>
+                {props.lostReasons.map((reason) => (
+                  <option key={reason.id} value={reason.id}>{reason.name}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Комментарий
+              <textarea
+                value={form.comment}
+                onChange={(event) => setForm({ ...form, comment: event.target.value })}
+              />
+            </label>
           </>
         ) : (
           <>
@@ -319,6 +348,10 @@ export function DealsBoard(props: Props) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [lostCount, setLostCount] = useState(props.lostCount);
+  const [qualifiedDeals, setQualifiedDeals] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [gate, setGate] = useState<Gate | null>(null);
   const [gateForm, setGateForm] = useState<GateForm>({
     qualification: "",
@@ -365,6 +398,16 @@ export function DealsBoard(props: Props) {
       gate.needsTask &&
       (!gateForm.taskTitle || !gateForm.taskDueAt || !gateForm.taskTypeId || !gateForm.taskAssigneeId)
     ) return;
+    const taskDueAt = gate.needsTask
+      ? new Date(gateForm.taskDueAt)
+      : null;
+    if (
+      taskDueAt &&
+      (!Number.isFinite(taskDueAt.getTime()) || taskDueAt.getTime() <= Date.now())
+    ) {
+      setFeedback("Дата следующего шага должна быть в будущем");
+      return;
+    }
     setPending(true);
     const ownerId = gate.lost
       ? gate.deal.owner_id
@@ -377,7 +420,7 @@ export function DealsBoard(props: Props) {
       p_lost_comment: gate.lost ? gateForm.comment || null : null,
       p_qualification: gateForm.qualification || null,
       p_task_title: gate.needsTask ? gateForm.taskTitle : null,
-      p_task_due_at: gate.needsTask ? gateForm.taskDueAt : null,
+      p_task_due_at: gate.needsTask ? taskDueAt?.toISOString() ?? null : null,
       p_task_type_id: gate.needsTask ? gateForm.taskTypeId : null,
       p_task_assignee_id: gate.needsTask ? gateForm.taskAssigneeId : null,
     });
@@ -398,6 +441,10 @@ export function DealsBoard(props: Props) {
       owner_id: transition.owner_id,
       status: transition.status,
     };
+    if (gate.lost) setLostCount((count) => count + 1);
+    if (gate.needsQualification && gateForm.qualification) {
+      setQualifiedDeals((current) => new Set(current).add(gate.deal.id));
+    }
     setColumns((current) => {
       const removed = current.map((column, index) =>
         index === gate.sourceIndex
@@ -439,14 +486,18 @@ export function DealsBoard(props: Props) {
       : columns[targetIndex];
     const deal = source.deals.find((item) => item.id === dealId);
     if (!deal) return;
+    const factualSource = columns.find(
+      (column) => column.id === deal.stage_id,
+    );
     const isForward =
       !droppingLost &&
-      (source.kettle || (target.position ?? 0) > (source.position ?? 0));
+      (target.position ?? 0) > (factualSource?.position ?? 0);
     const needsQualification =
       !droppingLost &&
       isForward &&
       target.kind === "open" &&
       target.requires_qualification_tag === true &&
+      !qualifiedDeals.has(dealId) &&
       !(maps.tagsByDeal.get(dealId) ?? []).some(
         (tag) => tag.name === "КВАЛ" || tag.name === "неквал",
       );
@@ -527,7 +578,11 @@ export function DealsBoard(props: Props) {
     const result = await createClient().rpc("transition_crm_deal", {
       p_deal_id: dealId,
       p_stage_id: targetStage.kettle ? deal.stage_id : targetStage.id,
-      p_owner_id: targetStage.kettle ? null : update.owner_id ?? deal.owner_id,
+      p_owner_id: targetStage.kettle
+        ? null
+        : update.owner_id !== undefined
+          ? update.owner_id
+          : deal.owner_id,
       p_lost_reason_id: null,
       p_lost_comment: null,
       p_qualification: null,
@@ -567,7 +622,7 @@ export function DealsBoard(props: Props) {
           {columns.map((column) => (
             <BoardColumn key={column.id} column={column} maps={maps} />
           ))}
-          <LostDropZone count={props.lostCount} enabled={props.lostStageId !== null} />
+          <LostDropZone count={lostCount} enabled={props.lostStageId !== null} />
         </div>
         <DragOverlay>
           {activeDeal ? (
