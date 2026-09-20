@@ -1,7 +1,7 @@
 "use client";
 
-import { Check, Clock3, FileText, Phone, Plus } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { Check, Clock3, FileText, Phone, Plus, X } from "lucide-react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -16,6 +16,7 @@ type Task = {
   done_by: string | null;
   created_at: string;
   is_auto: boolean;
+  result_text: string | null;
 };
 type Note = {
   id: string;
@@ -172,6 +173,8 @@ export function DealRecordClient({ data }: { data: DealRecordData }) {
   const [taskDue, setTaskDue] = useState("");
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [completionTask, setCompletionTask] = useState<Task | null>(null);
+  const [completionResult, setCompletionResult] = useState("");
   const people = useMemo(
     () => new Map(data.people.map((person) => [person.id, person])),
     [data.people],
@@ -214,6 +217,14 @@ export function DealRecordClient({ data }: { data: DealRecordData }) {
     tab !== "all" ? shownCounts[tab as keyof typeof shownCounts] : 0;
   const activeTotal =
     tab !== "all" ? data.feedCounts[tab as keyof typeof data.feedCounts] : 0;
+  useEffect(() => {
+    if (!completionTask) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !saving) setCompletionTask(null);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [completionTask, saving]);
   function showError(error: { message: string } | null) {
     if (error) setFeedback(error.message);
   }
@@ -256,22 +267,26 @@ export function DealRecordClient({ data }: { data: DealRecordData }) {
       router.refresh();
     }
   }
-  async function completeTask(task: Task) {
-    if (saving || task.done_at) return;
+  async function completeTask(event: FormEvent) {
+    event.preventDefault();
+    if (!completionTask || !completionResult.trim() || saving) return;
     setSaving(true);
     const result = await createClient()
       .from("tasks")
       .update({
+        result_text: completionResult.trim(),
         done_at: new Date().toISOString(),
         done_by: data.currentUser.id,
       })
-      .eq("id", task.id)
-      .select("id")
+      .eq("id", completionTask.id)
+      .select("id, result_text, done_at, done_by")
       .maybeSingle();
     setSaving(false);
     if (result.error || !result.data)
       showError(result.error ?? { message: "Задача недоступна" });
     else {
+      setCompletionTask(null);
+      setCompletionResult("");
       setFeedback("Задача выполнена");
       router.refresh();
     }
@@ -465,7 +480,12 @@ export function DealRecordClient({ data }: { data: DealRecordData }) {
                   <FeedItem icon={<Check size={15} />}>
                     <button
                       className={`record-task ${entry.item.done_at ? "done" : ""}`}
-                      onClick={() => completeTask(entry.item)}
+                      onClick={() => {
+                        if (!entry.item.done_at) {
+                          setCompletionTask(entry.item);
+                          setCompletionResult("");
+                        }
+                      }}
                       disabled={Boolean(entry.item.done_at) || saving}
                     >
                       <span className="record-check">
@@ -478,6 +498,11 @@ export function DealRecordClient({ data }: { data: DealRecordData }) {
                           : fmtDate(entry.item.due_at)}
                       </small>
                     </button>
+                    {entry.item.done_at && entry.item.result_text && (
+                      <div className="record-task-result">
+                        “{entry.item.result_text}”
+                      </div>
+                    )}
                   </FeedItem>
                 )}
                 {entry.type === "stages" && (
@@ -500,6 +525,64 @@ export function DealRecordClient({ data }: { data: DealRecordData }) {
           </div>
         </section>
       </div>
+      {completionTask && (
+        <div
+          className="record-modal-backdrop"
+          role="presentation"
+          onMouseDown={() => !saving && setCompletionTask(null)}
+        >
+          <form
+            className="record-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="completion-title"
+            onSubmit={completeTask}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="record-modal-head">
+              <h2 id="completion-title">Результат задачи</h2>
+              <button
+                type="button"
+                className="record-modal-close"
+                onClick={() => !saving && setCompletionTask(null)}
+                aria-label="Закрыть"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <p className="record-modal-task">{completionTask.title}</p>
+            <label className="record-modal-label" htmlFor="completion-result">
+              Что сделано
+            </label>
+            <textarea
+              id="completion-result"
+              autoFocus
+              required
+              minLength={1}
+              value={completionResult}
+              onChange={(event) => setCompletionResult(event.target.value)}
+              placeholder="Например: договор подписан, документы переданы"
+            />
+            <div className="record-modal-actions">
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => !saving && setCompletionTask(null)}
+                disabled={saving}
+              >
+                Отмена
+              </button>
+              <button
+                type="submit"
+                className="btn"
+                disabled={saving || !completionResult.trim()}
+              >
+                {saving ? "Сохраняем…" : "Выполнить задачу"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
       {feedback && (
         <div className="record-feedback" role="status">
           {feedback}

@@ -120,7 +120,7 @@ export default async function DealRecordPage({
     supabase
       .from("tasks")
       .select(
-        "id, deal_id, assignee_id, title, due_at, done_at, done_by, created_at, is_auto",
+        "id, deal_id, assignee_id, title, due_at, done_at, done_by, created_at, is_auto, result_text",
         { count: "exact" },
       )
       .eq("deal_id", id)
@@ -213,10 +213,14 @@ export default async function DealRecordPage({
   ].filter((phone, index, all) => {
     const keys = phoneDedupKeys(phone.phone);
     if (!keys.length)
-      return all.findIndex((candidate) => candidate.phone === phone.phone) === index;
-    const duplicate = all.slice(0, index).some((candidate) =>
-      phoneDedupKeys(candidate.phone).some((key) => keys.includes(key)),
-    );
+      return (
+        all.findIndex((candidate) => candidate.phone === phone.phone) === index
+      );
+    const duplicate = all
+      .slice(0, index)
+      .some((candidate) =>
+        phoneDedupKeys(candidate.phone).some((key) => keys.includes(key)),
+      );
     return !duplicate;
   });
   const data: DealRecordData = {
