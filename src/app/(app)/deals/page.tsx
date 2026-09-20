@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { DealsBoard } from "./deals-board";
+import { CreateDealModal } from "./create-deal-modal";
 
 const PAGE_SIZE = 24;
 const CHUNK_SIZE = 100;
@@ -28,7 +29,7 @@ type Deal = {
   postponed_until: string | null;
 };
 type Contact = { id: string; full_name: string };
-type Profile = { id: string; full_name: string };
+type Profile = { id: string; full_name: string; role?: string };
 type Project = { id: string; code: string; name: string };
 type Source = { id: string; name: string };
 type Tag = { id: string; name: string };
@@ -77,31 +78,43 @@ async function loadColumn(
   page: number,
 ): Promise<ColumnData> {
   const countQuery = stageId
-    ? supabase.from("deals").select("id", { count: "exact", head: true }).eq("stage_id", stageId).not("owner_id", "is", null)
-    : supabase.from("deals").select("id", { count: "exact", head: true }).is("owner_id", null).not("status", "in", "(won,lost)");
+    ? supabase
+        .from("deals")
+        .select("id", { count: "exact", head: true })
+        .eq("stage_id", stageId)
+        .not("owner_id", "is", null)
+    : supabase
+        .from("deals")
+        .select("id", { count: "exact", head: true })
+        .is("owner_id", null)
+        .not("status", "in", "(won,lost)");
   const countResponse = await countQuery;
-  if (countResponse.error) throw new Error("Сделки: " + countResponse.error.message);
+  if (countResponse.error)
+    throw new Error("Сделки: " + countResponse.error.message);
   const total = countResponse.count ?? 0;
   const offset = page * PAGE_SIZE;
   if (offset >= total) return { deals: [], total };
   const query = stageId
     ? supabase
-    .from("deals")
-    .select(
-      "id, contact_id, owner_id, stage_id, status, object_text, source_id, budget, budget_currency, postponed_until",
-      { count: "exact" },
-    )
-    .eq("stage_id", stageId)
-    .not("owner_id", "is", null)
-    .order("updated_at", { ascending: false })
-    .range(offset, Math.min(offset + PAGE_SIZE, total) - 1)
+        .from("deals")
+        .select(
+          "id, contact_id, owner_id, stage_id, status, object_text, source_id, budget, budget_currency, postponed_until",
+          { count: "exact" },
+        )
+        .eq("stage_id", stageId)
+        .not("owner_id", "is", null)
+        .order("updated_at", { ascending: false })
+        .range(offset, Math.min(offset + PAGE_SIZE, total) - 1)
     : supabase
-    .from("deals")
-    .select("id, contact_id, owner_id, stage_id, status, object_text, source_id, budget, budget_currency, postponed_until", { count: "exact" })
-    .is("owner_id", null)
-    .not("status", "in", "(won,lost)")
-    .order("updated_at", { ascending: false })
-    .range(offset, Math.min(offset + PAGE_SIZE, total) - 1);
+        .from("deals")
+        .select(
+          "id, contact_id, owner_id, stage_id, status, object_text, source_id, budget, budget_currency, postponed_until",
+          { count: "exact" },
+        )
+        .is("owner_id", null)
+        .not("status", "in", "(won,lost)")
+        .order("updated_at", { ascending: false })
+        .range(offset, Math.min(offset + PAGE_SIZE, total) - 1);
   const response = await query;
   if (response.error) throw new Error("Сделки: " + response.error.message);
   return { deals: (response.data ?? []) as Deal[], total };
@@ -161,7 +174,7 @@ export default async function DealsPage({
         "Контакты",
       ),
       loadByIds(
-        ownerIds,
+        [...new Set(ownerIds)],
         (ids) =>
           supabase.from("profiles").select("id, full_name").in("id", ids),
         "Ответственные",
@@ -176,7 +189,7 @@ export default async function DealsPage({
         "Проекты сделок",
       ),
       loadByIds(
-        sourceIds,
+        [...new Set(sourceIds)],
         (ids) => supabase.from("sources").select("id, name").in("id", ids),
         "Источники",
       ),
@@ -207,17 +220,41 @@ export default async function DealsPage({
   const tagIds = (tagRows as LinkRow[]).flatMap((row) =>
     row.tag_id ? [row.tag_id] : [],
   );
-  const [projects, tags] = await Promise.all([
+  const [
+    projectsResponse,
+    tagsResponse,
+    modalSourcesResponse,
+    modalProjectsResponse,
+    modalTagsResponse,
+    modalOwnersResponse,
+  ] = await Promise.all([
     loadByIds(
-      projectIds,
+      [...new Set(projectIds)],
       (ids) => supabase.from("projects").select("id, code, name").in("id", ids),
       "Проекты",
     ),
     loadByIds(
-      tagIds,
+      [...new Set(tagIds)],
       (ids) => supabase.from("tags").select("id, name").in("id", ids),
       "Теги",
     ),
+    supabase
+      .from("sources")
+      .select("id, name")
+      .eq("is_active", true)
+      .order("name"),
+    supabase
+      .from("projects")
+      .select("id, code, name")
+      .eq("is_active", true)
+      .order("position"),
+    supabase.from("tags").select("id, name").order("name"),
+    supabase
+      .from("profiles")
+      .select("id, full_name")
+      .eq("is_active", true)
+      .in("role", ["manager", "head", "admin"])
+      .order("full_name"),
   ]);
   const [lostReasonsResponse, taskTypesResponse, activeAssigneesResponse] = await Promise.all([
     supabase.from("lost_reasons").select("id, name").eq("is_active", true).order("position"),
@@ -227,6 +264,16 @@ export default async function DealsPage({
   if (lostReasonsResponse.error) throw new Error("Причины отказа: " + lostReasonsResponse.error.message);
   if (taskTypesResponse.error) throw new Error("Типы задач: " + taskTypesResponse.error.message);
   if (activeAssigneesResponse.error) throw new Error("Исполнители: " + activeAssigneesResponse.error.message);
+  if (modalSourcesResponse.error)
+    throw new Error("Источники: " + modalSourcesResponse.error.message);
+  if (modalProjectsResponse.error)
+    throw new Error("Проекты: " + modalProjectsResponse.error.message);
+  if (modalTagsResponse.error)
+    throw new Error("Теги: " + modalTagsResponse.error.message);
+  if (modalOwnersResponse.error)
+    throw new Error("Ответственные: " + modalOwnersResponse.error.message);
+  const projects = projectsResponse;
+  const tags = tagsResponse;
   const shown = allDeals.length;
   const total =
     kettle.total + columns.reduce((sum, column) => sum + column.total, 0);
@@ -245,6 +292,13 @@ export default async function DealsPage({
         <span className="toolbar-label">Воронка</span>
         <span className="header-spacer" />
         <span className="summary">Сделки в воронке</span>
+        <CreateDealModal
+          stages={stages}
+          sources={(modalSourcesResponse.data ?? []) as Source[]}
+          projects={(modalProjectsResponse.data ?? []) as Project[]}
+          tags={(modalTagsResponse.data ?? []) as Tag[]}
+          owners={(modalOwnersResponse.data ?? []) as Profile[]}
+        />
       </div>
       <div className="filterbar">
         <span className="static-filter">Сортировка</span>
