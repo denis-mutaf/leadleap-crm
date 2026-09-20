@@ -38,6 +38,8 @@ export function CreateDealModal({
     [title, setTitle] = useState(""),
     [objectText, setObjectText] = useState(""),
     [tagIds, setTagIds] = useState<string[]>([]),
+    [tagPickerOpen, setTagPickerOpen] = useState(false),
+    [tagSearch, setTagSearch] = useState(""),
     [note, setNote] = useState(""),
     [candidates, setCandidates] = useState<Candidate[]>([]),
     [selectedContact, setSelectedContact] = useState<string | null>(null),
@@ -64,6 +66,10 @@ export function CreateDealModal({
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && tagPickerOpen) {
+        setTagPickerOpen(false);
+        return;
+      }
       if (e.key === "Escape" && !saving) {
         setOpen(false);
         reset();
@@ -71,8 +77,8 @@ export function CreateDealModal({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, saving]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, saving, tagPickerOpen]);
   function reset() {
     request.current += 1;
     setFullName("");
@@ -84,6 +90,8 @@ export function CreateDealModal({
     setTitle("");
     setObjectText("");
     setTagIds([]);
+    setTagPickerOpen(false);
+    setTagSearch("");
     setNote("");
     setCandidates([]);
     setSelectedContact(null);
@@ -206,7 +214,10 @@ export function CreateDealModal({
                     <input
                       autoFocus
                       value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
+                      onChange={(e) => {
+                        setFullName(e.target.value);
+                        setSelectedContact(null);
+                      }}
                     />
                   </label>
                   <label>
@@ -344,21 +355,72 @@ export function CreateDealModal({
                     ))}
                   </select>
                 </label>
-                <fieldset>
-                  <legend>Теги</legend>
-                  <div className="create-deal-checks">
-                    {tags.map((x) => (
-                      <label key={x.id}>
+                <div className="create-deal-tag-picker">
+                  <span className="create-deal-field-label">Метки</span>
+                  <div className="create-deal-tag-control">
+                    <div className="create-deal-tag-chips">
+                      {tagIds.length === 0 && (
+                        <span className="create-deal-muted">Нет меток</span>
+                      )}
+                      {tagIds.map((id) => {
+                        const tag = tags.find((item) => item.id === id);
+                        return tag ? (
+                          <button
+                            className="create-deal-chip"
+                            key={id}
+                            type="button"
+                            aria-label={`Удалить метку ${tag.name}`}
+                            onClick={() => setTagIds(toggle(tagIds, id))}
+                          >
+                            {tag.name} ×
+                          </button>
+                        ) : null;
+                      })}
+                      <button
+                        className="btn btn-ghost create-deal-add-tag"
+                        type="button"
+                        aria-label="Добавить метку"
+                        aria-expanded={tagPickerOpen}
+                        onClick={() => setTagPickerOpen((value) => !value)}
+                      >
+                        + Добавить метку
+                      </button>
+                    </div>
+                    {tagPickerOpen && (
+                      <div className="create-deal-tag-menu">
                         <input
-                          type="checkbox"
-                          checked={tagIds.includes(x.id)}
-                          onChange={() => setTagIds(toggle(tagIds, x.id))}
+                          autoFocus
+                          aria-label="Поиск меток"
+                          placeholder="Поиск меток"
+                          value={tagSearch}
+                          onChange={(e) => setTagSearch(e.target.value)}
                         />
-                        {x.name}
-                      </label>
-                    ))}
+                        <div className="create-deal-tag-options">
+                          {tags
+                            .filter((tag) =>
+                              tag.name
+                                .toLocaleLowerCase()
+                                .includes(tagSearch.toLocaleLowerCase()),
+                            )
+                            .map((tag) => (
+                              <button
+                                className="create-deal-tag-option"
+                                key={tag.id}
+                                type="button"
+                                aria-pressed={tagIds.includes(tag.id)}
+                                onClick={() =>
+                                  setTagIds(toggle(tagIds, tag.id))
+                                }
+                              >
+                                <span>{tag.name}</span>
+                                {tagIds.includes(tag.id) && <span>✓</span>}
+                              </button>
+                            ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </fieldset>
+                </div>
                 <label>
                   Объект / комментарий
                   <textarea
