@@ -500,6 +500,10 @@
 }
 .dnd-feedback { position: fixed; right: 18px; bottom: 18px; max-width: 360px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--foreground); box-shadow: 0 6px 18px rgba(28,31,38,.12); font-size: 13px; }
 .gate-scrim { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 16px; background: rgba(28,31,38,.28); }
+.gate-scrim { animation: gate-fade-in 140ms ease-out; }
+.gate-dialog { animation: gate-dialog-in 160ms ease-out; }
+@keyframes gate-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes gate-dialog-in { from { opacity: 0; transform: translateY(6px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 .gate-dialog {
   width: min(440px, 100%);
   max-height: calc(100vh - 32px);
@@ -518,6 +522,7 @@
 .gate-dialog footer { display:flex; justify-content:flex-end; gap:8px; margin-top:18px; padding:14px 20px; border-top:1px solid var(--border); background:var(--secondary); } .gate-primary { height:28px; padding:0 10px; border:1px solid var(--primary); border-radius:var(--radius); background:var(--primary); color:white; font:inherit; font-size:13px; cursor:pointer; } .gate-primary:disabled { opacity:.5; cursor:not-allowed; } kbd { margin-left:4px; padding:1px 4px; border:1px solid currentColor; border-radius:3px; font-size:10px; opacity:.65; }
 @media (max-width:600px) { .gate-dialog footer { flex-direction:column-reverse; } .gate-dialog footer button { width:100%; justify-content:center; } .qual-options { grid-template-columns:1fr; } }
 @media (prefers-reduced-motion: reduce) { .deal-card { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .gate-scrim, .gate-dialog { animation: none; } }
 
 .record-page { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 .record-header { height: 48px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 16px; border-bottom: 1px solid var(--border); }
@@ -913,6 +918,10 @@
     transition: none;
     animation: none;
   }
+}
+@media (max-width: 600px) {
+  .nav { min-width: 0; width: 100%; overflow-x: hidden; }
+  .nav nav { flex: 1 1 auto; min-width: 0; width: auto; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: thin; }
 }
 @layer base {
   * {

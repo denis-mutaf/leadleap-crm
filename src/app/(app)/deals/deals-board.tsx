@@ -1,6 +1,8 @@
 "use client";
 import {
   DndContext,
+  rectIntersection,
+  pointerWithin,
   DragEndEvent,
   DragOverlay,
   DragStartEvent,
@@ -83,6 +85,11 @@ type GateForm = {
   taskDueAt: string;
   taskTypeId: string;
   taskAssigneeId: string;
+};
+type MobileConfirmation = {
+  dealId: string;
+  targetId: string;
+  destination: string;
 };
 type Maps = {
   contacts: Map<string, Contact>;
@@ -356,6 +363,8 @@ export function DealsBoard(props: Props) {
   const [qualifiedDeals, setQualifiedDeals] = useState<Set<string>>(
     () => new Set(),
   );
+  const [mobileConfirmation, setMobileConfirmation] =
+    useState<MobileConfirmation | null>(null);
   const [taskOverrides, setTaskOverrides] = useState<Map<string, Task>>(
     () => new Map(),
   );
@@ -377,6 +386,8 @@ export function DealsBoard(props: Props) {
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor),
   );
+  const collisionDetectionStrategy = (args: Parameters<typeof pointerWithin>[0]) =>
+    args.pointerCoordinates ? pointerWithin(args) : rectIntersection(args);
   useEffect(() => {
     if (!feedback) return;
     const timeout = window.setTimeout(() => setFeedback(null), 2800);
@@ -384,11 +395,14 @@ export function DealsBoard(props: Props) {
   }, [feedback]);
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && gate && !pending) setGate(null);
+      if (event.key === "Escape" && !pending) {
+        if (gate) setGate(null);
+        if (mobileConfirmation) setMobileConfirmation(null);
+      }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [gate, pending]);
+  }, [gate, mobileConfirmation, pending]);
   const activeDeal = columns
     .flatMap((column) => column.deals)
     .find((deal) => deal.id === activeId);
@@ -483,11 +497,12 @@ export function DealsBoard(props: Props) {
     setPending(false);
     setFeedback("Сделка перемещена");
   }
-  async function onDragEnd(event: DragEndEvent) {
-    setActiveId(null);
+  async function moveDeal(
+    dealId: string,
+    targetId: string,
+    allowMobileConfirmation = false,
+  ) {
     if (pending) return;
-    const dealId = String(event.active.id);
-    const targetId = event.over?.id ? String(event.over.id) : null;
     const sourceIndex = columns.findIndex((column) =>
       column.deals.some((deal) => deal.id === dealId),
     );
@@ -553,6 +568,14 @@ export function DealsBoard(props: Props) {
         taskTypeId: props.taskTypes[0]?.id ?? "",
         taskAssigneeId: deal.owner_id ?? props.currentUserId,
       }));
+      return;
+    }
+    if (window.innerWidth <= 600 && !allowMobileConfirmation) {
+      setMobileConfirmation({
+        dealId,
+        targetId,
+        destination: target.kettle ? "Общий котёл" : target.title,
+      });
       return;
     }
     let targetStage = target;
@@ -631,10 +654,16 @@ export function DealsBoard(props: Props) {
     setFeedback("Сделка перемещена");
     setPending(false);
   }
+  function onDragEnd(event: DragEndEvent) {
+    setActiveId(null);
+    const targetId = event.over?.id ? String(event.over.id) : null;
+    if (targetId) void moveDeal(String(event.active.id), targetId);
+  }
   return (
     <>
       <DndContext
         sensors={sensors}
+        collisionDetection={collisionDetectionStrategy}
         onDragStart={onDragStart}
         onDragCancel={onDragCancel}
         onDragEnd={onDragEnd}
@@ -657,6 +686,33 @@ export function DealsBoard(props: Props) {
         </div>
       )}
       {gate && <GateDialog gate={gate} form={gateForm} setForm={setGateForm} props={props} pending={pending} onCancel={() => setGate(null)} onSubmit={commitGate} />}
+      {mobileConfirmation && (
+        <div className="gate-scrim">
+          <div className="gate-dialog move-confirmation" role="dialog" aria-modal="true">
+            <header>
+              <div>
+                <h2>Подтвердить перенос</h2>
+                <p>Переместить сделку в «{mobileConfirmation.destination}»?</p>
+              </div>
+              <button className="gate-close" onClick={() => setMobileConfirmation(null)} aria-label="Закрыть">×</button>
+            </header>
+            <footer>
+              <button className="btn" onClick={() => setMobileConfirmation(null)} disabled={pending}>Отмена <kbd>Esc</kbd></button>
+              <button
+                className="gate-primary"
+                onClick={() => {
+                  const confirmation = mobileConfirmation;
+                  setMobileConfirmation(null);
+                  void moveDeal(confirmation.dealId, confirmation.targetId, true);
+                }}
+                disabled={pending}
+              >
+                Перевести <kbd>↵</kbd>
+              </button>
+            </footer>
+          </div>
+        </div>
+      )}
     </>
   );
 }

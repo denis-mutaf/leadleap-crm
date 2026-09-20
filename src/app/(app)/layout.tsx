@@ -1,8 +1,48 @@
-import Link from "next/link";
 import { BarChart3, CheckSquare, Contact, Inbox, LayoutDashboard, Settings } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { USER_ROLE_LABELS } from "@/lib/types";
 import { SignOutButton } from "./sign-out-button";
-const NAV = [{ href: "/deals", label: "Сделки", icon: LayoutDashboard, roles: ["manager", "head", "admin"] }, { href: "/tasks", label: "Задачи", icon: CheckSquare, roles: ["manager", "head", "admin"] }, { href: "/inbox", label: "Инбокс", icon: Inbox, roles: ["manager", "head", "admin"] }, { href: "/contacts", label: "Контакты", icon: Contact, roles: ["manager", "head", "admin"] }, { href: "/reports", label: "Отчёты", icon: BarChart3, roles: ["head", "admin", "builder"] }, { href: "/settings", label: "Настройки", icon: Settings, roles: ["head", "admin"] }];
-export default async function AppLayout({ children }: { children: React.ReactNode }) { const profile = await getCurrentProfile(); if (!profile) redirect("/login"); const visibleNav = NAV.filter((item) => !item.roles || item.roles.includes(profile.role)); return <div className="app-shell"><aside className="nav"><div className="nav-brand">ISRAGRUP</div><nav>{visibleNav.map(({ href, label, icon: Icon }) => <Link className={`nav-item ${href === "/deals" ? "is-active" : ""}`} href={href} key={href}><Icon size={16} />{label}</Link>)}</nav><div className="nav-foot"><span className="avatar">{profile.full_name.slice(0, 2).toUpperCase()}</span><span className="nav-person"><strong>{profile.full_name}</strong><small>{USER_ROLE_LABELS[profile.role]}</small></span><SignOutButton /></div></aside><main className="main-shell">{children}</main></div>; }
+import { AppNav, type AppNavItem } from "./app-nav";
+
+type NavEntry = AppNavItem & {
+  roles: string[];
+};
+
+const NAV: NavEntry[] = [
+  { href: "/deals", label: "Сделки", icon: LayoutDashboard, roles: ["manager", "head", "admin"] },
+  { href: "/tasks", label: "Задачи", icon: CheckSquare, roles: ["manager", "head", "admin"] },
+  { href: "/inbox", label: "Инбокс", icon: Inbox, roles: ["manager", "head", "admin"] },
+  { href: "/contacts", label: "Контакты", icon: Contact, roles: ["manager", "head", "admin"] },
+  { href: "/reports", label: "Отчёты", icon: BarChart3, roles: ["head", "admin", "builder"] },
+  { href: "/settings", label: "Настройки", icon: Settings, roles: ["head", "admin"] },
+];
+
+export default async function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const profile = await getCurrentProfile();
+  if (!profile) redirect("/login");
+
+  const visibleNav = NAV.filter((item) => item.roles.includes(profile.role));
+
+  return (
+    <div className="app-shell">
+      <aside className="nav">
+        <div className="nav-brand">ISRAGRUP</div>
+        <AppNav items={visibleNav} />
+        <div className="nav-foot">
+          <span className="avatar">{profile.full_name.slice(0, 2).toUpperCase()}</span>
+          <span className="nav-person">
+            <strong>{profile.full_name}</strong>
+            <small>{USER_ROLE_LABELS[profile.role]}</small>
+          </span>
+          <SignOutButton />
+        </div>
+      </aside>
+      <main className="main-shell">{children}</main>
+    </div>
+  );
+}
