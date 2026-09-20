@@ -1,105 +1,15 @@
 "use client";
-
 import { Plus, X } from "lucide-react";
-import { FormEvent, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-
-type Stage = { id: string; name: string; kind: "open" | "won" | "lost" };
-type Contact = { id: string; full_name: string };
-
-export function CreateDealModal({
-  stages,
-  contacts,
-  currentUserId,
-}: {
-  stages: Stage[];
-  contacts: Contact[];
-  currentUserId: string;
-}) {
-  const openStages = stages.filter((stage) => stage.kind === "open");
-  const [isOpen, setIsOpen] = useState(false);
-  const [contactId, setContactId] = useState(contacts[0]?.id ?? "");
-  const [stageId, setStageId] = useState(openStages[0]?.id ?? "");
-  const [title, setTitle] = useState("");
-  const [objectText, setObjectText] = useState("");
-  const [budget, setBudget] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  function close() {
-    if (!saving) {
-      setIsOpen(false);
-      setError(null);
-    }
-  }
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!contactId || !stageId || !title.trim()) {
-      setError("Укажите контакт, этап и название сделки");
-      return;
-    }
-    setSaving(true);
-    setError(null);
-    const result = await createClient()
-      .from("deals")
-      .insert({
-        contact_id: contactId,
-        owner_id: currentUserId,
-        stage_id: stageId,
-        title: title.trim(),
-        object_text: objectText.trim() || null,
-        budget: budget ? Number(budget) : null,
-        budget_currency: "EUR",
-      })
-      .select("id")
-      .maybeSingle();
-    if (result.error) {
-      setError(result.error.message);
-      setSaving(false);
-      return;
-    }
-    setTitle("");
-    setObjectText("");
-    setBudget("");
-    setSaving(false);
-    setIsOpen(false);
-    window.location.reload();
-  }
-
-  return (
-    <>
-      <button className="btn create-deal-trigger" type="button" onClick={() => setIsOpen(true)}>
-        <Plus size={15} /> Новая сделка
-      </button>
-      {isOpen && (
-        <div className="create-deal-overlay" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && close()}>
-          <section className="create-deal-modal" role="dialog" aria-modal="true" aria-labelledby="create-deal-title">
-            <header className="create-deal-header">
-              <div>
-                <h2 id="create-deal-title">Новая сделка</h2>
-                <p>Добавьте сделку в воронку</p>
-              </div>
-              <button className="create-deal-close" type="button" aria-label="Закрыть" onClick={close}>
-                <X size={16} />
-              </button>
-            </header>
-            <form onSubmit={submit}>
-              <div className="create-deal-fields">
-                <label>Название сделки<input autoFocus value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Например, Квартира на Пушкина" /></label>
-                <label>Контакт<select value={contactId} onChange={(event) => setContactId(event.target.value)}><option value="">Выберите контакт</option>{contacts.map((contact) => <option key={contact.id} value={contact.id}>{contact.full_name}</option>)}</select></label>
-                <div className="create-deal-grid">
-                  <label>Этап<select value={stageId} onChange={(event) => setStageId(event.target.value)}>{openStages.map((stage) => <option key={stage.id} value={stage.id}>{stage.name}</option>)}</select></label>
-                  <label>Бюджет<input inputMode="decimal" type="number" min="0" value={budget} onChange={(event) => setBudget(event.target.value)} placeholder="0" /></label>
-                </div>
-                <label>Объект или комментарий<textarea value={objectText} onChange={(event) => setObjectText(event.target.value)} placeholder="Необязательно" rows={3} /></label>
-              </div>
-              {error && <p className="create-deal-error" role="alert">{error}</p>}
-              <footer className="create-deal-footer"><button className="btn" type="button" onClick={close}>Отмена</button><button className="btn create-deal-submit" type="submit" disabled={saving}>{saving ? "Сохраняем…" : "Создать сделку"}</button></footer>
-            </form>
-          </section>
-        </div>
-      )}
-    </>
-  );
+type Option={id:string;name:string}; type Stage=Option&{kind:"open"|"won"|"lost"}; type Owner={id:string;full_name:string};
+type Candidate={contact_id:string;full_name:string;latest_deal_id:string|null;latest_stage:string|null;deal_count:number};
+export function CreateDealModal({stages,sources,projects,tags,owners}:{stages:Stage[];sources:Option[];projects:Option[];tags:Option[];owners:Owner[]}){
+ const router=useRouter(); const [open,setOpen]=useState(false),[fullName,setFullName]=useState(""),[phone,setPhone]=useState(""),[sourceId,setSourceId]=useState(""),[projectIds,setProjectIds]=useState<string[]>([]),[stageId,setStageId]=useState(stages.find(s=>s.kind==="open")?.id??""),[ownerId,setOwnerId]=useState(""),[title,setTitle]=useState(""),[objectText,setObjectText]=useState(""),[tagIds,setTagIds]=useState<string[]>([]),[note,setNote]=useState(""),[candidates,setCandidates]=useState<Candidate[]>([]),[selectedContact,setSelectedContact]=useState<string|null>(null),[searching,setSearching]=useState(false),[saving,setSaving]=useState(false),[error,setError]=useState<string|null>(null); const request=useRef(0); const digits=phone.replace(/\D/g,"");
+ useEffect(()=>{if(!open||digits.length<8)return; const n=++request.current;const timer=window.setTimeout(async()=>{const r=await createClient().rpc("find_contacts_by_phone",{p_phone:phone});if(n!==request.current)return;setSearching(false);if(r.error)setError(r.error.message);else setCandidates((r.data??[]) as Candidate[])},350);return()=>window.clearTimeout(timer)},[open,phone,digits.length]);
+ useEffect(()=>{if(!open)return;const onKey=(e:KeyboardEvent)=>{if(e.key==="Escape"&&!saving){setOpen(false);reset()}};window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey)},[open,saving]);
+ function reset(){setFullName("");setPhone("");setSourceId("");setProjectIds([]);setOwnerId("");setTitle("");setObjectText("");setTagIds([]);setNote("");setCandidates([]);setSelectedContact(null);setError(null)} function close(){if(!saving){setOpen(false);reset()}} function toggle(xs:string[],id:string){return xs.includes(id)?xs.filter(x=>x!==id):[...xs,id]}
+ async function submit(e:FormEvent<HTMLFormElement>){e.preventDefault();if(!fullName.trim()||digits.length<8||!sourceId||!projectIds.length||!stageId||!title.trim()){setError("Заполните обязательные поля: имя, телефон, источник, проект, этап и название");return}setSaving(true);setError(null);const r=await createClient().rpc("create_crm_deal",{p_full_name:fullName.trim(),p_phone:phone,p_source_id:sourceId,p_project_ids:projectIds,p_stage_id:stageId,p_title:title.trim(),p_owner_id:ownerId||null,p_object_text:objectText.trim()||null,p_tag_ids:tagIds,p_note:note.trim()||null,p_reuse_contact_id:selectedContact});if(r.error){setError(r.error.message);setSaving(false);return}const result=r.data as {kind?:string;deal_id?:string};if(result.kind==="created"&&result.deal_id){router.push(`/deals/${result.deal_id}`);return}if(result.kind==="duplicate"){setError("Найден существующий контакт. Выберите его ниже, чтобы добавить сделку.");setSaving(false);return}setError("Не удалось создать сделку");setSaving(false)}
+ return <><button className="btn create-deal-trigger" type="button" onClick={()=>setOpen(true)}><Plus size={15}/> Новая сделка</button>{open&&<div className="create-deal-overlay" role="presentation" onMouseDown={e=>e.target===e.currentTarget&&close()}><section className="create-deal-modal create-deal-modal-wide" role="dialog" aria-modal="true" aria-labelledby="create-deal-title"><header className="create-deal-header"><div><h2 id="create-deal-title">Новая сделка</h2><p>Контакт и параметры новой сделки</p></div><button className="create-deal-close" type="button" aria-label="Закрыть" onClick={close}><X size={16}/></button></header><form onSubmit={submit}><div className="create-deal-fields create-deal-scroll"><div className="create-deal-grid"><label>Имя контакта *<input autoFocus value={fullName} onChange={e=>setFullName(e.target.value)}/></label><label>Телефон *<input value={phone} onChange={e=>{setPhone(e.target.value);setSearching(e.target.value.replace(/\D/g,"").length>=8);setSelectedContact(null);setCandidates([])}} placeholder="+373 60000000"/></label></div>{searching&&<p className="create-deal-hint">Проверяем дубликаты…</p>}{candidates.length>0&&<div className="duplicate-list"><strong>Найдено совпадение</strong>{candidates.map(c=><div className={`duplicate-card ${selectedContact===c.contact_id?"is-selected":""}`} key={c.contact_id}><div><b>{c.full_name}</b><span>{c.latest_stage?`Последняя сделка · ${c.latest_stage}`:"Сделок нет"} · всего {c.deal_count}</span></div><div className="duplicate-actions">{c.latest_deal_id&&<button className="btn btn-ghost" type="button" onClick={()=>router.push(`/deals/${c.latest_deal_id}`)}>Открыть сделку</button>}<button className="btn" type="button" onClick={()=>{setSelectedContact(c.contact_id);setFullName(c.full_name)}}>Добавить сделку этому контакту</button></div></div>)}</div>}<div className="create-deal-grid"><label>Источник / канал *<select value={sourceId} onChange={e=>setSourceId(e.target.value)}><option value="">Выберите источник</option>{sources.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label><label>Этап *<select value={stageId} onChange={e=>setStageId(e.target.value)}>{stages.filter(s=>s.kind==="open").map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label></div><fieldset><legend>Проекты * — выберите хотя бы один</legend><div className="create-deal-checks">{projects.map(x=><label key={x.id}><input type="checkbox" checked={projectIds.includes(x.id)} onChange={()=>setProjectIds(toggle(projectIds,x.id))}/>{x.name}</label>)}</div></fieldset><label>Название сделки *<input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Например, Покупка квартиры"/></label><label>Ответственный (необязательно)<select value={ownerId} onChange={e=>setOwnerId(e.target.value)}><option value="">Общий котёл</option>{owners.map(x=><option key={x.id} value={x.id}>{x.full_name}</option>)}</select></label><fieldset><legend>Теги</legend><div className="create-deal-checks">{tags.map(x=><label key={x.id}><input type="checkbox" checked={tagIds.includes(x.id)} onChange={()=>setTagIds(toggle(tagIds,x.id))}/>{x.name}</label>)}</div></fieldset><label>Объект / комментарий<textarea value={objectText} onChange={e=>setObjectText(e.target.value)} rows={2}/></label><label>Заметка<textarea value={note} onChange={e=>setNote(e.target.value)} rows={2}/></label></div>{error&&<p className="create-deal-error" role="alert">{error}</p>}<footer className="create-deal-footer"><button className="btn" type="button" onClick={close}>Отмена</button><button className="btn create-deal-submit" type="submit" disabled={saving}>{saving?"Создаём…":"Создать сделку"}</button></footer></form></section></div>}</>;
 }

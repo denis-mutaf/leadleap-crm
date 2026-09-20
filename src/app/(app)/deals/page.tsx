@@ -27,7 +27,7 @@ type Deal = {
   postponed_until: string | null;
 };
 type Contact = { id: string; full_name: string };
-type Profile = { id: string; full_name: string };
+type Profile = { id: string; full_name: string; role?: string };
 type Project = { id: string; code: string; name: string };
 type Source = { id: string; name: string };
 type Tag = { id: string; name: string };
@@ -143,12 +143,6 @@ export default async function DealsPage({
     ...columns.map((column) => column.deals),
   ].flat();
   const dealIds = allDeals.map((deal) => deal.id);
-  const sourceIds = allDeals.flatMap((deal) =>
-    deal.source_id ? [deal.source_id] : [],
-  );
-  const ownerIds = allDeals.flatMap((deal) =>
-    deal.owner_id ? [deal.owner_id] : [],
-  );
   const [contacts, owners, projectRows, sources, tagRows, tasks] =
     await Promise.all([
       supabase
@@ -159,12 +153,7 @@ export default async function DealsPage({
           if (response.error) throw new Error("Контакты: " + response.error.message);
           return response.data ?? [];
         }),
-      loadByIds(
-        ownerIds,
-        (ids) =>
-          supabase.from("profiles").select("id, full_name").in("id", ids),
-        "Ответственные",
-      ),
+      supabase.from("profiles").select("id, full_name, role").eq("is_active", true).in("role", ["manager", "head", "admin"]).order("full_name").then((r) => { if (r.error) throw new Error("Ответственные: " + r.error.message); return r.data ?? []; }),
       loadByIds(
         dealIds,
         (ids) =>
@@ -174,11 +163,7 @@ export default async function DealsPage({
             .in("deal_id", ids),
         "Проекты сделок",
       ),
-      loadByIds(
-        sourceIds,
-        (ids) => supabase.from("sources").select("id, name").in("id", ids),
-        "Источники",
-      ),
+      supabase.from("sources").select("id, name").eq("is_active", true).order("name").then((r) => { if (r.error) throw new Error("Источники: " + r.error.message); return r.data ?? []; }),
       loadByIds(
         dealIds,
         (ids) =>
@@ -200,24 +185,14 @@ export default async function DealsPage({
         "Задачи",
       ),
     ]);
-  const projectIds = (projectRows as LinkRow[]).flatMap((row) =>
-    row.project_id ? [row.project_id] : [],
-  );
-  const tagIds = (tagRows as LinkRow[]).flatMap((row) =>
-    row.tag_id ? [row.tag_id] : [],
-  );
-  const [projects, tags] = await Promise.all([
-    loadByIds(
-      projectIds,
-      (ids) => supabase.from("projects").select("id, code, name").in("id", ids),
-      "Проекты",
-    ),
-    loadByIds(
-      tagIds,
-      (ids) => supabase.from("tags").select("id, name").in("id", ids),
-      "Теги",
-    ),
+  const [projectsResponse, tagsResponse] = await Promise.all([
+    supabase.from("projects").select("id, code, name").eq("is_active", true).order("position"),
+    supabase.from("tags").select("id, name").eq("is_active", true).order("name"),
   ]);
+  if (projectsResponse.error) throw new Error("Проекты: " + projectsResponse.error.message);
+  if (tagsResponse.error) throw new Error("Теги: " + tagsResponse.error.message);
+  const projects = projectsResponse.data ?? [];
+  const tags = tagsResponse.data ?? [];
   const shown = allDeals.length;
   const total =
     kettle.total + columns.reduce((sum, column) => sum + column.total, 0);
@@ -236,7 +211,7 @@ export default async function DealsPage({
         <span className="toolbar-label">Воронка</span>
         <span className="header-spacer" />
         <span className="summary">Сделки в воронке</span>
-        <CreateDealModal stages={stages} contacts={contacts as Contact[]} currentUserId={profile.id} />
+        <CreateDealModal stages={stages} sources={sources as Source[]} projects={projects as Project[]} tags={tags as Tag[]} owners={owners as Profile[]} />
       </div>
       <div className="filterbar">
         <span className="static-filter">Сортировка</span>
