@@ -12,6 +12,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { House, MoreHorizontal } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -151,7 +152,9 @@ function PresentationalCard({
     >
       <div className="deal-title">
         <span className="truncate">
-          {maps.contacts.get(deal.contact_id)?.full_name ?? "Без имени"}
+          <Link className="deal-card-link" href={`/deals/${deal.id}`}>
+            {maps.contacts.get(deal.contact_id)?.full_name ?? "Без имени"}
+          </Link>
         </span>
         {deal.source_id && (
           <span className="deal-source">
