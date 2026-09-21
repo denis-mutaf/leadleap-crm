@@ -30,6 +30,7 @@
 .table td { height: var(--h-row); box-sizing: border-box; padding: 0 var(--px-cell); border-bottom: 1px solid var(--border); vertical-align: middle; }
 .table tbody tr:hover td { background: var(--accent); }
 .countHead, .count { text-align: right !important; }
+.stageCell { display: inline-flex; min-width: 0; max-width: 100%; }
 .dot { display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: var(--primary); }
 .dotWon { background: var(--success); }
 .dotLost { background: var(--destructive); }

@@ -2,8 +2,10 @@ import { Database, Info } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { StageIndicator } from "@/components/crm/stage-indicator";
 import { BuilderDashboard } from "./builder-dashboard";
 import { loadBuilderDashboard } from "./builder-data";
+import styles from "./reports.module.css";
 
 type Period = "month" | "quarter" | "year";
 type ReportsSearchParams = Promise<{
@@ -282,15 +284,41 @@ export default async function ReportsPage({
         </div>
         <div className="stage-list">
           {stageCounts.map((stage) => (
-            <div className="stage-row" key={stage.id}>
-              <span className="stage-name">{stage.name}</span>
-              <div className="stage-track">
-                <i
-                  style={{ width: `${(stage.count / maxStageCount) * 100}%` }}
+            <div className={styles.frow} key={stage.id}>
+              <span className={styles.fname}>
+                <StageIndicator
+                  stage={{
+                    id: stage.id,
+                    kind: (stage.kind ?? "open") as "open" | "won" | "lost",
+                    position: stage.position ?? 0,
+                  }}
+                  stages={openStages.map((item) => ({
+                    id: item.id,
+                    kind: (item.kind ?? "open") as "open" | "won" | "lost",
+                    position: item.position ?? 0,
+                  }))}
+                  name={stage.name}
                 />
-                <b>{stage.count}</b>
+              </span>
+              <div className={styles.trackWrap}>
+                <StageIndicator
+                  stage={{
+                    id: stage.id,
+                    kind: (stage.kind ?? "open") as "open" | "won" | "lost",
+                    position: stage.position ?? 0,
+                  }}
+                  stages={openStages.map((item) => ({
+                    id: item.id,
+                    kind: (item.kind ?? "open") as "open" | "won" | "lost",
+                    position: item.position ?? 0,
+                  }))}
+                  name={stage.name}
+                  variant="track"
+                  fillRatio={stage.count / maxStageCount}
+                />
+                <span className={`${styles.num} num`}>{stage.count}</span>
               </div>
-              <span className="stage-percent">
+              <span className={`${styles.conv} num`}>
                 {percent(stage.count, open)}
               </span>
             </div>

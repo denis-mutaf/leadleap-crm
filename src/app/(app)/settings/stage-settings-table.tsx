@@ -7,6 +7,7 @@ import { DndContext, PointerSensor, KeyboardSensor, closestCenter, useSensor, us
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Stage, StageKind } from "@/lib/types";
+import { StageIndicator } from "@/components/crm/stage-indicator";
 import styles from "./settings.module.css";
 
 type Row = Stage & { counts: { total: number } };
@@ -17,12 +18,12 @@ function Toggle({ value, disabled, label, onClick }: { value: boolean; disabled:
   return <button type="button" className={`${styles.switch} ${value ? styles.on : ""}`} aria-label={label} aria-pressed={value} disabled={disabled} onClick={onClick} />;
 }
 
-function StageRow({ row, canEdit, menu, setMenu, onEdit, onToggle }: { row: Row; canEdit: boolean; menu: string | null; setMenu: (id: string | null) => void; onEdit: (row: Row) => void; onToggle: (row: Row, key: GateKey) => void }) {
+function StageRow({ row, canEdit, menu, setMenu, onEdit, onToggle, allStages }: { row: Row; canEdit: boolean; menu: string | null; setMenu: (id: string | null) => void; onEdit: (row: Row) => void; onToggle: (row: Row, key: GateKey) => void; allStages: readonly Row[] }) {
   const closed = row.kind !== "open";
   const { setNodeRef, transform, transition, attributes, listeners } = useSortable({ id: row.id, disabled: !canEdit || closed });
   return <tr ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={closed ? styles.closed : undefined}>
     <td className={styles.grip}>{!closed && <button className={styles.dragHandle} {...attributes} {...listeners} disabled={!canEdit} aria-label={`Переместить ${row.name}`}><GripVertical size={14} /></button>}</td>
-    <td><span className={`${styles.dot} ${row.kind === "won" ? styles.dotWon : row.kind === "lost" ? styles.dotLost : ""}`} />{row.name}</td>
+    <td><span className={styles.stageCell}><StageIndicator stage={row} stages={allStages} name={row.name} /></span></td>
     <td><span className={`${styles.kind} ${row.kind === "won" ? styles.kindWon : row.kind === "lost" ? styles.kindLost : ""}`}>{kindLabel(row.kind)}</span></td>
     <td><Toggle value={row.requires_next_step} disabled={!canEdit || closed} label={`${row.name}: требовать следующий шаг`} onClick={() => onToggle(row, "requires_next_step")} /></td>
     <td><Toggle value={row.requires_qualification_tag} disabled={!canEdit} label={`${row.name}: требовать квалификацию`} onClick={() => onToggle(row, "requires_qualification_tag")} /></td>
@@ -82,9 +83,9 @@ export function StageTable({ rows, canEdit }: { rows: Row[]; canEdit: boolean })
   return <>
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={reorder}>
       <table className={styles.table}><thead><tr><th aria-label="Перетаскивание" /><th>Этап</th><th>Вид</th><th>Требовать следующий шаг</th><th>Требовать квалификацию</th><th className={styles.countHead}>Сделок</th><th aria-label="Действия" /></tr></thead><tbody>
-        <SortableContext items={openRows.map((row) => row.id)} strategy={verticalListSortingStrategy}>{openRows.map((row) => <StageRow key={row.id} row={row} canEdit={canEdit} menu={menu} setMenu={setMenu} onEdit={(item) => { setEditing(item); setDraft(item.name); }} onToggle={toggle} />)}</SortableContext>
+        <SortableContext items={openRows.map((row) => row.id)} strategy={verticalListSortingStrategy}>{openRows.map((row) => <StageRow key={row.id} row={row} canEdit={canEdit} menu={menu} setMenu={setMenu} onEdit={(item) => { setEditing(item); setDraft(item.name); }} onToggle={toggle} allStages={items} />)}</SortableContext>
         {openRows.length > 0 && <tr><td colSpan={7}><div className={styles.dropPlaceholder} /></td></tr>}
-        {closedRows.map((row) => <StageRow key={row.id} row={row} canEdit={canEdit} menu={menu} setMenu={setMenu} onEdit={(item) => { setEditing(item); setDraft(item.name); }} onToggle={toggle} />)}
+        {closedRows.map((row) => <StageRow key={row.id} row={row} canEdit={canEdit} menu={menu} setMenu={setMenu} onEdit={(item) => { setEditing(item); setDraft(item.name); }} onToggle={toggle} allStages={items} />)}
       </tbody></table>
     </DndContext>
     {canEdit && (adding ? <div className={styles.addForm}><input autoFocus value={newName} onChange={(event) => setNewName(event.target.value)} placeholder="Название этапа" onKeyDown={(event) => { if (event.key === "Enter") void addStage(); if (event.key === "Escape") setAdding(false); }} /><button className={styles.saveButton} onClick={() => void addStage()} disabled={busy}>Добавить</button><button className={styles.cancelButton} onClick={() => setAdding(false)}>Отмена</button></div> : <button className={styles.addRow} onClick={() => setAdding(true)}><Plus size={15} /> Этап</button>)}
