@@ -68,7 +68,7 @@ export default async function DealsTablePage({
   let dataQuery = supabase
     .from("deals")
     .select(
-      "id, contact_id, owner_id, stage_id, status, title, object_text, created_at, updated_at, contact:contacts!deals_contact_id_fkey(full_name), deal_tags(tag:tags(name)), tasks(title, due_at, done_at), notes(body, created_at), calls(direction, started_at), stage_transitions(changed_at)",
+      "id, contact_id, owner_id, stage_id, status, title, object_text, created_at, updated_at, contact:contacts!deals_contact_id_fkey(full_name)",
       { count: "exact" },
     );
   dataQuery = dataQuery.is("deleted_at", null);
@@ -117,6 +117,115 @@ export default async function DealsTablePage({
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(page, pageCount - 1);
   const deals = rows.data ?? [];
+  const dealIds = deals.map((deal) => deal.id);
+  type DealTagRow = {
+    deal_id: string;
+    tag: { name?: string | null } | Array<{ name?: string | null }> | null;
+  };
+  type DealTaskRow = {
+    deal_id: string;
+    title: string;
+    due_at: string;
+    done_at: string | null;
+  };
+  type DealNoteRow = { deal_id: string; body: string | null; created_at: string };
+  type DealCallRow = {
+    deal_id: string;
+    direction: string | null;
+    started_at: string;
+  };
+  type DealTransitionRow = { deal_id: string; changed_at: string };
+  const emptyTagData: DealTagRow[] = [];
+  const emptyTaskData: DealTaskRow[] = [];
+  const emptyNoteData: DealNoteRow[] = [];
+  const emptyCallData: DealCallRow[] = [];
+  const emptyTransitionData: DealTransitionRow[] = [];
+  const [dealTags, dealTasks, dealNotes, dealCalls, dealTransitions] =
+    dealIds.length > 0
+      ? await Promise.all([
+          supabase
+            .from("deal_tags")
+            .select("deal_id, tag:tags(name)")
+            .in("deal_id", dealIds),
+          supabase
+            .from("tasks")
+            .select("deal_id, title, due_at, done_at")
+            .in("deal_id", dealIds),
+          supabase
+            .from("notes")
+            .select("deal_id, body, created_at")
+            .in("deal_id", dealIds),
+          supabase
+            .from("calls")
+            .select("deal_id, direction, started_at")
+            .in("deal_id", dealIds),
+          supabase
+            .from("stage_transitions")
+            .select("deal_id, changed_at")
+            .in("deal_id", dealIds),
+        ])
+      : [
+          { data: emptyTagData, error: null },
+          { data: emptyTaskData, error: null },
+          { data: emptyNoteData, error: null },
+          { data: emptyCallData, error: null },
+          { data: emptyTransitionData, error: null },
+        ];
+  for (const child of [
+    dealTags,
+    dealTasks,
+    dealNotes,
+    dealCalls,
+    dealTransitions,
+  ]) {
+    if (child.error) {
+      console.error("[deals/table]", child.error.code ?? "child_query_failed");
+      const retryParams = new URLSearchParams();
+      for (const [key, value] of Object.entries(params)) {
+        const item = Array.isArray(value) ? value[0] : value;
+        if (item) retryParams.set(key, item);
+      }
+      return (
+        <div className="deals-page">
+          <header className="page-header">
+            <Funnel size={16} />
+            <span>Сделки</span>
+          </header>
+          <div className="deals-table-empty" role="alert">
+            <strong>Список сделок временно недоступен</strong>
+            <span>
+              Не удалось получить сделки. Данные не заменены пустым списком.
+            </span>
+            <Link href={`/deals/table?${retryParams}`}>Повторить</Link>
+          </div>
+        </div>
+      );
+    }
+  }
+  const groupByDeal = <T extends { deal_id: string }>(items: T[]) => {
+    const map = new Map<string, T[]>();
+    for (const item of items) {
+      const list = map.get(item.deal_id);
+      if (list) list.push(item);
+      else map.set(item.deal_id, [item]);
+    }
+    return map;
+  };
+  const tagsByDeal = groupByDeal<DealTagRow>(
+    (dealTags.data ?? []) as unknown as DealTagRow[],
+  );
+  const tasksByDeal = groupByDeal<DealTaskRow>(
+    (dealTasks.data ?? []) as unknown as DealTaskRow[],
+  );
+  const notesByDeal = groupByDeal<DealNoteRow>(
+    (dealNotes.data ?? []) as unknown as DealNoteRow[],
+  );
+  const callsByDeal = groupByDeal<DealCallRow>(
+    (dealCalls.data ?? []) as unknown as DealCallRow[],
+  );
+  const transitionsByDeal = groupByDeal<DealTransitionRow>(
+    (dealTransitions.data ?? []) as unknown as DealTransitionRow[],
+  );
   const ownerIdsOnPage = deals.flatMap((deal) =>
     deal.owner_id ? [deal.owner_id] : [],
   );
@@ -195,19 +304,23 @@ export default async function DealsTablePage({
   const tableRows: TableDeal[] = deals.map((deal) => {
     const stageRow = stageMap.get(deal.stage_id);
     const contact = Array.isArray(deal.contact) ? deal.contact[0] : deal.contact;
-    const task = (deal.tasks ?? [])
+    const dealTaskRows = tasksByDeal.get(deal.id) ?? [];
+    const dealNoteRows = notesByDeal.get(deal.id) ?? [];
+    const dealCallRows = callsByDeal.get(deal.id) ?? [];
+    const dealTransitionRows = transitionsByDeal.get(deal.id) ?? [];
+    const task = dealTaskRows
       .filter((row) => !row.done_at)
       .sort((a, b) => a.due_at.localeCompare(b.due_at))[0];
     const activities = [
-      ...(deal.notes ?? []).map((row) => ({
+      ...dealNoteRows.map((row) => ({
         text: row.body ? `Заметка: ${row.body}` : "Заметка",
         at: row.created_at,
       })),
-      ...(deal.calls ?? []).map((row) => ({
+      ...dealCallRows.map((row) => ({
         text: row.direction === "in" ? "Входящий звонок" : "Исходящий звонок",
         at: row.started_at,
       })),
-      ...(deal.stage_transitions ?? []).map((row) => ({
+      ...dealTransitionRows.map((row) => ({
         text: "Этап изменён",
         at: row.changed_at,
       })),
@@ -218,7 +331,7 @@ export default async function DealsTablePage({
       stage: stageRow?.name ?? "Без этапа",
       stageKind: stageRow?.kind ?? "open",
       stageHue: stageHueMap.get(deal.stage_id) ?? "grey",
-      tags: (deal.deal_tags ?? [])
+      tags: (tagsByDeal.get(deal.id) ?? [])
         .map((row) => {
           const tag = row.tag as unknown as
             | { name?: string }
