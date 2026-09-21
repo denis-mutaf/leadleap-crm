@@ -4,6 +4,7 @@
 // сегменты складываем в segments, цельный текст остаётся запасным путём.
 
 import { createAdminClient } from "../supabase/admin.ts";
+import { ISRAGRUP_TRANSCRIPTION_PHRASES } from "./isragrup-transcription-context.ts";
 import type { CallTranscriptSegment } from "./types.ts";
 
 export const OPENROUTER_TRANSCRIBE_MODEL = "microsoft/mai-transcribe-2";
@@ -12,14 +13,7 @@ const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
 const MIN_DURATION_SEC = 5;
 const REQUEST_TIMEOUT_MS = 65000;
 
-const PHRASE_LIST = [
-  "IsraGrup",
-  "Isragrup",
-  "Chișinău",
-  "Chisinau",
-  "complex locativ",
-  "apartament",
-];
+const PHRASE_LIST: readonly string[] = ISRAGRUP_TRANSCRIPTION_PHRASES;
 
 export type TranscribeStatus = "pending" | "processing" | "completed" | "failed";
 
@@ -150,7 +144,9 @@ export async function transcribeCall(
         authorization: `Bearer ${apiKey}`,
         "content-type": "application/json",
       },
-      // Язык не фиксируем: речь смешанная, румынский чередуется с русским.
+      // Язык намеренно не фиксируется: API позволяет форсировать только один
+      // locale, а звонки code-switch RU/RO. Фактический контекст передаётся через
+      // keyword biasing phraseList, поскольку prompt игнорируется/не поддерживается.
       body: JSON.stringify({
         model: OPENROUTER_TRANSCRIBE_MODEL,
         input_audio: { data: Buffer.from(audio).toString("base64"), format: "mp3" },
