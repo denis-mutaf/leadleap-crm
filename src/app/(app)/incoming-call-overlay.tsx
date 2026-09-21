@@ -6,6 +6,7 @@ import {
   ChevronDown,
   Clock3,
   PhoneIncoming,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -443,9 +444,18 @@ export function IncomingCallOverlay({
         </time>
         <button
           onClick={() => setCollapsed((value) => !value)}
-          aria-label="Свернуть"
+          aria-label={collapsed ? "Развернуть" : "Свернуть"}
         >
           <ChevronDown size={16} />
+        </button>
+        {/* Карточку звонка можно было только свернуть: убрать её с экрана было
+            нечем, хотя close() — пометить уведомление прочитанным — написан. */}
+        <button
+          onClick={() => void close()}
+          disabled={pending !== null}
+          aria-label="Убрать карточку звонка"
+        >
+          <X size={16} />
         </button>
       </header>
       {!collapsed && (

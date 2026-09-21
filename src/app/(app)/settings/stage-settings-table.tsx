@@ -19,9 +19,9 @@ function Toggle({ value, disabled, label, onClick }: { value: boolean; disabled:
 
 function StageRow({ row, canEdit, menu, setMenu, onEdit, onToggle }: { row: Row; canEdit: boolean; menu: string | null; setMenu: (id: string | null) => void; onEdit: (row: Row) => void; onToggle: (row: Row, key: GateKey) => void }) {
   const closed = row.kind !== "open";
-  const sortable = useSortable({ id: row.id, disabled: !canEdit || closed });
-  return <tr ref={sortable.setNodeRef} style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }} className={closed ? styles.closed : undefined}>
-    <td className={styles.grip}>{!closed && <button className={styles.dragHandle} {...sortable.attributes} {...sortable.listeners} disabled={!canEdit} aria-label={`Переместить ${row.name}`}><GripVertical size={14} /></button>}</td>
+  const { setNodeRef, transform, transition, attributes, listeners } = useSortable({ id: row.id, disabled: !canEdit || closed });
+  return <tr ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={closed ? styles.closed : undefined}>
+    <td className={styles.grip}>{!closed && <button className={styles.dragHandle} {...attributes} {...listeners} disabled={!canEdit} aria-label={`Переместить ${row.name}`}><GripVertical size={14} /></button>}</td>
     <td><span className={`${styles.dot} ${row.kind === "won" ? styles.dotWon : row.kind === "lost" ? styles.dotLost : ""}`} />{row.name}</td>
     <td><span className={`${styles.kind} ${row.kind === "won" ? styles.kindWon : row.kind === "lost" ? styles.kindLost : ""}`}>{kindLabel(row.kind)}</span></td>
     <td><Toggle value={row.requires_next_step} disabled={!canEdit || closed} label={`${row.name}: требовать следующий шаг`} onClick={() => onToggle(row, "requires_next_step")} /></td>

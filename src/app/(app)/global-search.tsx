@@ -88,13 +88,23 @@ export function GlobalSearch() {
     router.push(item.href);
   };
 
+  // Недавние запросы лежат в localStorage — на сервере его нет, и прочитать
+  // их можно только после монтирования. Это ровно тот случай, для которого
+  // эффект и существует: синхронизация с внешним хранилищем. Правило
+  // set-state-in-effect отличить его от лишнего прохода рендера не умеет.
   useEffect(() => {
+    let stored: unknown = [];
     try {
-      const stored = JSON.parse(window.localStorage.getItem("leadleap-search-recent") ?? "[]");
-      if (Array.isArray(stored)) setRecent(stored.filter((value): value is string => typeof value === "string").slice(0, 5));
+      stored = JSON.parse(window.localStorage.getItem("leadleap-search-recent") ?? "[]");
     } catch {
-      setRecent([]);
+      stored = [];
     }
+    const list = Array.isArray(stored)
+      ? stored.filter((value): value is string => typeof value === "string").slice(0, 5)
+      : [];
+    if (list.length === 0) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setRecent(list);
   }, []);
 
   useEffect(() => {
