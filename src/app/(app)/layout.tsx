@@ -85,7 +85,7 @@ export default async function AppLayout({
       </aside>
       <main className="main-shell">
         <NotificationsPanel role={profile.role} />
-        <IncomingCallOverlay role={profile.role} />
+        <IncomingCallOverlay role={profile.role} actorId={profile.id} />
         {children}
       </main>
     </div>

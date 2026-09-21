@@ -54,7 +54,13 @@ const formatTouchTime = (value: string) =>
     minute: "2-digit",
   }).format(new Date(value));
 
-export function IncomingCallOverlay({ role }: { role: string }) {
+export function IncomingCallOverlay({
+  role,
+  actorId,
+}: {
+  role: string;
+  actorId: string;
+}) {
   const [notice, setNotice] = useState<Notice | null>(null);
   const [deal, setDeal] = useState<Deal | null>(null);
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -333,6 +339,7 @@ export function IncomingCallOverlay({ role }: { role: string }) {
         .insert({
           deal_id: deal.id,
           contact_id: deal.contact_id,
+          author_id: actorId,
           body: note.trim(),
         })
         .select("id")
