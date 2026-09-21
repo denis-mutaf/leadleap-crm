@@ -93,7 +93,14 @@ export default async function ReportsPage({
   if (profile.role === "builder") {
     const params = searchParams ? await searchParams : undefined;
     const data = await loadBuilderDashboard(parsePeriod(params?.period));
-    return <BuilderDashboard data={data} />;
+    return (
+      <BuilderDashboard
+        data={{
+          ...data,
+          exportHref: `/api/reports/builder-export?period=${data.period}`,
+        }}
+      />
+    );
   }
 
   const supabase = await createClient();
