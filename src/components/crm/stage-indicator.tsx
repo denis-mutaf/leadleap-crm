@@ -50,7 +50,7 @@ export function StageIndicator({
       <span
         aria-hidden="true"
         className={cn("dot", className)}
-        style={{ background: vars.dot, ...style }}
+        style={{ marginTop: 0, background: vars.dot, ...style }}
       />
     );
   }
@@ -103,7 +103,11 @@ export function StageIndicator({
   // "inline" — этап как связка «точка + название» (.st из кита).
   return (
     <span className={cn("st", className)} style={style}>
-      <span aria-hidden="true" className="dot" style={{ background: vars.dot }} />
+      <span
+        aria-hidden="true"
+        className="dot"
+        style={{ marginTop: 0, background: vars.dot }}
+      />
       {name != null && <span className="tr">{name}</span>}
     </span>
   );
