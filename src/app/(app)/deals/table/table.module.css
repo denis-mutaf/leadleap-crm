@@ -72,12 +72,12 @@
 
 .table th:nth-child(1), .table td:nth-child(1) { width: 36px; }
 .table th:nth-child(2), .table td:nth-child(2) { width: 170px; }
-.table th:nth-child(3), .table td:nth-child(3) { width: 150px; }
-.table th:nth-child(4), .table td:nth-child(4) { width: 180px; }
-.table th:nth-child(5), .table td:nth-child(5) { width: 220px; }
+.table th:nth-child(3), .table td:nth-child(3) { width: 210px; }
+.table th:nth-child(4), .table td:nth-child(4) { width: 160px; }
+.table th:nth-child(5), .table td:nth-child(5) { width: 180px; }
 .table th:nth-child(6), .table td:nth-child(6) { width: 260px; }
-.table th:nth-child(7), .table td:nth-child(7) { width: 100px; }
-.table th:nth-child(8), .table td:nth-child(8) { width: 150px; }
+.table th:nth-child(7), .table td:nth-child(7) { width: 84px; }
+.table th:nth-child(8), .table td:nth-child(8) { width: 130px; }
 .table th:nth-child(9), .table td:nth-child(9) { width: 36px; }
 
 .table th a {
@@ -100,7 +100,8 @@
 .won { background: var(--success); }
 .lost { background: var(--muted-foreground); }
 .tags { display: flex; min-width: 0; gap: 4px; overflow: hidden; }
-.tags span { min-width: 0; overflow: hidden; padding: 0 6px; border-radius: 4px; background: var(--muted); color: var(--secondary-text); text-overflow: ellipsis; }
+.tags span { flex: none; padding: 0 6px; border-radius: 4px; background: var(--muted); color: var(--secondary-text); }
+.tags span.tagsMore { padding: 0; background: transparent; color: var(--muted-foreground); }
 .truncate,
 .activity { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .activity { color: var(--secondary-text); }

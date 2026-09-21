@@ -68,6 +68,38 @@ function displayDate(value: string | null, withTime = true) {
   }).format(new Date(value));
 }
 
+// Метки не ужимаются друг под друга: «КВ… septem… til…» не читается ни как
+// метка, ни как счёт. Целиком показывается столько меток, сколько помещается
+// в колонку, остальные сворачиваются в «+N»; полный список — в подсказке.
+const TAGS_BUDGET = 19; // символов в колонке меток
+const TAGS_MORE_COST = 3; // место под «+N»
+
+function pickTags(tags: string[]) {
+  const cost = (tag: string) => tag.length + 2; // паддинг пилюли и зазор
+  const shown: string[] = [];
+  let used = 0;
+  for (const tag of tags) {
+    if (shown.length > 0 && used + cost(tag) > TAGS_BUDGET) break;
+    shown.push(tag);
+    used += cost(tag);
+  }
+  while (shown.length > 1 && shown.length < tags.length && used > TAGS_BUDGET - TAGS_MORE_COST) {
+    used -= cost(shown.pop() as string);
+  }
+  return { shown, hidden: tags.length - shown.length };
+}
+
+function TagCell({ tags }: { tags: string[] }) {
+  if (tags.length === 0) return null;
+  const { shown, hidden } = pickTags(tags);
+  return (
+    <div className={styles.tags} title={tags.join(" · ")}>
+      {shown.map((tag) => <span key={tag}>{tag}</span>)}
+      {hidden > 0 && <span className={styles.tagsMore}>+{hidden}</span>}
+    </div>
+  );
+}
+
 function csvCell(value: string) {
   const safe = /^[\s\u0000-\u001f]*[=+\-@]/.test(value) ? `'${value}` : value;
   return `"${safe.replaceAll('"', '""')}"`;
@@ -271,8 +303,8 @@ export function DealsTableView(p: Props) {
                 >
                   <td className={styles.selectCell} onClick={(event) => event.stopPropagation()}><input type="checkbox" checked={selected.has(row.id)} onChange={() => toggle(row.id)} aria-label={`Выбрать сделку ${row.contact}`} /></td>
                   <td><Link className={styles.contact} href={`/deals/${row.id}`} onClick={(event) => event.stopPropagation()} title={row.contact}>{row.contact}</Link></td>
-                  <td><span className={styles.stageCell}><span className={`${styles.stageDot} ${row.stageKind === "won" ? styles.won : row.stageKind === "lost" ? styles.lost : ""}`} /><span className={styles.truncate}>{row.stage}</span></span></td>
-                  <td><div className={styles.tags}>{row.tags.map((tag) => <span key={tag}>{tag}</span>)}</div></td>
+                  <td title={row.stage}><span className={styles.stageCell}><span className={`${styles.stageDot} ${row.stageKind === "won" ? styles.won : row.stageKind === "lost" ? styles.lost : ""}`} /><span className={styles.truncate}>{row.stage}</span></span></td>
+                  <td><TagCell tags={row.tags} /></td>
                   <td className={styles.truncate} title={row.task}>{row.task && <>{row.task} · {displayDate(row.taskDueAt)}</>}</td>
                   <td className={styles.activity} title={row.activity}>{row.activity}{row.activityAt && ` · ${displayDate(row.activityAt)}`}</td>
                   <td className={styles.muted}>{displayDate(row.created, false)}</td>
