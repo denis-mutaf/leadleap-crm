@@ -8,14 +8,24 @@ export type CallResult = "talked" | "missed" | "failed" | "busy";
 
 export type CallTranscriptStatus = "pending" | "processing" | "completed" | "failed";
 
-// Строка public.call_transcripts для панели звонка. Текст цельный:
-// gpt-transcribe не возвращает ни говорящих, ни таймкоды.
+// Строка public.call_transcripts для панели звонка. Цельный текст —
+// запасной путь, при диаризации mai-transcribe-2 кладёт сюда же segments.
+export type CallTranscriptSegment = {
+  id: string;
+  start: number;
+  end: number;
+  speaker: string;
+  text: string;
+};
+
 export type CallTranscriptRow = {
   call_id: string;
   status: CallTranscriptStatus | string | null;
   transcript: string | null;
   language: string | null;
+  segments: CallTranscriptSegment[] | null;
   model: string | null;
+  usage: Record<string, unknown> | null;
   error: string | null;
   created_at: string | null;
   updated_at: string | null;

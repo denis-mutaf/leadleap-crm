@@ -1,15 +1,25 @@
 // Batch-транскрибация звонка через OpenRouter. Только сервер:
 // тянет аудио, держит ключ и пишет итог в public.call_transcripts.
-// gpt-transcribe возвращает цельный текст без говорящих и таймкодов —
-// их не выдумываем ни в базе, ни в UI.
+// microsoft/mai-transcribe-2 возвращает verbose_json с диаризацией:
+// сегменты складываем в segments, цельный текст остаётся запасным путём.
 
 import { createAdminClient } from "../supabase/admin.ts";
+import type { CallTranscriptSegment } from "./types.ts";
 
-export const OPENROUTER_TRANSCRIBE_MODEL = "openai/gpt-transcribe";
+export const OPENROUTER_TRANSCRIBE_MODEL = "microsoft/mai-transcribe-2";
 
 const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
 const MIN_DURATION_SEC = 5;
 const REQUEST_TIMEOUT_MS = 65000;
+
+const PHRASE_LIST = [
+  "IsraGrup",
+  "Isragrup",
+  "Chișinău",
+  "Chisinau",
+  "complex locativ",
+  "apartament",
+];
 
 export type TranscribeStatus = "pending" | "processing" | "completed" | "failed";
 
@@ -37,6 +47,32 @@ async function markFailed(callId: string, message: string): Promise<TranscribeOu
     { onConflict: "call_id" },
   );
   return { status: "failed", error: message };
+}
+
+// Только валидные {id,start,end,speaker,text}: остальное отбрасываем,
+// speaker без значения — строка "unknown". Пусто — [].
+function parseSegments(raw: unknown): CallTranscriptSegment[] {
+  if (!Array.isArray(raw)) return [];
+  const out: CallTranscriptSegment[] = [];
+  for (let i = 0; i < raw.length; i++) {
+    const item = raw[i] as Record<string, unknown> | null;
+    if (!item || typeof item !== "object") continue;
+    const text = typeof item.text === "string" ? item.text.trim() : "";
+    if (!text) continue;
+    const start = typeof item.start === "number" ? item.start : Number.NaN;
+    const end = typeof item.end === "number" ? item.end : Number.NaN;
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end < start) continue;
+    const speaker =
+      typeof item.speaker === "string" && item.speaker.trim() !== ""
+        ? item.speaker.trim()
+        : typeof item.speaker === "number" && Number.isFinite(item.speaker)
+          ? String(item.speaker)
+          : "unknown";
+    const id =
+      typeof item.id === "string" && item.id.trim() !== "" ? item.id.trim() : `seg-${i}`;
+    out.push({ id, start, end, speaker, text });
+  }
+  return out;
 }
 
 export async function transcribeCall(
@@ -114,21 +150,28 @@ export async function transcribeCall(
         authorization: `Bearer ${apiKey}`,
         "content-type": "application/json",
       },
+      // Язык не фиксируем: речь смешанная, румынский чередуется с русским.
       body: JSON.stringify({
         model: OPENROUTER_TRANSCRIBE_MODEL,
         input_audio: { data: Buffer.from(audio).toString("base64"), format: "mp3" },
-        // Короткий контекст вместо фиксации языка: речь в звонках
-        // смешанная, румынский чередуется с русским.
-        prompt:
-          "Apel imobiliar din Moldova. Vorbirea poate alterna între română și rusă. " +
-          "Păstrează limba originală și transcrie exact. Termeni posibili: " +
-          "IsraGrup, Chișinău, complex locativ, apartament.",
-        response_format: "json",
+        response_format: "verbose_json",
+        timestamp_granularities: ["word"],
+        provider: {
+          options: {
+            azure: {
+              diarization: { enabled: true },
+              phraseList: { phrases: PHRASE_LIST },
+              enhancedMode: { modelOptions: { transcribeStyle: "clean" } },
+            },
+          },
+        },
       }),
       signal: controller.signal,
     });
     const body = (await res.json().catch(() => null)) as {
       text?: unknown;
+      language?: unknown;
+      segments?: unknown;
       usage?: unknown;
     } | null;
     if (!res.ok) {
@@ -137,6 +180,11 @@ export async function transcribeCall(
     }
     const text = typeof body?.text === "string" ? body.text.trim() : "";
     if (!text) return markFailed(callId, "Распознавание вернуло пустой текст");
+    const language =
+      typeof body?.language === "string" && body.language.trim() !== ""
+        ? body.language.trim()
+        : null;
+    const segments = parseSegments(body?.segments);
     const usage = (body?.usage ?? null) as Record<string, unknown> | null;
     const cost =
       usage && typeof usage.cost === "number" && Number.isFinite(usage.cost) ? usage.cost : null;
@@ -146,6 +194,8 @@ export async function transcribeCall(
         call_id: callId,
         status: "completed",
         transcript: text,
+        language,
+        segments,
         model: OPENROUTER_TRANSCRIBE_MODEL,
         usage: usage ?? { model: OPENROUTER_TRANSCRIBE_MODEL },
         error: null,

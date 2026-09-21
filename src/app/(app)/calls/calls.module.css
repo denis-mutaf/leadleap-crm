@@ -711,6 +711,51 @@ tr.row:hover .dealLink {
   margin: 0;
 }
 
+/* Чат расшифровки по говорящим: компактные реплики разными
+   мягкими поверхностями и выравниванием, без новых иконок. */
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+
+.chatMsg {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 92%;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.chatLeft {
+  align-self: flex-start;
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.chatRight {
+  align-self: flex-end;
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+.chatHead {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.chatText {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .spin {
   animation: transcript-spin 1s linear infinite;
 }

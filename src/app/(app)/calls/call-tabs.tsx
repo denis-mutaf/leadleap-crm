@@ -10,8 +10,9 @@ import styles from "./calls.module.css";
 
 type Tab = "transcript" | "about" | "links";
 
-// Вкладка транскрипта: цельный текст из gpt-transcribe без говорящих
-// и таймкодов — модель их не возвращает, и мы их не выдумываем.
+// Вкладка транскрипта: при диаризации mai-transcribe-2 — компактный чат
+// по segments, без приписывания личностей (модель их не знает);
+// без сегментов — прежний цельный текст.
 export function CallTabs({ call, transcript }: { call: CallRow; transcript: CallTranscriptRow | null }) {
   const [tab, setTab] = useState<Tab>("transcript");
   const result = callResult(call);
@@ -45,7 +46,7 @@ export function CallTabs({ call, transcript }: { call: CallRow; transcript: Call
         <section aria-label="Транскрипт">
           {transcript?.status === "completed" && transcript.transcript ? (
             <>
-              <p className={styles.transcriptText}>{transcript.transcript}</p>
+              <TranscriptBody transcript={transcript} />
               <p className={styles.transcriptMeta}>
                 {[transcript.model, transcript.completed_at ? formatTranscriptDate(transcript.completed_at) : null]
                   .filter(Boolean)
@@ -125,6 +126,45 @@ export function CallTabs({ call, transcript }: { call: CallRow; transcript: Call
       )}
     </div>
   );
+}
+
+function TranscriptBody({ transcript }: { transcript: CallTranscriptRow }) {
+  const segments = Array.isArray(transcript.segments)
+    ? transcript.segments.filter(
+        (s) => s && typeof s.text === "string" && s.text.trim() !== "",
+      )
+    : [];
+  if (segments.length === 0) {
+    return <p className={styles.transcriptText}>{transcript.transcript}</p>;
+  }
+  // Номера по первому появлению: «Говорящий 1/2», без менеджер/клиент.
+  const order = new Map<string, number>();
+  for (const s of segments) {
+    if (!order.has(s.speaker)) order.set(s.speaker, order.size + 1);
+  }
+  return (
+    <div className={styles.chat} role="log" aria-label="Расшифровка по говорящим">
+      {segments.map((s, i) => {
+        const n = order.get(s.speaker) ?? 1;
+        const side = n % 2 === 1 ? styles.chatLeft : styles.chatRight;
+        return (
+          <div key={s.id || i} className={`${styles.chatMsg} ${side}`}>
+            <span className={styles.chatHead}>
+              Говорящий {n} · {formatMmSs(s.start)}
+            </span>
+            <span className={styles.chatText}>{s.text}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function formatMmSs(sec: number): string {
+  if (!Number.isFinite(sec) || sec < 0) return "0:00";
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 function Field({ k, v, mono }: { k: string; v: string; mono?: boolean }) {

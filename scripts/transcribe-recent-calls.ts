@@ -1,7 +1,8 @@
 // Batch-расшифровка свежих звонков через общий helper.
 //
-// Запуск: node --no-warnings --experimental-strip-types scripts/transcribe-recent-calls.ts [--limit N]
+// Запуск: node --no-warnings --experimental-strip-types scripts/transcribe-recent-calls.ts [--limit N] [--force]
 // Лимит не больше 5 за запуск: каждая расшифровка — платный запрос.
+// --force повторно обрабатывает и completed, лимит всё равно максимум 5.
 // Печатаем только id/status/cost — текст разговоров в лог не пишем.
 
 import { readFile } from "node:fs/promises";
@@ -17,6 +18,7 @@ const limitRaw =
   (args.includes("--limit") ? args[args.indexOf("--limit") + 1] : undefined);
 const parsed = limitRaw && /^\d+$/.test(limitRaw) ? Number(limitRaw) : DEFAULT_LIMIT;
 const limit = Math.min(Math.max(1, parsed), MAX_LIMIT);
+const force = args.includes("--force");
 
 async function loadEnv() {
   const text = await readFile(new URL("../.env.local", import.meta.url), "utf8");
@@ -57,7 +59,7 @@ async function main() {
     .eq("status", "completed");
   if (doneError) throw new Error(`Проверка расшифровок: ${doneError.message}`);
   const completed = new Set((done ?? []).map((d) => d.call_id as string));
-  const queue = ids.filter((id) => !completed.has(id)).slice(0, limit);
+  const queue = ids.filter((id) => force || !completed.has(id)).slice(0, limit);
   if (!queue.length) {
     console.log("Всё свежее уже расшифровано.");
     return;
@@ -65,7 +67,7 @@ async function main() {
 
   // Строго последовательно: бережём таймауты и бюджет.
   for (const id of queue) {
-    const outcome = await transcribeCall(id);
+    const outcome = await transcribeCall(id, force ? { force: true } : undefined);
     if (outcome.status === "completed") {
       console.log(`${id} completed cost=${formatCost(outcome.cost)}`);
     } else if (outcome.status === "processing") {
