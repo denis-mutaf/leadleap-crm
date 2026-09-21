@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { StageIndicator } from "@/components/crm/stage-indicator";
 import { monthlyAmount, shortAmount } from "@/lib/amo-amount";
 import { createClient } from "@/lib/supabase/client";
 import { startRouteProgress } from "../route-progress";
@@ -247,12 +248,14 @@ function KettleCard({ deal, onOpen, onClaim }: { deal: BoardCard; onOpen: OpenDe
 
 function BoardColumn({
   column,
+  stages,
   onOpen,
   onCreate,
   onClaim,
   onToggle,
 }: {
   column: BoardColumn;
+  stages: { id: string; kind: "open" | "won" | "lost"; position: number }[];
   onOpen: (id: string, event?: OpenEvent) => void;
   onCreate: () => void;
   onClaim: (id: string) => void;
@@ -266,23 +269,26 @@ function BoardColumn({
     <section ref={setNodeRef} className={`${column.kettle ? "kettle" : "kanban-column"} ${isOver ? "drop-target" : ""}`}>
       <div className="column-head">
         {onToggle && <button className="column-collapse" type="button" onClick={onToggle} aria-label="Развернуть колонку"><ChevronRight size={14} /></button>}
-        <span className={`dot ${column.kettle ? "dot-amber" : column.won ? "dot-green" : "dot-blue"}`} />
-        <strong>{column.title}</strong>
+        {column.kettle
+          ? <StageIndicator hue="grey" name={column.title} />
+          : <StageIndicator stage={{ id: column.id, kind: column.kind ?? (column.won ? "won" : "open"), position: column.position ?? 0 }} stages={stages} name={column.title} />}
         <span className="pill">{column.total}</span>
         {!column.kettle && <div className="column-menu-wrap"><button className="column-more" type="button" aria-label={`Меню колонки ${column.title}`} onClick={() => setMenuOpen((open) => !open)}><MoreHorizontal size={15} /></button>{menuOpen && <div className="column-menu"><button type="button" onClick={() => { setHidden(true); setMenuOpen(false); }}>Скрыть колонку</button></div>}</div>}
       </div>
       {column.sum !== null && column.sum > 0 && <div className="column-sum">€ {new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(column.sum)}</div>}
+      <div className="column-track">
       {column.deals.map((deal) => column.kettle ? <KettleCard key={deal.id} deal={deal} onOpen={(event) => onOpen(deal.id, event)} onClaim={() => onClaim(deal.id)} /> : <DraggableCard key={deal.id} deal={deal} onOpen={(event) => onOpen(deal.id, event)} />)}
       {column.deals.length === 0 && <div className="empty-column">Нет сделок</div>}
       <button className="column-add-button" type="button" onClick={onCreate}><Plus size={14} /> Сделка</button>
+      </div>
     </section>
   );
 }
 
-function LostColumn({ column, expanded, onToggle, onOpen, onCreate }: { column: BoardColumn; expanded: boolean; onToggle: () => void; onOpen: (id: string, event?: OpenEvent) => void; onCreate: () => void }) {
+function LostColumn({ column, stages, expanded, onToggle, onOpen, onCreate }: { column: BoardColumn; stages: { id: string; kind: "open" | "won" | "lost"; position: number }[]; expanded: boolean; onToggle: () => void; onOpen: (id: string, event?: OpenEvent) => void; onCreate: () => void }) {
   const { setNodeRef, isOver } = useDroppable({ id: "lost" });
-  if (!expanded) return <button ref={setNodeRef} className={`closed-column ${isOver ? "drop-target" : ""}`} type="button" onClick={onToggle} aria-label={`Развернуть Отказ: ${column.total}`}><ChevronRight size={14} /><span className="dot dot-grey" /><span className="closed-column-label">Отказ</span><span className="pill">{column.total}</span></button>;
-  return <section ref={setNodeRef} className={`kanban-column lost-expanded ${isOver ? "drop-target" : ""}`}><div className="column-head"><button className="column-collapse" type="button" onClick={onToggle} aria-label="Свернуть Отказ"><ChevronDown size={14} /></button><span className="dot dot-grey" /><strong>{column.title}</strong><span className="pill">{column.total}</span></div>{column.deals.map((deal) => <DraggableCard key={deal.id} deal={deal} onOpen={(event) => onOpen(deal.id, event)} />)}{column.deals.length === 0 && <div className="empty-column">Нет отказов</div>}<button className="column-add-button" type="button" onClick={onCreate}><Plus size={14} /> Сделка</button></section>;
+  if (!expanded) return <button ref={setNodeRef} className={`closed-column ${isOver ? "drop-target" : ""}`} type="button" onClick={onToggle} aria-label={`Развернуть Отказ: ${column.total}`}><ChevronRight size={14} /><StageIndicator variant="dot" stage={{ id: column.id, kind: "lost", position: column.position ?? 0 }} stages={stages} /><span className="closed-column-label">Отказ</span><span className="pill">{column.total}</span></button>;
+  return <section ref={setNodeRef} className={`kanban-column lost-expanded ${isOver ? "drop-target" : ""}`}><div className="column-head"><button className="column-collapse" type="button" onClick={onToggle} aria-label="Свернуть Отказ"><ChevronDown size={14} /></button><StageIndicator stage={{ id: column.id, kind: "lost", position: column.position ?? 0 }} stages={stages} name={column.title} /><span className="pill">{column.total}</span></div><div className="column-track">{column.deals.map((deal) => <DraggableCard key={deal.id} deal={deal} onOpen={(event) => onOpen(deal.id, event)} />)}{column.deals.length === 0 && <div className="empty-column">Нет отказов</div>}<button className="column-add-button" type="button" onClick={onCreate}><Plus size={14} /> Сделка</button></div></section>;
 }
 
 function GateDialog({ gate, form, setForm, props, pending, onCancel, onSubmit }: { gate: Gate; form: GateForm; setForm: Dispatch<SetStateAction<GateForm>>; props: Props; pending: boolean; onCancel: () => void; onSubmit: () => void }) {
@@ -373,11 +379,15 @@ export function DealsBoard(props: Props) {
   function onDragEnd(event: DragEndEvent) { lastDragAt.current = Date.now(); setActiveId(null); const targetId = event.over?.id ? String(event.over.id) : null; if (targetId) void moveDeal(String(event.active.id), targetId); }
   const visibleColumns = columns.filter((column) => column.id !== "lost");
   const lost = columns.find((column) => column.id === "lost");
+  const stageList = useMemo(
+    () => columns.filter((column) => !column.kettle).map((column, index) => ({ id: column.id, kind: column.kind ?? (column.won ? "won" as const : "open" as const), position: column.position ?? index })),
+    [columns],
+  );
   return <>
     <DndContext id="crm-deals-board" sensors={sensors} collisionDetection={collisionDetectionStrategy} onDragStart={onDragStart} onDragCancel={onDragCancel} onDragEnd={onDragEnd}>
       <div className="board">
-        {visibleColumns.map((column) => <BoardColumn key={column.id} column={column} onOpen={openDeal} onCreate={createDeal} onClaim={claimDeal} />)}
-        {lost && <LostColumn column={lost} expanded={lostExpanded} onToggle={() => setLostExpanded((expanded) => !expanded)} onOpen={openDeal} onCreate={createDeal} />}
+        {visibleColumns.map((column) => <BoardColumn key={column.id} column={column} stages={stageList} onOpen={openDeal} onCreate={createDeal} onClaim={claimDeal} />)}
+        {lost && <LostColumn column={lost} stages={stageList} expanded={lostExpanded} onToggle={() => setLostExpanded((expanded) => !expanded)} onOpen={openDeal} onCreate={createDeal} />}
       </div>
       <DragOverlay>{activeDeal ? <PresentationalCard deal={activeDeal} dragging /> : null}</DragOverlay>
     </DndContext>
