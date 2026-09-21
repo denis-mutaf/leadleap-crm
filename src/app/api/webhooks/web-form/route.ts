@@ -9,7 +9,11 @@ export const runtime = "nodejs";
 export async function POST(req: Request) {
   const expected = process.env.WEB_FORM_TOKEN;
   const provided = req.headers.get("x-form-token");
-  if (!expected || !provided || provided !== expected) {
+  if (!expected) {
+    console.error("web-form token is not configured");
+    return NextResponse.json({ ok: false, error: "Temporary intake failure" }, { status: 503 });
+  }
+  if (!provided || provided !== expected) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 

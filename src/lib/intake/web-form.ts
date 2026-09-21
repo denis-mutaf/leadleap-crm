@@ -6,7 +6,8 @@ export const INTAKE_CHANNEL = "web_form";
 export const INTAKE_KIND = "form_submit";
 
 // Хеш тела плюс текущая минута UTC: двойной сабмит в пределах минуты
-// ложится на тот же dedup_key и не порождает вторую сделку.
+// ложится на тот же dedup_key и не порождает вторую сделку. Без стабильного
+// upstream event ID это не может гарантировать дедупликацию за пределами окна.
 export function buildDedupKey(body: Record<string, unknown>, now = new Date()): string {
   const minute = now.toISOString().slice(0, 16);
   const hash = createHash("sha256").update(JSON.stringify(body)).digest("hex");
