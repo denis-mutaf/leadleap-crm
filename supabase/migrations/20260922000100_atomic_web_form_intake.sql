@@ -20,7 +20,8 @@ create or replace function public.process_web_form_event(
   p_comment text,
   p_utm jsonb,
   p_meta_campaign_id text,
-  p_unknown jsonb
+  p_unknown jsonb,
+  p_unknown_labels jsonb
 )
 returns jsonb
 language plpgsql
@@ -33,15 +34,13 @@ declare
   normalized text := public.normalize_phone(p_phone);
   phone_tail text := right(regexp_replace(coalesce(p_phone, ''), '\D', '', 'g'), 8);
   matched_ids uuid[];
-  contact_id uuid;
+  target_contact_id uuid;
   deal_id uuid;
   stage_id uuid;
   source_id uuid;
   field_id uuid;
   field_key text;
-  field_value text;
-  open_deal record;
-  created_field record;
+  field_value jsonb;
 begin
   if coalesce(auth.role(), '') <> 'service_role' then
     raise exception 'Service role required' using errcode = '42501';
@@ -84,19 +83,23 @@ begin
   if coalesce(cardinality(matched_ids), 0) > 1 then
     raise exception 'Ambiguous phone match: % contacts', cardinality(matched_ids) using errcode = '21000';
   end if;
-  contact_id := matched_ids[1];
+  target_contact_id := matched_ids[1];
 
-  if contact_id is null then
+  if target_contact_id is null then
     insert into public.contacts (full_name)
     values (coalesce(nullif(btrim(p_name), ''), 'Без имени'))
-    returning id into contact_id;
+    returning id into target_contact_id;
     insert into public.contact_phones (contact_id, phone, is_primary)
-    values (contact_id, normalized, true);
+    values (target_contact_id, normalized, true);
   end if;
 
   select d.id into deal_id
   from public.deals d
-  where d.contact_id = contact_id and d.status not in ('won', 'lost')
+  where d.status not in ('won', 'lost')
+    and (d.contact_id = target_contact_id or exists (
+      select 1 from public.deal_contacts dc
+      where dc.deal_id = d.id and dc.contact_id = target_contact_id
+    ))
   order by d.created_at desc
   limit 1
   for update;
@@ -113,7 +116,7 @@ begin
       contact_id, stage_id, source_id, title, utm, meta_campaign_id,
       first_inbound_at, intake_event_id
     ) values (
-      contact_id, stage_id, source_id,
+      target_contact_id, stage_id, source_id,
       case when nullif(btrim(p_name), '') is not null then 'Форма сайта: ' || btrim(p_name) else 'Форма сайта' end,
       coalesce(p_utm, '{}'::jsonb), p_meta_campaign_id,
       now(), p_event_id
@@ -123,18 +126,22 @@ begin
     values (deal_id, coalesce(nullif(p_comment, ''), 'Обращение с формы сайта (повторное обращение)'), p_event_id);
   end if;
 
+  insert into public.deal_contacts (deal_id, contact_id, is_primary)
+  values (deal_id, target_contact_id, true)
+  on conflict (deal_id, contact_id) do update set is_primary = excluded.is_primary;
+
   if deal_id is not null and p_comment is not null and btrim(p_comment) <> ''
      and not exists (select 1 from public.notes where intake_event_id = p_event_id) then
     insert into public.notes (deal_id, body, intake_event_id)
     values (deal_id, p_comment, p_event_id);
   end if;
 
-  for field_key, field_value in select key, value from jsonb_each_text(coalesce(p_unknown, '{}'::jsonb)) loop
+  for field_key, field_value in select key, value from jsonb_each(coalesce(p_unknown, '{}'::jsonb)) loop
     select id into field_id from public.custom_field_defs
     where entity = 'deal' and key = field_key;
     if field_id is null then
       insert into public.custom_field_defs (entity, key, label, field_type, auto_created)
-      values ('deal', field_key, field_key, 'text', true)
+      values ('deal', field_key, coalesce(nullif(p_unknown_labels ->> field_key, ''), field_key), 'text', true)
       on conflict (entity, key) do update set key = excluded.key
       returning id into field_id;
       if field_id is null then
@@ -142,7 +149,7 @@ begin
       end if;
     end if;
     insert into public.custom_field_values (field_id, entity_id, value)
-    values (field_id, deal_id, to_jsonb(field_value))
+    values (field_id, deal_id, field_value)
     on conflict (field_id, entity_id) do update set value = excluded.value;
   end loop;
 
@@ -153,5 +160,5 @@ begin
 end;
 $$;
 
-revoke all on function public.process_web_form_event(uuid, text, text, text, jsonb, text, jsonb) from public, authenticated, anon;
-grant execute on function public.process_web_form_event(uuid, text, text, text, jsonb, text, jsonb) to service_role;
+revoke all on function public.process_web_form_event(uuid, text, text, text, jsonb, text, jsonb, jsonb) from public, authenticated, anon;
+grant execute on function public.process_web_form_event(uuid, text, text, text, jsonb, text, jsonb, jsonb) to service_role;

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { parseFormFields } from "./field-synonyms";
+import { humanizeKey, parseFormFields } from "./field-synonyms";
 
 export const INTAKE_CHANNEL = "web_form";
 export const INTAKE_KIND = "form_submit";
@@ -37,6 +37,9 @@ export async function processWebFormEvent(
     p_utm: parsed.utm,
     p_meta_campaign_id: parsed.metaCampaignId ?? null,
     p_unknown: parsed.unknown,
+    p_unknown_labels: Object.fromEntries(
+      Object.keys(parsed.unknown).map((key) => [key, humanizeKey(key)]),
+    ),
   });
   if (error) throw new Error(`Не удалось атомарно обработать заявку: ${error.message}`);
   const result = data as { deal_id?: string; duplicate?: boolean } | null;
