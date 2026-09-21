@@ -5,6 +5,7 @@ import { SignOutButton } from "./sign-out-button";
 import { AppNav, type AppNavItem } from "./app-nav";
 import { GlobalSearch } from "./global-search";
 import { NotificationsPanel } from "./notifications-panel";
+import { IncomingCallOverlay } from "./incoming-call-overlay";
 
 type NavEntry = AppNavItem & {
   roles: string[];
@@ -84,6 +85,7 @@ export default async function AppLayout({
       </aside>
       <main className="main-shell">
         <NotificationsPanel role={profile.role} />
+        <IncomingCallOverlay role={profile.role} />
         {children}
       </main>
     </div>
