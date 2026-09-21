@@ -53,9 +53,22 @@ export async function proxy(request: NextRequest) {
     return redirectWithSession("/deals");
   }
 
+  if (!user && pathname.startsWith("/api/")) {
+    const unauthorized = NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 },
+    );
+    response.cookies
+      .getAll()
+      .forEach((cookie) => unauthorized.cookies.set(cookie));
+    return unauthorized;
+  }
+
   return response;
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };
