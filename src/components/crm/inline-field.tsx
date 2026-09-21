@@ -52,7 +52,15 @@ export function InlineField({
   const [saving, setSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(null);
 
-  useEffect(() => setCurrent(value), [value]);
+  // Поле показывает своё значение сразу после правки, не дожидаясь ответа
+  // сервера, поэтому серверное value и локальное current живут отдельно.
+  // Синхронизация через useEffect давала лишний проход рендера на каждое
+  // обновление страницы — сверка делается прямо в рендере, как советует React.
+  const [syncedValue, setSyncedValue] = useState(value);
+  if (syncedValue !== value) {
+    setSyncedValue(value);
+    setCurrent(value);
+  }
   useEffect(() => {
     if (editing) inputRef.current?.focus();
   }, [editing]);

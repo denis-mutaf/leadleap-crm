@@ -115,6 +115,11 @@ export default async function TasksPage({
   const toDate = /^\d{4}-\d{2}-\d{2}$/.test(params.to ?? "")
     ? params.to
     : "";
+  // Один и тот же набор фильтров ложится и на select(), и на head-счётчики, а
+  // тип билдера Supabase меняется на каждом звене цепочки. Структурный дженерик
+  // здесь уходит в TS2589 «instantiation is excessively deep»: рекурсия по
+  // собственному типу складывается с рекурсией PostgrestFilterBuilder.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const applyFilters = (base: any) => {
     let next = base;
     if (assignee !== "all") next = next.eq("assignee_id", assignee);
