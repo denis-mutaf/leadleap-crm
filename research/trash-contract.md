@@ -1,6 +1,13 @@
 # Контракт корзины: фактический охват и безопасные границы
 
-Статус: research-only. Migration 027 намеренно не добавлена и не применялась.
+Статус: foundation реализован в migration 027, но не применялся. RPC корзины и UI
+по-прежнему не реализованы.
+
+Важно: RLS гарантирует active-only доступ только для клиентов, которые проходят
+через PostgreSQL RLS. Service-role/admin client Supabase RLS обходит; все его
+обычные чтения (webhooks, отчёты, фоновые процессы и будущий purge) обязаны явно
+добавлять `deleted_at is null` либо использовать отдельный явно названный trash
+контракт. Migration 027 намеренно не меняет app service-role queries.
 
 ## Фактический охват
 
@@ -116,6 +123,8 @@ restore stage/status, expired restore, audit и отсутствие физич�
 
 ## Не выполнено намеренно
 
-- SQL migration 027 не создана.
+- SQL migration 027 создана как foundation: колонки, индексы, active-only RLS и
+  запрет authenticated physical DELETE/direct update delete-columns.
 - RPC и purge function не созданы.
-- Live writes, `supabase db push`, apply миграций и UI не выполнялись.
+- SQL syntax check в `BEGIN/ROLLBACK`, live writes, `supabase db push`, apply
+  миграций и UI не выполнялись.
