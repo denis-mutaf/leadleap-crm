@@ -10,6 +10,7 @@ import {
   PhoneMissed,
   UserPlus,
   ArrowRight,
+  Settings,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -269,16 +270,21 @@ export function NotificationsPanel({ role }: { role: string }) {
         )}
       </button>
       {open && (
-        <section className={styles.panel} aria-label="Уведомления">
+        <section className={`${styles.panel} motion-panel`} aria-label="Уведомления">
           <div className={styles.header}>
             <h2>Уведомления</h2>
-            <button
-              className={styles.quiet}
-              disabled={!unread || pending !== null}
-              onClick={() => void markAll()}
-            >
-              Прочитать все
-            </button>
+            <span className={styles.headerActions}>
+              <button
+                className={styles.quiet}
+                disabled={!unread || pending !== null}
+                onClick={() => void markAll()}
+              >
+                Прочитать все
+              </button>
+              <Link className={styles.settings} href="/settings" aria-label="Настройки уведомлений">
+                <Settings size={15} />
+              </Link>
+            </span>
           </div>
           <div className={styles.tabs} role="tablist">
             <button

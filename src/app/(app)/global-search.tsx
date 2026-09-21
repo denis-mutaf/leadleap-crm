@@ -2,6 +2,7 @@
 import { BriefcaseBusiness, ListTodo, Search, Users, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 type Result = {
@@ -26,6 +27,14 @@ const LIMIT = 8,
   isPhone = (value: string) => /^[\d\s+()\-]+$/.test(value);
 const likeLiteral = (value: string) =>
   value.replace(/[\\%_]/g, (character) => `\\${character}`);
+const highlight = (value: string, query: string): ReactNode => {
+  const term = query.trim();
+  if (!term) return value;
+  const parts = value.split(new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "ig"));
+  return parts.map((part, index) =>
+    part.toLowerCase() === term.toLowerCase() ? <mark key={index}>{part}</mark> : part,
+  );
+};
 async function chunks<T>(
   ids: string[],
   load: (
@@ -49,7 +58,8 @@ export function GlobalSearch() {
     >([]),
     [error, setError] = useState<string | null>(null),
     [loading, setLoading] = useState(false),
-    [selected, setSelected] = useState(0);
+    [selected, setSelected] = useState(0),
+    [recent, setRecent] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null),
     triggerRef = useRef<HTMLButtonElement>(null),
     requestId = useRef(0),
@@ -68,9 +78,24 @@ export function GlobalSearch() {
     triggerRef.current?.focus();
   };
   const go = (item: Result) => {
+    const value = query.trim();
+    if (value) {
+      const next = [value, ...recent.filter((entry) => entry !== value)].slice(0, 5);
+      setRecent(next);
+      window.localStorage.setItem("leadleap-search-recent", JSON.stringify(next));
+    }
     close();
     router.push(item.href);
   };
+
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(window.localStorage.getItem("leadleap-search-recent") ?? "[]");
+      if (Array.isArray(stored)) setRecent(stored.filter((value): value is string => typeof value === "string").slice(0, 5));
+    } catch {
+      setRecent([]);
+    }
+  }, []);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -166,7 +191,7 @@ export function GlobalSearch() {
             db
               .from("contact_phones")
               .select("contact_id")
-              .ilike("phone", `%${phoneDigits}%`)
+              .ilike("phone", `%${phoneDigits.slice(-4)}%`)
               .limit(LIMIT),
             db
               .from("imported_contact_phones")
@@ -429,13 +454,13 @@ export function GlobalSearch() {
       </button>
       {open && (
         <div
-          className="global-search-overlay"
+          className="global-search-overlay motion-veil"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) close();
           }}
         >
           <section
-            className="global-search-panel"
+            className="global-search-panel motion-dialog"
             role="dialog"
             aria-modal="true"
             aria-label="Глобальный поиск"
@@ -466,10 +491,11 @@ export function GlobalSearch() {
                   <p className="global-search-state">Ничего не найдено</p>
                 )}
               {groups.map((group) => (
-                <div key={group.label}>
+              <div key={group.label}>
                   <div className="global-search-group">
                     <group.icon size={14} />
                     {group.label}
+                    <span className="global-search-count">{group.items.length}</span>
                   </div>
                   {group.items.map((item) => {
                     const Icon =
@@ -487,13 +513,31 @@ export function GlobalSearch() {
                         onClick={() => go(item)}
                       >
                         <Icon size={15} />
-                        <span>{item.title}</span>
+                        <span>{highlight(item.title, query)}</span>
                         <small>{item.meta}</small>
                       </button>
                     );
                   })}
                 </div>
               ))}
+              {!loading && !error && !query.trim() && recent.length > 0 && (
+                <div>
+                  <div className="global-search-group"><Search size={14} /> Недавние запросы</div>
+                  {recent.map((entry) => (
+                    <button
+                      className="global-search-row"
+                      key={entry}
+                      onClick={() => setQuery(entry)}
+                    >
+                      <Search size={15} />
+                      <span>{entry}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {!loading && !error && !query.trim() && !recent.length && (
+                <p className="global-search-state">Введите имя, номер, сделку или объект</p>
+              )}
             </div>
             <footer className="global-search-footer">
               <span>

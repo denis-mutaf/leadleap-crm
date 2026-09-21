@@ -6,7 +6,6 @@ import {
   ChevronDown,
   Clock3,
   PhoneIncoming,
-  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -68,9 +67,9 @@ export function IncomingCallOverlay({
   const [note, setNote] = useState("");
   const [collapsed, setCollapsed] = useState(false);
   const [tick, setTick] = useState(0);
-  const [pending, setPending] = useState<"close" | "note" | null>(null);
+  const [pending, setPending] = useState<"close" | "note" | "create" | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const pendingRef = useRef<"close" | "note" | null>(null);
+  const pendingRef = useRef<"close" | "note" | "create" | null>(null);
   const pollInFlight = useRef(false);
   const request = useRef(0);
   const supabase = useMemo(() => createClient(), []);
@@ -371,6 +370,59 @@ export function IncomingCallOverlay({
       setPending(null);
     }
   };
+  const createDeal = async () => {
+    if (!notice || !unknown || pendingRef.current) return;
+    const phone = notice.payload.phone ?? "Номер не указан";
+    if (phone === "Номер не указан") {
+      setError("У входящего звонка нет номера");
+      return;
+    }
+    pendingRef.current = "create";
+    setPending("create");
+    setError(null);
+    try {
+      const contactResult = await supabase
+        .from("contacts")
+        .insert({ full_name: phone, created_by: actorId })
+        .select("id, full_name")
+        .single();
+      if (contactResult.error) throw new Error("Не удалось создать контакт");
+      const phoneResult = await supabase
+        .from("contact_phones")
+        .insert({ contact_id: contactResult.data.id, phone, is_primary: true });
+      if (phoneResult.error) throw new Error("Не удалось сохранить номер");
+      const stageResult = await supabase
+        .from("stages")
+        .select("id")
+        .eq("is_active", true)
+        .order("position")
+        .limit(1)
+        .maybeSingle();
+      if (stageResult.error || !stageResult.data) throw new Error("Не найден этап для новой сделки");
+      const dealResult = await supabase
+        .from("deals")
+        .insert({
+          contact_id: contactResult.data.id,
+          owner_id: actorId,
+          stage_id: stageResult.data.id,
+          title: `Входящий звонок ${phone}`,
+          created_by: actorId,
+        })
+        .select("id, title, object_text, updated_at, stage_id, contact_id")
+        .single();
+      if (dealResult.error) throw new Error("Не удалось создать сделку");
+      await supabase
+        .from("notifications")
+        .update({ contact_id: contactResult.data.id, deal_id: dealResult.data.id })
+        .eq("id", notice.id);
+      setNotice((current) => current ? { ...current, kind: "incoming_call", contact_id: contactResult.data.id, deal_id: dealResult.data.id } : current);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Не удалось создать сделку");
+    } finally {
+      pendingRef.current = null;
+      setPending(null);
+    }
+  };
   if (!active || !notice) return null;
   const phone = notice.payload.phone ?? "Номер не указан";
   const unknown = notice.kind === "new_lead";
@@ -379,7 +431,7 @@ export function IncomingCallOverlay({
 
   return (
     <aside
-      className={`${styles.card} ${collapsed ? styles.collapsed : ""}`}
+      className={`${styles.card} motion-panel ${collapsed ? styles.collapsed : ""}`}
       aria-live="polite"
     >
       <header className={styles.header}>
@@ -394,13 +446,6 @@ export function IncomingCallOverlay({
           aria-label="Свернуть"
         >
           <ChevronDown size={16} />
-        </button>
-        <button
-          onClick={() => void close()}
-          disabled={pending !== null}
-          aria-label="Закрыть"
-        >
-          <X size={16} />
         </button>
       </header>
       {!collapsed && (
@@ -440,7 +485,7 @@ export function IncomingCallOverlay({
           {detail.overdue && (
             <div className={styles.overdue}>{detail.overdue}</div>
           )}
-          {!unknown && deal && (
+          {(
             <div className={styles.noteBox}>
               <textarea
                 value={note}
@@ -450,7 +495,7 @@ export function IncomingCallOverlay({
               />
               <button
                 onClick={() => void saveNote()}
-                disabled={!note.trim() || pending !== null}
+                disabled={!deal || !note.trim() || pending !== null}
               >
                 <Check size={14} />{" "}
                 {pending === "note" ? "Сохраняем…" : "Сохранить заметку"}
@@ -459,7 +504,11 @@ export function IncomingCallOverlay({
           )}
           {error && <p className={styles.error}>{error}</p>}
           <footer>
-            {!unknown && deals.length > 1 && (
+            {unknown ? (
+              <Link href={`/contacts?q=${encodeURIComponent(phone)}`}>
+                Найти контакт
+              </Link>
+            ) : deals.length > 1 ? (
               <button
                 onClick={() =>
                   setDeal(deals[(currentIndex + 1) % deals.length])
@@ -467,14 +516,15 @@ export function IncomingCallOverlay({
               >
                 <ArrowLeftRight size={14} /> Другая сделка
               </button>
-            )}
+            ) : null}
             {deal ? (
               <Link href={`/deals/${deal.id}`}>Открыть сделку</Link>
-            ) : notice.contact_id ? (
-              <Link href={`/contacts/${notice.contact_id}`}>
-                Открыть контакт
-              </Link>
             ) : null}
+            {unknown && !deal && (
+              <button className={styles.primaryAction} onClick={() => void createDeal()} disabled={pending !== null}>
+                {pending === "create" ? "Создаём…" : "Создать сделку"}
+              </button>
+            )}
           </footer>
         </>
       )}

@@ -1,7 +1,7 @@
 .root {
   position: absolute;
   top: 8px;
-  right: 16px;
+  right: 12px;
   z-index: 40;
 }
 .bell {
@@ -37,7 +37,7 @@
 }
 .panel {
   position: absolute;
-  top: 40px;
+  top: 48px;
   right: 0;
   width: 400px;
   max-height: 560px;
@@ -47,7 +47,7 @@
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: 0 16px 40px rgb(36 37 41 / 16%);
+  box-shadow: var(--shadow-overlay, 0 8px 16px -4px rgb(0 0 0 / 4%), 0 2px 4px -1px rgb(0 0 0 / 2%));
 }
 .header {
   height: 49px;
@@ -62,12 +62,33 @@
   font-size: 14px;
   font-weight: 600;
 }
+.headerActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.settings {
+  width: var(--h-control);
+  height: var(--h-control);
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius);
+  color: var(--muted-foreground);
+  text-decoration: none;
+}
+.settings:hover,
+.settings:focus-visible {
+  background: var(--accent);
+  color: var(--foreground);
+  outline: 0;
+}
 .quiet {
   border: 0;
   background: transparent;
   color: var(--muted-foreground);
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
 }
 .quiet:hover:not(:disabled) {
@@ -78,9 +99,11 @@
   opacity: 0.5;
 }
 .tabs {
+  min-height: 39px;
   display: flex;
   gap: 4px;
-  padding: 6px 12px;
+  align-items: center;
+  padding: 0 12px;
   border-bottom: 1px solid var(--border);
 }
 .tab {
@@ -90,7 +113,7 @@
   background: transparent;
   color: var(--muted-foreground);
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
 }
 .tabActive {
@@ -103,7 +126,10 @@
   min-height: 110px;
 }
 .groupTitle {
-  padding: 6px 12px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
   background: var(--muted);
   color: var(--muted-foreground);
   font-size: 12px;
@@ -166,13 +192,13 @@
   white-space: nowrap;
 }
 .title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
 }
 .bodyText,
 .time {
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: 13px;
 }
 .time {
   align-self: start;
