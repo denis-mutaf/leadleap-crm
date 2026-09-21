@@ -13,14 +13,6 @@ export default async function DictionariesPage() {
   const db = await createClient();
   const specs = [
     {
-      key: "tags",
-      label: "Метки",
-      table: "tags",
-      relation: "deal_tags",
-      foreign: "tag_id",
-      select: "id, name, is_active, merged_into",
-    },
-    {
       key: "sources",
       label: "Источники",
       table: "sources",
@@ -43,14 +35,6 @@ export default async function DictionariesPage() {
       relation: "deals",
       foreign: "lost_reason_id",
       select: "id, name, is_active, position",
-    },
-    {
-      key: "projects",
-      label: "Площадки",
-      table: "projects",
-      relation: "deal_projects",
-      foreign: "project_id",
-      select: "id, name, is_active, code",
     },
   ] as const;
   let loaded: Awaited<ReturnType<typeof loadDictionaries>>;

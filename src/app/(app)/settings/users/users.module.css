@@ -126,7 +126,7 @@
   background: var(--muted);
   color: var(--muted-foreground);
 }
-button:disabled {
+.dialog button:disabled {
   cursor: not-allowed;
   opacity: 0.65;
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { UserRole } from "@/lib/types";
 import { USER_ROLE_LABELS } from "@/lib/types";
@@ -122,13 +121,9 @@ export default function UsersClient({
     }
   }
   return (
-    <div className={styles.page}>
+    <div className={`${styles.page} settings-content`}>
       <div className={styles.top}>
         <div>
-          <Link href="/settings" className={styles.back}>
-            ← Настройки
-          </Link>
-          <p className={styles.eyebrow}>Настройки / Команда</p>
           <h1>Пользователи и роли</h1>
           <p className={styles.subtitle}>
             Людей не удаляют — отключают. История их сделок остаётся.

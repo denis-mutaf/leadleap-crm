@@ -1,353 +1,94 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { Stage, StageKind } from "@/lib/types";
+import { useState, useRef } from "react";
+import { Ellipsis, GripVertical, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { DndContext, PointerSensor, KeyboardSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import type { Stage, StageKind } from "@/lib/types";
 import styles from "./settings.module.css";
 
 type Row = Stage & { counts: { total: number } };
-type Editable = Pick<
-  Stage,
-  | "name"
-  | "requires_next_step"
-  | "requires_qualification_tag"
-  | "requires_qualification"
->;
+type GateKey = "requires_next_step" | "requires_qualification_tag";
+const kindLabel = (kind: StageKind) => kind === "won" ? "успешный" : kind === "lost" ? "неуспешный" : "открытый";
 
-const kindLabel = (kind: StageKind) =>
-  kind === "won" ? "Успешный" : kind === "lost" ? "Неуспешный" : "Открытый";
-
-export function StageTable({
-  rows,
-  canEdit,
-}: {
-  rows: Row[];
-  canEdit: boolean;
-}) {
-  const [items, setItems] = useState(rows);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<Editable | null>(null);
-  const [pendingId, setPendingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [confirming, setConfirming] = useState<{
-    stage: Row;
-    draft: Editable;
-  } | null>(null);
-  const pendingRef = useRef(false);
-  const confirmRef = useRef<HTMLButtonElement>(null);
-  const saveButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const editButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-
-  function beginEdit(stage: Row) {
-    setError(null);
-    setEditingId(stage.id);
-    setDraft({
-      name: stage.name,
-      requires_next_step: stage.requires_next_step,
-      requires_qualification_tag: stage.requires_qualification_tag,
-      requires_qualification: stage.requires_qualification,
-    });
-  }
-
-  function cancelEdit() {
-    if (pendingId) return;
-    setEditingId(null);
-    setDraft(null);
-    setError(null);
-  }
-
-  const closeConfirmation = useCallback(() => {
-    const stageId = confirming?.stage.id;
-    setConfirming(null);
-    if (stageId) {
-      requestAnimationFrame(() => saveButtonRefs.current[stageId]?.focus());
-    }
-  }, [confirming]);
-
-  function save(stage: Row) {
-    if (!draft || !draft.name.trim()) {
-      setError("Введите название этапа.");
-      return;
-    }
-    setConfirming({ stage, draft: { ...draft, name: draft.name.trim() } });
-  }
-
-  useEffect(() => {
-    if (!confirming) return;
-    confirmRef.current?.focus();
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") closeConfirmation();
-    }
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [closeConfirmation, confirming]);
-
-  async function confirmSave() {
-    if (!confirming || pendingRef.current) return;
-    const { stage, draft: confirmedDraft } = confirming;
-    setConfirming(null);
-
-    pendingRef.current = true;
-    setPendingId(stage.id);
-    setError(null);
-    const supabase = createClient();
-    const result = await supabase
-      .from("stages")
-      .update({
-        name: confirmedDraft.name,
-        requires_next_step: confirmedDraft.requires_next_step,
-        requires_qualification_tag: confirmedDraft.requires_qualification_tag,
-        requires_qualification: confirmedDraft.requires_qualification,
-      })
-      .eq("id", stage.id)
-      .select(
-        "id, name, position, kind, requires_next_step, requires_qualification_tag, requires_qualification, is_active, created_at",
-      )
-      .single();
-
-    if (result.error) {
-      setError(result.error.message);
-      setPendingId(null);
-      pendingRef.current = false;
-      return;
-    }
-
-    setItems((current) =>
-      current.map((item) =>
-        item.id === stage.id ? { ...item, ...(result.data as Stage) } : item,
-      ),
-    );
-    setPendingId(null);
-    pendingRef.current = false;
-    setEditingId(null);
-    setDraft(null);
-    requestAnimationFrame(() => editButtonRefs.current[stage.id]?.focus());
-  }
-
-  return (
-    <table className={styles.table}>
-      <thead>
-        <tr>
-          <th>Этап</th>
-          <th>Вид</th>
-          <th>Следующий шаг</th>
-          <th>КВАЛ-тег</th>
-          <th>Поля квалификации</th>
-          <th className={styles.countHead}>Сделки</th>
-          {canEdit && <th className={styles.actionHead}>Действие</th>}
-        </tr>
-      </thead>
-      <tbody>
-        {items.map((stage) => {
-          const isEditing = editingId === stage.id;
-          const isPending = pendingId === stage.id;
-          return (
-            <tr key={stage.id}>
-              <td>
-                {isEditing && draft ? (
-                  <label className={styles.editField}>
-                    <span className={styles.srOnly}>Название этапа</span>
-                    <input
-                      value={draft.name}
-                      onChange={(event) =>
-                        setDraft({ ...draft, name: event.target.value })
-                      }
-                      disabled={isPending}
-                    />
-                  </label>
-                ) : (
-                  <>
-                    <span
-                      className={`${styles.dot} ${stage.kind === "won" ? styles.dotWon : stage.kind === "lost" ? styles.dotLost : ""}`}
-                    />
-                    {stage.name}
-                  </>
-                )}
-              </td>
-              <td>
-                <span
-                  className={`${styles.kind} ${stage.kind === "won" ? styles.kindWon : stage.kind === "lost" ? styles.kindLost : ""}`}
-                >
-                  {kindLabel(stage.kind)}
-                </span>
-              </td>
-              <td>
-                <Gate
-                  value={
-                    isEditing && draft
-                      ? draft.requires_next_step
-                      : stage.requires_next_step
-                  }
-                  detail={undefined}
-                  draft={isEditing ? draft : null}
-                  label={`${stage.name}: требовать следующий шаг`}
-                  disabled={isPending}
-                  onChange={(value) =>
-                    draft && setDraft({ ...draft, requires_next_step: value })
-                  }
-                />
-              </td>
-              <td>
-                <Gate
-                  value={
-                    isEditing && draft
-                      ? draft.requires_qualification_tag
-                      : stage.requires_qualification_tag
-                  }
-                  detail="ручная метка КВАЛ/неквал"
-                  draft={isEditing ? draft : null}
-                  label={`${stage.name}: требовать КВАЛ-тег`}
-                  disabled={isPending}
-                  onChange={(value) =>
-                    draft &&
-                    setDraft({ ...draft, requires_qualification_tag: value })
-                  }
-                />
-              </td>
-              <td>
-                <Gate
-                  value={
-                    isEditing && draft
-                      ? draft.requires_qualification
-                      : stage.requires_qualification
-                  }
-                  detail="бюджет, оплата и другие поля"
-                  draft={isEditing ? draft : null}
-                  label={`${stage.name}: требовать заполнение полей квалификации`}
-                  disabled={isPending}
-                  onChange={(value) =>
-                    draft &&
-                    setDraft({ ...draft, requires_qualification: value })
-                  }
-                />
-              </td>
-              <td className={styles.count}>
-                <strong>{stage.counts.total.toLocaleString("ru-RU")}</strong>
-              </td>
-              {canEdit && (
-                <td className={styles.actions}>
-                  {isEditing ? (
-                    <>
-                      <button
-                        type="button"
-                        className={styles.saveButton}
-                        ref={(button) => {
-                          saveButtonRefs.current[stage.id] = button;
-                        }}
-                        onClick={() => save(stage)}
-                        disabled={isPending}
-                      >
-                        {isPending ? "Сохранение…" : "Сохранить"}
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.cancelButton}
-                        onClick={cancelEdit}
-                        disabled={isPending}
-                      >
-                        Отмена
-                      </button>
-                      {error && (
-                        <span className={styles.inlineError} role="alert">
-                          {error}
-                        </span>
-                      )}
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      className={styles.editButton}
-                      ref={(button) => {
-                        editButtonRefs.current[stage.id] = button;
-                      }}
-                      onClick={() => beginEdit(stage)}
-                    >
-                      Изменить
-                    </button>
-                  )}
-                </td>
-              )}
-            </tr>
-          );
-        })}
-      </tbody>
-      {confirming && (
-        <tfoot>
-          <tr>
-            <td colSpan={canEdit ? 7 : 6}>
-              <div
-                className={styles.confirmDialog}
-                role="group"
-                aria-labelledby={`confirm-stage-title-${confirming.stage.id}`}
-              >
-                <div>
-                  <strong id={`confirm-stage-title-${confirming.stage.id}`}>
-                    Сохранить изменения этапа?
-                  </strong>
-                  <p>
-                    «{confirming.stage.name}» будет обновлён с выбранными
-                    правилами.
-                  </p>
-                </div>
-                <div className={styles.confirmActions}>
-                  <button
-                    ref={confirmRef}
-                    type="button"
-                    className={styles.saveButton}
-                    onClick={confirmSave}
-                  >
-                    Подтвердить
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.cancelButton}
-                    onClick={closeConfirmation}
-                  >
-                    Отмена
-                  </button>
-                </div>
-              </div>
-            </td>
-          </tr>
-        </tfoot>
-      )}
-    </table>
-  );
+function Toggle({ value, disabled, label, onClick }: { value: boolean; disabled: boolean; label: string; onClick: () => void }) {
+  return <button type="button" className={`${styles.switch} ${value ? styles.on : ""}`} aria-label={label} aria-pressed={value} disabled={disabled} onClick={onClick} />;
 }
 
-function Gate({
-  value,
-  detail,
-  draft,
-  label,
-  disabled,
-  onChange,
-}: {
-  value: boolean;
-  detail?: string;
-  draft: Editable | null;
-  label: string;
-  disabled: boolean;
-  onChange: (value: boolean) => void;
-}) {
-  return draft ? (
-    <label className={styles.gateEdit}>
-      <input
-        aria-label={label}
-        type="checkbox"
-        checked={value}
-        onChange={(event) => onChange(event.target.checked)}
-        disabled={disabled}
-      />
-      <span>{value ? "Да" : "Нет"}</span>
-      {detail && <small>{detail}</small>}
-    </label>
-  ) : (
-    <span className={styles.gate}>
-      <span className={value ? styles.on : styles.off}>
-        {value ? "Да" : "Нет"}
-      </span>
-      {detail && <small>{detail}</small>}
-    </span>
-  );
+function StageRow({ row, canEdit, menu, setMenu, onEdit, onToggle }: { row: Row; canEdit: boolean; menu: string | null; setMenu: (id: string | null) => void; onEdit: (row: Row) => void; onToggle: (row: Row, key: GateKey) => void }) {
+  const closed = row.kind !== "open";
+  const sortable = useSortable({ id: row.id, disabled: !canEdit || closed });
+  return <tr ref={sortable.setNodeRef} style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }} className={closed ? styles.closed : undefined}>
+    <td className={styles.grip}>{!closed && <button className={styles.dragHandle} {...sortable.attributes} {...sortable.listeners} disabled={!canEdit} aria-label={`Переместить ${row.name}`}><GripVertical size={14} /></button>}</td>
+    <td><span className={`${styles.dot} ${row.kind === "won" ? styles.dotWon : row.kind === "lost" ? styles.dotLost : ""}`} />{row.name}</td>
+    <td><span className={`${styles.kind} ${row.kind === "won" ? styles.kindWon : row.kind === "lost" ? styles.kindLost : ""}`}>{kindLabel(row.kind)}</span></td>
+    <td><Toggle value={row.requires_next_step} disabled={!canEdit || closed} label={`${row.name}: требовать следующий шаг`} onClick={() => onToggle(row, "requires_next_step")} /></td>
+    <td><Toggle value={row.requires_qualification_tag} disabled={!canEdit} label={`${row.name}: требовать квалификацию`} onClick={() => onToggle(row, "requires_qualification_tag")} /></td>
+    <td className={styles.count}><strong>{row.counts.total.toLocaleString("ru-RU")}</strong></td>
+    <td className={styles.menuCell}>{canEdit && <button className={styles.menuButton} aria-label={`Действия: ${row.name}`} aria-expanded={menu === row.id} onClick={(event) => { event.stopPropagation(); setMenu(menu === row.id ? null : row.id); }}><Ellipsis size={16} /></button>}{menu === row.id && <div className={styles.menu} role="menu"><button onClick={() => onEdit(row)}>Переименовать</button></div>}</td>
+  </tr>;
+}
+
+export function StageTable({ rows, canEdit }: { rows: Row[]; canEdit: boolean }) {
+  const [items, setItems] = useState(rows);
+  const [menu, setMenu] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Row | null>(null);
+  const [draft, setDraft] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const busyRef = useRef(false);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+  const openRows = items.filter((row) => row.kind === "open").sort((a, b) => a.position - b.position);
+  const closedRows = items.filter((row) => row.kind !== "open").sort((a, b) => a.position - b.position);
+
+  async function reorder(event: DragEndEvent) {
+    if (!event.over || event.active.id === event.over.id || busyRef.current) return;
+    const from = openRows.findIndex((row) => row.id === event.active.id), to = openRows.findIndex((row) => row.id === event.over?.id);
+    if (from < 0 || to < 0) return;
+    const next = arrayMove(openRows, from, to).map((row, index) => ({ ...row, position: index }));
+    const previous = items; setItems([...next, ...closedRows]); setBusy(true); busyRef.current = true; setError("");
+    try {
+      const db = createClient();
+      const temp = await Promise.all(openRows.map((row, index) => db.from("stages").update({ position: -(index + 1) }).eq("id", row.id)));
+      if (temp.some((result) => result.error)) throw temp.find((result) => result.error)?.error;
+      const final = await Promise.all(next.map((row) => db.from("stages").update({ position: row.position }).eq("id", row.id)));
+      if (final.some((result) => result.error)) throw final.find((result) => result.error)?.error;
+    } catch (cause) { setItems(previous); setError(cause instanceof Error ? cause.message : "Не удалось изменить порядок"); }
+    finally { busyRef.current = false; setBusy(false); }
+  }
+  async function toggle(row: Row, key: GateKey) {
+    if (!canEdit || busyRef.current) return;
+    const value = !row[key]; setItems((current) => current.map((item) => item.id === row.id ? { ...item, [key]: value } : item)); setBusy(true); busyRef.current = true; setError("");
+    const result = await createClient().from("stages").update({ [key]: value }).eq("id", row.id);
+    if (result.error) { setItems((current) => current.map((item) => item.id === row.id ? { ...item, [key]: row[key] } : item)); setError(result.error.message); }
+    busyRef.current = false; setBusy(false);
+  }
+  async function saveName() {
+    if (!editing || !draft.trim() || busyRef.current) return;
+    setBusy(true); busyRef.current = true; setError(""); const result = await createClient().from("stages").update({ name: draft.trim() }).eq("id", editing.id).select("name").single();
+    if (result.error) setError(result.error.message); else { setItems((current) => current.map((row) => row.id === editing.id ? { ...row, name: draft.trim() } : row)); setEditing(null); }
+    busyRef.current = false; setBusy(false);
+  }
+  async function addStage() {
+    if (!newName.trim() || busyRef.current) return;
+    setBusy(true); busyRef.current = true; setError(""); const result = await createClient().from("stages").insert({ name: newName.trim(), position: openRows.length, kind: "open", requires_next_step: false, requires_qualification: false, requires_qualification_tag: false, is_active: true }).select("id,name,position,kind,requires_next_step,requires_qualification_tag,requires_qualification,is_active,created_at").single();
+    if (result.error) setError(result.error.message); else { setItems((current) => [...current, { ...(result.data as Stage), counts: { total: 0 } }]); setNewName(""); setAdding(false); }
+    busyRef.current = false; setBusy(false);
+  }
+  return <>
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={reorder}>
+      <table className={styles.table}><thead><tr><th aria-label="Перетаскивание" /><th>Этап</th><th>Вид</th><th>Требовать следующий шаг</th><th>Требовать квалификацию</th><th className={styles.countHead}>Сделок</th><th aria-label="Действия" /></tr></thead><tbody>
+        <SortableContext items={openRows.map((row) => row.id)} strategy={verticalListSortingStrategy}>{openRows.map((row) => <StageRow key={row.id} row={row} canEdit={canEdit} menu={menu} setMenu={setMenu} onEdit={(item) => { setEditing(item); setDraft(item.name); }} onToggle={toggle} />)}</SortableContext>
+        {openRows.length > 0 && <tr><td colSpan={7}><div className={styles.dropPlaceholder} /></td></tr>}
+        {closedRows.map((row) => <StageRow key={row.id} row={row} canEdit={canEdit} menu={menu} setMenu={setMenu} onEdit={(item) => { setEditing(item); setDraft(item.name); }} onToggle={toggle} />)}
+      </tbody></table>
+    </DndContext>
+    {canEdit && (adding ? <div className={styles.addForm}><input autoFocus value={newName} onChange={(event) => setNewName(event.target.value)} placeholder="Название этапа" onKeyDown={(event) => { if (event.key === "Enter") void addStage(); if (event.key === "Escape") setAdding(false); }} /><button className={styles.saveButton} onClick={() => void addStage()} disabled={busy}>Добавить</button><button className={styles.cancelButton} onClick={() => setAdding(false)}>Отмена</button></div> : <button className={styles.addRow} onClick={() => setAdding(true)}><Plus size={15} /> Этап</button>)}
+    {editing && <div className={styles.inlineEdit}><input autoFocus value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void saveName(); if (event.key === "Escape") setEditing(null); }} /><button className={styles.saveButton} onClick={() => void saveName()} disabled={busy}>Сохранить</button><button className={styles.cancelButton} onClick={() => setEditing(null)}>Отмена</button></div>}
+    {error && <p className={styles.inlineError} role="alert">{error}</p>}
+  </>;
 }
