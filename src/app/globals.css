@@ -2222,7 +2222,7 @@
 .deal-object { margin-top: 7px; }
 .deal-tags { min-height: 20px; }
 .card-placeholder { color: var(--muted-foreground); font-size: 12px; }
-.deal-money { min-height: 20px; margin-top: 8px; color: var(--foreground); font-size: 13px; font-weight: 500; }
+.deal-money { display: -webkit-box; overflow: hidden; min-height: 20px; margin-top: 8px; color: var(--foreground); font-size: 13px; font-weight: 500; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .deal-footer { min-width: 0; margin-top: 9px; padding-top: 8px; }
 .owner-mark { display: inline-flex; align-items: center; gap: 4px; flex: none; }
 .no-step-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted-foreground); }
