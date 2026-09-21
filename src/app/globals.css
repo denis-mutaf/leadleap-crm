@@ -2157,3 +2157,83 @@
   }
   .field-value { transition: none; }
 }
+
+/* Pipeline v2: live controls and the dense card from docs/ux-contract.md. */
+:root { --shadow-drag: 0 14px 30px rgb(28 31 38 / 18%); }
+.page-header { padding-inline: var(--px-cell); }
+.header-notification { position: relative; display: inline-flex; align-items: center; color: var(--muted-foreground); }
+.header-notification b { position: absolute; top: -10px; right: -12px; min-width: 19px; height: 18px; padding: 0 4px; border-radius: 4px; background: var(--destructive); color: #fff; font-size: 11px; line-height: 18px; text-align: center; font-weight: 500; }
+.toolbar { padding-inline: var(--px-cell); }
+.toolbar .view-switch { display: inline-flex; align-items: center; gap: 6px; height: var(--h-control); padding: 0 9px; border: 1px solid var(--input); border-radius: var(--radius); background: var(--secondary); color: var(--foreground); font: inherit; font-size: 13px; text-decoration: none; cursor: pointer; }
+.toolbar .view-switch.active { border-color: var(--input); background: var(--accent); }
+.pipeline-search { display: inline-flex; align-items: center; gap: 6px; height: var(--h-control); min-width: 170px; padding: 0 9px; border: 1px solid var(--input); border-radius: var(--radius); color: var(--muted-foreground); font-size: 13px; }
+.filterbar { position: relative; padding-inline: var(--px-cell); }
+.filter-popover { position: relative; }
+.filter-popover > summary { list-style: none; }
+.filter-popover > summary::-webkit-details-marker { display: none; }
+.filter-button { display: inline-flex; align-items: center; gap: 5px; height: var(--h-control-sm); padding: 0 8px; border: 1px dashed var(--input); border-radius: var(--radius); color: var(--muted-foreground); font-size: 13px; cursor: pointer; }
+.filter-button:hover, .filter-popover[open] .filter-button { background: var(--accent); color: var(--foreground); }
+.filter-menu { position: absolute; z-index: 10; top: calc(100% + 6px); left: 0; min-width: 190px; padding: 4px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); box-shadow: 0 10px 24px rgb(28 31 38 / 12%); }
+.filter-menu > a, .filter-menu > button { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: var(--h-control); padding: 0 8px; border: 0; border-radius: var(--radius); background: transparent; color: var(--foreground); font: inherit; font-size: 13px; text-align: left; text-decoration: none; cursor: pointer; }
+.filter-menu > a:hover, .filter-menu > a.is-selected, .filter-menu > button:hover { background: var(--accent); }
+.filter-form { display: grid; gap: 8px; min-width: 260px; padding: 10px; }
+.filter-form label { display: grid; gap: 4px; color: var(--muted-foreground); font-size: 12px; }
+.filter-form select { width: 100%; height: var(--h-control); border: 1px solid var(--input); border-radius: var(--radius); background: var(--background); color: var(--foreground); font: inherit; font-size: 13px; }
+.filter-check { display: flex !important; grid-template-columns: auto 1fr; align-items: center; gap: 7px !important; color: var(--foreground) !important; }
+.filter-check input { accent-color: var(--primary); }
+.filter-submit { justify-content: center !important; border-color: var(--primary-border) !important; background: var(--primary) !important; color: var(--primary-foreground) !important; }
+.filter-help { color: var(--muted-foreground); font-size: 11px; }
+.filter-chips { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.filter-chip { display: inline-flex; align-items: center; gap: 4px; height: var(--h-control-sm); padding: 0 7px; border: 1px solid var(--input); border-radius: 999px; background: var(--accent); color: var(--foreground); font-size: 12px; text-decoration: none; }
+.filter-chip:hover { border-color: var(--primary); }
+.counter-filters { display: flex; align-items: center; gap: 12px; color: var(--muted-foreground); font-size: 13px; }
+.counter-filters a { display: inline-flex; align-items: center; gap: 5px; color: inherit; text-decoration: none; white-space: nowrap; }
+.counter-filters a:hover, .counter-filters a.is-active { color: var(--foreground); }
+.counter-filters i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.counter-filters b { font-weight: 500; }
+.counter-no-step i { color: var(--muted-foreground); }
+.counter-overdue i { color: var(--destructive); }
+.counter-today i { color: var(--primary); }
+.applied-summary { display: none; }
+.column-sum { height: 18px; margin-top: -8px; margin-bottom: 6px; color: var(--muted-foreground); font-size: 13px; }
+.column-menu-wrap { position: relative; margin-left: auto; }
+.column-more { display: grid; place-items: center; width: var(--h-control); height: var(--h-control); margin: -2px 0 0; padding: 0; border: 0; border-radius: var(--radius); background: transparent; color: var(--muted-foreground); cursor: pointer; }
+.column-more:hover { background: var(--accent); color: var(--foreground); }
+.column-menu { position: absolute; z-index: 4; top: calc(100% + 2px); right: 0; min-width: 150px; padding: 4px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); box-shadow: 0 8px 18px rgb(28 31 38 / 12%); }
+.column-menu button { width: 100%; height: var(--h-control); padding: 0 8px; border: 0; border-radius: var(--radius); background: transparent; color: var(--foreground); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.column-menu button:hover { background: var(--accent); }
+.deal-card { min-height: 0; padding: 10px 12px; cursor: grab; transition: transform var(--motion-fast) var(--ease), box-shadow var(--motion-fast) var(--ease), opacity var(--motion-fast) var(--ease); }
+.deal-card:hover { box-shadow: 0 3px 10px rgb(28 31 38 / 7%); }
+.deal-card-overdue { border-left: 2px solid var(--warning); }
+.deal-card-overlay { box-shadow: var(--shadow-drag); transform: rotate(-1deg); }
+.deal-card-dragging { opacity: .35; border: 1px dashed var(--input); border-radius: var(--radius); }
+.deal-card-dragging .deal-card { opacity: 0; }
+.drop-target { background: var(--accent); border: 1px solid var(--accent); border-radius: var(--radius); }
+.deal-channel { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; color: var(--muted-foreground); font-size: 11px; font-weight: 400; white-space: nowrap; }
+.deal-channel span { max-width: 82px; overflow: hidden; text-overflow: ellipsis; }
+.deal-object { margin-top: 7px; }
+.deal-tags { min-height: 20px; }
+.card-placeholder { color: var(--muted-foreground); font-size: 12px; }
+.deal-money { min-height: 20px; margin-top: 8px; color: var(--foreground); font-size: 13px; font-weight: 500; }
+.deal-footer { min-width: 0; margin-top: 9px; padding-top: 8px; }
+.owner-mark { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+.no-step-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted-foreground); }
+.last-activity { min-width: 0; margin-left: auto; color: var(--muted-foreground); font-size: 11px; }
+.task-state.overdue { margin-left: 6px; color: var(--warning); font-size: 11px; white-space: nowrap; }
+.kettle-card { min-height: 116px; margin-bottom: 8px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); cursor: grab; touch-action: none; }
+.kettle-card strong { display: block; margin-top: 7px; font-size: 14px; font-weight: 500; }
+.kettle-card p { margin: 7px 0; color: var(--muted-foreground); font-size: 13px; }
+.kettle-meta { display: flex; align-items: center; gap: 5px; color: var(--muted-foreground); font-size: 12px; }
+.kettle-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); color: var(--muted-foreground); font-size: 12px; }
+.kettle-claim { height: var(--h-control-sm); padding-inline: 8px; }
+.column-add-button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; width: 100%; height: var(--h-control); margin-top: 2px; border: 1px dashed var(--input); border-radius: var(--radius); background: transparent; color: var(--muted-foreground); font: inherit; font-size: 13px; cursor: pointer; }
+.column-add-button:hover { border-color: var(--primary); background: var(--accent); color: var(--foreground); }
+.empty-column { margin-bottom: 8px; padding: 14px 10px; }
+.hidden-column { align-self: flex-start; width: 44px; min-height: var(--h-control); padding: 6px; border: 1px dashed var(--input); border-radius: var(--radius); background: transparent; color: var(--muted-foreground); font: inherit; font-size: 11px; cursor: pointer; writing-mode: vertical-rl; }
+.column-collapse { display: inline-grid; place-items: center; width: var(--h-control); height: var(--h-control); padding: 0; border: 0; background: transparent; color: var(--muted-foreground); cursor: pointer; }
+.closed-column { position: relative; justify-content: flex-start; padding-top: 8px; border: 1px dashed var(--input); border-radius: var(--radius); background: transparent; cursor: pointer; }
+.closed-column:hover { background: var(--accent); }
+.lost-expanded { min-height: calc(100vh - 160px); }
+@media (max-width: 900px) { .counter-filters { gap: 7px; } .counter-filters a { font-size: 12px; } .pipeline-search { min-width: 28px; width: 28px; padding: 0; justify-content: center; } .pipeline-search span { display: none; } }
+@media (max-width: 640px) { .filterbar { min-height: auto; padding-block: 8px; flex-wrap: wrap; } .counter-filters { width: 100%; order: 4; justify-content: space-between; } .filter-chips { width: 100%; } .toolbar { overflow: auto; } .toolbar .view-switch { white-space: nowrap; } }
+@media (prefers-reduced-motion: reduce) { .deal-card, .deal-card-overlay { transition: none; transform: none; } }
