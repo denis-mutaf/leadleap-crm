@@ -341,7 +341,7 @@ export function DealsBoard(props: Props) {
     const snapshot = columns;
     setColumns(columns.map((column) => column.id === source.id ? { ...column, total: column.total - 1, deals: column.deals.filter((item) => item.id !== dealId) } : column.id === target.id ? { ...column, total: column.total + 1, deals: [nextDeal, ...column.deals] } : column));
     setPending(true);
-    const result = await createClient().rpc("transition_crm_deal", { p_deal_id: dealId, p_stage_id: target.kettle ? targetStage.id : target.id, p_owner_id: target.kettle ? null : nextDeal.owner_id, p_lost_reason_id: null, p_lost_comment: null, p_qualification: null, p_task_title: null, p_task_due_at: null, p_task_type_id: null, p_task_assignee_id: null });
+    const result = await createClient().rpc("transition_crm_deal", { p_deal_id: dealId, p_stage_id: target.kettle ? (deal.status === "won" ? targetStage.id : deal.stage_id) : target.id, p_owner_id: target.kettle ? null : nextDeal.owner_id, p_lost_reason_id: null, p_lost_comment: null, p_qualification: null, p_task_title: null, p_task_due_at: null, p_task_type_id: null, p_task_assignee_id: null });
     if (result.error || !result.data) { setColumns(snapshot); setFeedback(result.error?.message ?? "Сделка не найдена или недоступна"); setPending(false); return; }
     setPending(false); setFeedback("Сделка перемещена");
   }
