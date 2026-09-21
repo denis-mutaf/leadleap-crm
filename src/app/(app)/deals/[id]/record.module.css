@@ -16,6 +16,10 @@
 .section h2 { margin: 0; font-size: 16px; font-weight: 600; }
 .section h3 { margin: 0 0 4px; color: var(--secondary-text, var(--muted-foreground)); font-size: 13px; line-height: 18px; font-weight: 500; }
 .contactHead { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+/* Непрерывная колонка иконок ТИПА атрибута у подписей (глобальный .field-row
+   внутри левой колонки). Иконка — 14px приглушённая, подпись рядом. */
+.left :global(.field-row) > span:first-child { display: flex; align-items: center; gap: 6px; }
+.typeIcon { flex: none; color: var(--muted-foreground); }
 .avatar { width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; flex: none; border-radius: 50%; background: var(--primary); color: var(--primary-foreground, var(--foreground)); font-size: 11px; font-weight: 600; }
 .fieldRow, .relationRow { display: flex; align-items: center; min-height: var(--h-control, 28px); gap: 8px; padding: 1px 0; font-size: 13px; }
 .fieldRow > span:first-child, .relationRow > span:first-child { flex: 0 0 132px; color: var(--secondary-text, var(--muted-foreground)); }
@@ -33,9 +37,12 @@
 .sourcePanelOpen { grid-template-rows: 1fr; }
 .emptyLine { margin: 4px 0; color: var(--muted-foreground); font-size: 13px; line-height: 18px; }
 .right { min-height: 0; display: flex; flex-direction: column; overflow: hidden; padding: 12px; }
-.tabs { display: flex; flex: none; align-items: center; gap: 4px; height: var(--h-control, 28px); overflow-x: auto; }
-.tabs button { height: var(--h-control, 28px); padding: 0 10px; border: 0; border-radius: var(--radius); background: transparent; color: var(--secondary-text, var(--muted-foreground)); font: inherit; font-size: 13px; cursor: pointer; }
+.tabs { display: flex; flex: none; align-items: center; gap: 4px; height: auto; min-height: var(--h-control, 28px); overflow-x: auto; background: var(--muted); border-radius: var(--radius); padding: 2px; }
+.tabs button { height: var(--h-control, 28px); display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border: 0; border-radius: var(--radius); background: transparent; color: var(--secondary-text, var(--muted-foreground)); font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; }
 .tabs button:hover, .activeTab { background: var(--accent) !important; color: var(--foreground) !important; }
+/* Счётчик вкладки — отдельная белая пилюля на тонированном ряду.
+   Единственная пилюля-счётчик здесь: других pill на ряду нет. */
+.tabCount { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 4px; background: var(--background); color: var(--secondary-text, var(--muted-foreground)); font-size: 12px; line-height: 18px; text-align: center; font-variant-numeric: tabular-nums; }
 .quickActions { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 4px; }
 .quickActions form { display: flex; flex: 1 1 360px; gap: 6px; }
 .quickActions input { min-width: 0; flex: 1; height: var(--h-control, 28px); padding: 0 9px; border: 1px solid var(--input); border-radius: var(--radius); background: var(--background); color: var(--foreground); font: inherit; font-size: 13px; }
