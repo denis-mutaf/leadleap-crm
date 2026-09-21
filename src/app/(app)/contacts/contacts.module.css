@@ -1,0 +1,276 @@
+:global(.contacts-page),
+:global(.contact-record) {
+  padding: 24px 32px;
+  color: var(--foreground);
+  :global(.contacts-toolbar) {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 18px;
+  }
+  :global(.eyebrow) {
+    margin: 0 0 4px;
+    color: var(--muted-foreground);
+    font-size: 12px;
+  }
+  :global(.contacts-toolbar h1) {
+    margin: 0;
+    font-size: 20px;
+  }
+  :global(.count-badge),
+  :global(.quiet-chip),
+  :global(.tag) {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--muted);
+    padding: 3px 8px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  :global(.contacts-search) {
+    display: flex;
+    height: 32px;
+    align-items: center;
+    gap: 7px;
+    border: 1px solid var(--input);
+    border-radius: 6px;
+    padding: 0 8px;
+    color: var(--muted-foreground);
+  }
+  :global(.contacts-search input) {
+    width: 220px;
+    border: 0;
+    outline: 0;
+    font: inherit;
+  }
+  :global(.contacts-search button) {
+    border: 0;
+    background: transparent;
+    color: var(--primary);
+    font-size: 12px;
+    cursor: pointer;
+  }
+  :global(.contacts-table) {
+    margin-top: 20px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  :global(.contacts-row) {
+    display: grid;
+    grid-template-columns: 2fr 1.5fr 1fr 24px;
+    align-items: center;
+    min-height: 48px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--border);
+    color: inherit;
+    text-decoration: none;
+    font-size: 13px;
+  }
+  :global(.contacts-row:hover) {
+    background: var(--accent);
+  }
+  :global(.contacts-head) {
+    min-height: 36px;
+    background: var(--muted);
+    color: var(--muted-foreground);
+    font-size: 11px;
+  }
+  :global(.contact-name) {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+  }
+  :global(.contact-avatar) {
+    display: inline-flex;
+    width: 26px;
+    height: 26px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #e7edff;
+    color: var(--primary);
+    font-size: 10px;
+    font-weight: 700;
+  }
+  :global(.contact-avatar.large) {
+    width: 34px;
+    height: 34px;
+  }
+  :global(.contacts-empty) {
+    padding: 48px;
+    text-align: center;
+    color: var(--muted-foreground);
+  }
+  :global(.contacts-pagination) {
+    display: flex;
+    justify-content: space-between;
+    padding: 16px 2px;
+    color: var(--muted-foreground);
+    font-size: 12px;
+  }
+  :global(.contacts-pagination span:last-child) {
+    display: flex;
+    gap: 14px;
+  }
+  :global(.contacts-pagination a) {
+    color: var(--foreground);
+    text-decoration: none;
+  }
+  :global(.disabled) {
+    pointer-events: none;
+    color: #c4c5c8 !important;
+  }
+  :global(.record-header) {
+    height: 48px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  :global(.record-back) {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted-foreground);
+    text-decoration: none;
+  }
+  :global(.record-separator) {
+    color: var(--border);
+  }
+  :global(.contact-record-title) {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 22px 0;
+  }
+  :global(.contact-record-title h1) {
+    margin: 0;
+    font-size: 18px;
+  }
+  :global(.contact-layout) {
+    display: grid;
+    grid-template-columns: 360px minmax(0, 1fr);
+    gap: 28px;
+  }
+  :global(.contact-info) {
+    margin-bottom: 24px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  :global(.contact-info-heading) {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--muted);
+  }
+  :global(.contact-info h2) {
+    margin: 0;
+    font-size: 13px;
+  }
+  :global(.contact-field) {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 10px;
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  :global(.contact-field span) {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted-foreground);
+  }
+  :global(.contact-field strong) {
+    overflow-wrap: anywhere;
+    font-weight: 500;
+  }
+  :global(.tag-list) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 14px;
+  }
+  :global(.tag) {
+    background: white;
+  }
+  :global(.muted) {
+    display: block;
+    padding: 14px;
+    color: var(--muted-foreground);
+    font-size: 12px;
+  }
+  :global(.contact-deal),
+  :global(.activity) {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 14px;
+    border-bottom: 1px solid var(--border);
+    color: inherit;
+    text-decoration: none;
+  }
+  :global(.contact-deal > span:nth-child(2)),
+  :global(.activity > span) {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 4px;
+  }
+  :global(.contact-deal strong),
+  :global(.activity strong) {
+    font-size: 13px;
+    font-weight: 600;
+  }
+  :global(.contact-deal small),
+  :global(.activity small) {
+    color: var(--muted-foreground);
+    font-size: 12px;
+  }
+  :global(.status-dot) {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--primary);
+  }
+  :global(.bounded-note) {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 18px;
+    color: var(--muted-foreground);
+    font-size: 12px;
+  }
+  @media (max-width: 800px) {
+    :global(.contacts-page),
+    :global(.contact-record) {
+      padding: 16px;
+    }
+    :global(.contacts-toolbar) {
+      align-items: stretch;
+      flex-direction: column;
+      gap: 16px;
+    }
+    :global(.contact-layout) {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :global(.contacts-page *),
+    :global(.contacts-page *::before),
+    :global(.contacts-page *::after),
+    :global(.contact-record *),
+    :global(.contact-record *::before),
+    :global(.contact-record *::after) {
+      transition: none !important;
+      animation: none !important;
+    }
+  }
+}
