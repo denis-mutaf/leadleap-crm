@@ -36,7 +36,7 @@ async function loadCandidate(id: string, fullName: string, createdAt: string, cu
   if (failed?.error) throw new Error(failed.error.message);
   return {
     id,
-    fullName,
+    fullName: decodeHtmlEntities(fullName),
     createdAt,
     phones: [
       ...new Set([
@@ -381,4 +381,8 @@ function findSource(value: unknown): string | null {
     return typeof row.value === "string" || typeof row.value === "number" ? String(row.value) : String(row.enum ?? row.enum_code ?? "");
   }).filter(Boolean).join(", ");
   return result || null;
+}
+
+function decodeHtmlEntities(value: string): string {
+  return value.replace(/&lt;|&gt;|&amp;|&quot;|&#39;/g, (entity) => ({ "&lt;": "<", "&gt;": ">", "&amp;": "&", "&quot;": '"', "&#39;": "'" })[entity] ?? entity);
 }

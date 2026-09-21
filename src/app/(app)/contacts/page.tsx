@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowDownUp, Search, Users } from "lucide-react";
+import { Search, Users } from "lucide-react";
 import { EmptyState } from "@/components/crm/empty-state";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth";
+import { ContactSortSelect } from "./contact-sort-select";
 import styles from "./contacts.module.css";
 
 const PAGE_SIZE = 50;
@@ -29,12 +30,13 @@ export default async function ContactsPage({
 
   const params = await searchParams;
   const q = (params.q ?? "").trim().slice(0, 80);
+  const rpcQuery = q ? (/[<>"']/.test(q) ? encodeHtmlEntities(q) : q) : null;
   const requestedPage = Math.max(0, Number.parseInt(params.page ?? "0", 10) || 0);
-  const sort: Sort = params.sort === "created" || params.sort === "activity" ? params.sort : "name";
+  const sort: Sort = params.sort === "name" || params.sort === "created" ? params.sort : "activity";
   const supabase = await createClient();
 
   const response = await supabase.rpc("list_contacts_page", {
-    p_query: q || null,
+    p_query: rpcQuery,
     p_sort: sort,
     p_page: requestedPage,
     p_page_size: PAGE_SIZE,
@@ -47,7 +49,7 @@ export default async function ContactsPage({
   let rows = firstRows;
   if (page !== requestedPage) {
     const corrected = await supabase.rpc("list_contacts_page", {
-      p_query: q || null,
+      p_query: rpcQuery,
       p_sort: sort,
       p_page: page,
       p_page_size: PAGE_SIZE,
@@ -80,15 +82,7 @@ export default async function ContactsPage({
           <input type="hidden" name="sort" value={sort} />
           <button type="submit">Найти</button>
         </form>
-        <label className={styles.sortControl}>
-          <ArrowDownUp size={14} aria-hidden="true" />
-          <span>Сортировка</span>
-          <select name="sort" defaultValue={sort} form="contacts-sort-form" aria-label="Сортировка контактов">
-            <option value="name">По имени</option>
-            <option value="created">По дате добавления</option>
-            <option value="activity">По последней активности</option>
-          </select>
-        </label>
+        <ContactSortSelect value={sort} />
         <form id="contacts-sort-form" className={styles.sortSubmit}>
           <input type="hidden" name="q" value={q} />
           <button type="submit">Применить</button>
@@ -136,10 +130,19 @@ export default async function ContactsPage({
 }
 
 function initials(name: string): string {
-  return name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+  return decodeHtmlEntities(name).split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
 }
 
 function formatDate(value: string | null | undefined, empty = "—"): string {
   if (!value) return empty;
-  return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short" }).format(new Date(value));
+  const date = new Date(value);
+  return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", ...(date.getFullYear() === new Date().getFullYear() ? {} : { year: "numeric" }) }).format(date);
+}
+
+function decodeHtmlEntities(value: string): string {
+  return value.replace(/&lt;|&gt;|&amp;|&quot;|&#39;/g, (entity) => ({ "&lt;": "<", "&gt;": ">", "&amp;": "&", "&quot;": '"', "&#39;": "'" })[entity] ?? entity);
+}
+
+function encodeHtmlEntities(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
