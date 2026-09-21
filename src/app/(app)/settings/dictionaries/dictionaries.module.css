@@ -15,9 +15,13 @@
   color: var(--muted-foreground);
   font-size: 12px;
 }
+/* Шапка живёт в полосе высотой --h-toolbar рядом с «Поля карточки» и
+   «Пользователи и роли» — заголовок здесь того же размера, что у них. */
 .header h1 {
   margin: 0;
-  font-size: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
   letter-spacing: -0.02em;
 }
 .subtitle {

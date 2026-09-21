@@ -42,7 +42,8 @@ export default async function DictionariesPage() {
   try {
     loaded = await loadDictionaries(db, specs);
     counts = await loadCounts(db);
-  } catch {
+  } catch (error) {
+    console.error("[settings/dictionaries]", error);
     return (
       <DictionariesClient
         initialData={[]}
@@ -54,10 +55,15 @@ export default async function DictionariesPage() {
   const knownKeys = new Set<string>(specs.map((spec) => spec.key));
   const uuid =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  // Функция считает использования по всем справочникам сразу, включая метки и
+  // площадки — у них свои экраны. Чужой ключ здесь не поломка, а просто не наша
+  // строка: раньше он ронял весь экран в «Справочники временно недоступны».
+  const relevant = (counts.data ?? []).filter((item) =>
+    knownKeys.has(item.dictionary_key),
+  );
   if (
-    (counts.data ?? []).some(
+    relevant.some(
       (item) =>
-        !knownKeys.has(item.dictionary_key) ||
         !uuid.test(item.value_id) ||
         !Number.isSafeInteger(Number(item.usage)) ||
         Number(item.usage) < 0,
@@ -72,7 +78,7 @@ export default async function DictionariesPage() {
     );
   }
   const usage = new Map<string, number>();
-  for (const item of counts.data ?? []) {
+  for (const item of relevant) {
     const key = `${item.dictionary_key}:${item.value_id}`;
     usage.set(key, (usage.get(key) ?? 0) + Number(item.usage));
   }

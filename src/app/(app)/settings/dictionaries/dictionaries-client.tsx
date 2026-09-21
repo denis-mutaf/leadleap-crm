@@ -188,8 +188,7 @@ export function DictionariesClient({
       <div className={`${styles.page} settings-content`} role="alert">
         <header className={styles.header}>
           <div>
-            <p className={styles.eyebrow}>Настройки</p>
-            <h1>Справочники</h1>
+              <h1>Справочники</h1>
             <p className={styles.subtitle}>{initialError}</p>
           </div>
         </header>
@@ -212,8 +211,7 @@ export function DictionariesClient({
     <div className={`${styles.page} settings-content`}>
       <header className={styles.header}>
         <div>
-          <p className={styles.eyebrow}>Настройки</p>
-            <h1>{sectionTitle}</h1>
+          <h1>{sectionTitle}</h1>
           <p className={styles.subtitle}>
             Значения из справочников подставляются в карточку. Свободного ввода
             нет.
