@@ -76,6 +76,8 @@
 .confirmActions { white-space: nowrap; }
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
 .auditFilters { min-height: 49px; display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--border); }
+.auditSystem { display: inline-flex; align-items: center; gap: 6px; color: var(--muted-foreground); font-size: 13px; white-space: nowrap; }
+.auditSystem input { height: auto; accent-color: var(--primary); }
 .auditFilters select, .auditFilters input, .filterButton { height: var(--h-control); border: 1px solid var(--input); border-radius: var(--radius); background: var(--background); color: var(--foreground); padding: 0 8px; font: inherit; font-size: 13px; }
 .filterButton { background: var(--secondary); cursor: pointer; }
 .auditList { max-width: 900px; }
