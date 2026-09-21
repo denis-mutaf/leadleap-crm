@@ -8,8 +8,8 @@
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: 0 14px 38px rgb(36 37 41 / 20%);
-  animation: incoming-enter 180ms ease-out both;
+  box-shadow: var(--shadow-drag, 0 12px 24px -6px rgb(0 0 0 / 7%), 0 4px 8px -2px rgb(0 0 0 / 3%));
+  animation: incoming-enter var(--motion, 180ms) var(--ease, cubic-bezier(.2, 0, 0, 1)) both;
 }
 .header {
   min-height: 49px;
@@ -45,7 +45,7 @@
 .person,
 .deal,
 .touches {
-  padding: 14px 16px;
+  padding: 8px 16px;
 }
 .person strong {
   display: block;
@@ -66,7 +66,10 @@
   gap: 5px;
 }
 .chips span {
-  padding: 3px 7px;
+  min-height: var(--h-control-sm);
+  display: inline-flex;
+  align-items: center;
+  padding: 0 7px;
   border-radius: 99px;
   background: var(--muted);
   font-size: 12px;
@@ -131,6 +134,7 @@
   font-size: 12px;
 }
 .card footer {
+  min-height: 49px;
   display: flex;
   justify-content: space-between;
   gap: 8px;
@@ -144,7 +148,8 @@
   gap: 5px;
   border: 0;
   border-radius: 5px;
-  padding: 7px 9px;
+  min-height: var(--h-control);
+  padding: 0 9px;
   background: transparent;
   color: var(--muted-foreground);
   font: inherit;
@@ -155,6 +160,10 @@
 .card footer a:last-child {
   background: var(--primary);
   color: white;
+}
+.card footer .primaryAction {
+  background: var(--primary);
+  color: var(--primary-foreground);
 }
 .quiet {
   padding: 0 16px 12px;

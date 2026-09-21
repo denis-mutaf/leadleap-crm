@@ -1,0 +1,69 @@
+.searchForm {
+  height: var(--h-control);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 6px 0 8px;
+  border: 1px solid var(--input);
+  border-radius: var(--radius);
+  color: var(--muted-foreground);
+}
+
+.searchForm input {
+  width: 160px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 13px;
+}
+
+.filterField,
+.periodField {
+  height: var(--h-control-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+
+.filterField select,
+.periodField input {
+  max-width: 120px;
+  height: var(--h-control-sm);
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 13px;
+}
+
+.periodField {
+  gap: 2px;
+}
+
+.periodField input {
+  max-width: 112px;
+}
+
+.clear {
+  width: var(--h-control-sm);
+  height: var(--h-control-sm);
+  display: inline-grid;
+  place-items: center;
+  color: var(--muted-foreground);
+}
+
+.clear:hover,
+.clear:focus-visible {
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--foreground);
+  outline: 0;
+}

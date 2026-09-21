@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Search, X } from "lucide-react";
 import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { TaskCompletion } from "./task-completion";
+import { EmptyState } from "@/components/crm/empty-state";
+import { TaskRow } from "./task-row";
+import styles from "./tasks.module.css";
 
 type TaskRow = {
   id: string;
@@ -13,7 +16,7 @@ type TaskRow = {
   title: string | null;
   due_at: string;
   done_at: string | null;
-  result_text?: string | null;
+  result_text: string | null;
 };
 type Related = {
   id: string;
@@ -30,6 +33,7 @@ type ViewTask = TaskRow & {
   assigneeName: string;
   dueLabel: string;
   overdueLabel?: string;
+  typeCode?: string | null;
 };
 const typeFallback: Record<string, string> = {
   call: "Звонок",
@@ -60,14 +64,6 @@ const addDays = (value: string, days: number) => {
   date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
 };
-const initials = (name: string) =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase() || "—";
 const unique = (values: (string | null | undefined)[]) => [
   ...new Set(values.filter((value): value is string => Boolean(value))),
 ];
@@ -89,7 +85,14 @@ async function relationRows<T extends Related>(
 export default async function TasksPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{
+    page?: string;
+    assignee?: string;
+    type?: string;
+    from?: string;
+    to?: string;
+    q?: string;
+  }>;
 }) {
   const profile = await getCurrentProfile();
   if (!profile) return null;
@@ -100,11 +103,30 @@ export default async function TasksPage({
   const page =
     Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
   const pageSize = 100;
-  const countResult = await supabase
-    .from("tasks")
-    .select("id", { count: "exact", head: true })
-    .eq("assignee_id", profile.id)
-    .is("done_at", null);
+  const assignee = params.assignee || profile.id;
+  const typeId = params.type || "";
+  const query = params.q?.trim() || "";
+  const fromDate = /^\d{4}-\d{2}-\d{2}$/.test(params.from ?? "")
+    ? params.from
+    : "";
+  const toDate = /^\d{4}-\d{2}-\d{2}$/.test(params.to ?? "")
+    ? params.to
+    : "";
+  const applyFilters = (base: any) => {
+    let next = base;
+    if (assignee !== "all") next = next.eq("assignee_id", assignee);
+    if (typeId) next = next.eq("type_id", typeId);
+    if (fromDate) next = next.gte("due_at", `${fromDate}T00:00:00.000Z`);
+    if (toDate) next = next.lt("due_at", `${addDays(toDate, 1)}T00:00:00.000Z`);
+    if (query) {
+      const escaped = query.replace(/[\\%_]/g, (value) => `\\${value}`);
+      next = next.ilike("title", `%${escaped}%`);
+    }
+    return next;
+  };
+  const countResult = await applyFilters(
+    supabase.from("tasks").select("id", { count: "exact", head: true }),
+  );
   if (countResult.error)
     throw new Error(`Количество задач: ${countResult.error.message}`);
   const totalCount = countResult.count ?? 0;
@@ -112,18 +134,18 @@ export default async function TasksPage({
   const safePage = totalPages > 0 ? Math.min(page, totalPages) : 1;
   const from = (safePage - 1) * pageSize;
   const to = from + pageSize - 1;
-  const result = await supabase
-    .from("tasks")
-    .select(
-      "id, deal_id, contact_id, assignee_id, type_id, title, due_at, done_at",
-    )
-    .eq("assignee_id", profile.id)
-    .is("done_at", null)
+  const filteredResult = await applyFilters(
+    supabase.from("tasks").select(
+      "id, deal_id, contact_id, assignee_id, type_id, title, due_at, done_at, result_text",
+    ),
+  )
+    .order("done_at", { ascending: true, nullsFirst: true })
     .order("due_at", { ascending: true })
     .order("id", { ascending: true })
     .range(from, to);
-  if (result.error) throw new Error(`Задачи: ${result.error.message}`);
-  const rows = (result.data ?? []) as TaskRow[];
+  if (filteredResult.error)
+    throw new Error(`Задачи: ${filteredResult.error.message}`);
+  const rows = (filteredResult.data ?? []) as TaskRow[];
   const typeIds = unique(rows.map((row) => row.type_id));
   const contactIds = unique(rows.map((row) => row.contact_id));
   const dealIds = unique(rows.map((row) => row.deal_id));
@@ -157,6 +179,16 @@ export default async function TasksPage({
       profileIds,
     ),
   ]);
+  const allTypes = await relationRows(
+    () => supabase.from("task_types").select("id, name, code").order("name"),
+    "Фильтры типов задач",
+    ["all"],
+  );
+  const allPeople = await relationRows(
+    () => supabase.from("profiles").select("id, full_name").order("full_name"),
+    "Фильтры ответственных",
+    ["all"],
+  );
   const dealContactIds = unique(deals.map((deal) => deal.contact_id));
   const fallbackContacts = await relationRows(
     () =>
@@ -189,8 +221,6 @@ export default async function TasksPage({
   );
   const today = localDate(new Date());
   const tomorrow = addDays(today, 1);
-  const weekday = new Date(`${today}T12:00:00Z`).getUTCDay();
-  const weekEnd = addDays(today, weekday === 0 ? 0 : 7 - weekday);
   const viewTasks: ViewTask[] = rows.map((row) => {
     const type = typeMap.get(row.type_id ?? "");
     const deal = dealMap.get(row.deal_id ?? "");
@@ -211,6 +241,7 @@ export default async function TasksPage({
           ? timeFormatter.format(new Date(row.due_at))
           : dateFormatter.format(new Date(row.due_at)),
       overdueLabel: delta > 0 ? `просрочено ${delta} дн` : undefined,
+      typeCode: type?.code,
     };
   });
   const groupForTask = (task: ViewTask) => {
@@ -218,7 +249,6 @@ export default async function TasksPage({
     if (date < today) return "overdue";
     if (date === today) return "today";
     if (date === tomorrow) return "tomorrow";
-    if (date <= weekEnd) return "week";
     return "later";
   };
   const groups = [
@@ -239,14 +269,14 @@ export default async function TasksPage({
       tasks: viewTasks.filter((task) => groupForTask(task) === "tomorrow"),
     },
     {
-      key: "week",
-      label: "На этой неделе",
-      tasks: viewTasks.filter((task) => groupForTask(task) === "week"),
-    },
-    {
       key: "later",
       label: "Позже",
       tasks: viewTasks.filter((task) => groupForTask(task) === "later"),
+    },
+    {
+      key: "done",
+      label: "Выполненные",
+      tasks: viewTasks.filter((task) => Boolean(task.done_at)),
     },
   ].filter((group) => group.tasks.length);
   const groupCount = (key: string) =>
@@ -254,14 +284,53 @@ export default async function TasksPage({
   return (
     <div className="tasks-page">
       <header className="tasks-header">
-        <h1>Задачи</h1>
+        <h1>☷&nbsp; Задачи</h1>
         <span className="header-spacer" />
         <span className="tasks-total">
           Показано {rows.length} из {totalCount}
         </span>
       </header>
-      <div className="tasks-filterbar">
-        <span className="filter-chip">Ответственный: {profile.full_name}</span>
+      <div className="tasks-toolbar">
+        <div className="view-switch" aria-label="Вид задач">
+          <span className="view-switch-active">Список</span>
+        </div>
+        <span className="header-spacer" />
+        <form method="get" className={styles.searchForm}>
+          {assignee !== "all" && <input type="hidden" name="assignee" value={assignee} />}
+          {typeId && <input type="hidden" name="type" value={typeId} />}
+          {fromDate && <input type="hidden" name="from" value={fromDate} />}
+          {toDate && <input type="hidden" name="to" value={toDate} />}
+          <Search size={14} />
+          <input name="q" defaultValue={query} placeholder="Поиск по задачам" aria-label="Поиск по задачам" />
+          <button className="task-icon-button" type="submit" aria-label="Найти"><Search size={14} /></button>
+        </form>
+      </div>
+      <form method="get" className="tasks-filterbar">
+        <label className={styles.filterField}>
+          <span>Ответственный</span>
+          <select name="assignee" defaultValue={assignee}>
+            <option value="all">Все</option>
+            {allPeople.map((person) => (
+              <option key={person.id} value={person.id}>{person.full_name}</option>
+            ))}
+          </select>
+        </label>
+        <label className={styles.filterField}>
+          <span>Тип</span>
+          <select name="type" defaultValue={typeId}>
+            <option value="">Все типы</option>
+            {allTypes.map((item) => (
+              <option key={item.id} value={item.id}>{item.name}</option>
+            ))}
+          </select>
+        </label>
+        <label className={styles.periodField}>
+          <span>Период</span>
+          <input type="date" name="from" defaultValue={fromDate} aria-label="Дата от" />
+          <input type="date" name="to" defaultValue={toDate} aria-label="Дата до" />
+        </label>
+        <input type="hidden" name="q" value={query} />
+        <Link className={styles.clear} href="/tasks" aria-label="Сбросить фильтры"><X size={14} /></Link>
         <span className="header-spacer" />
         <span className="task-counter danger">
           <i />
@@ -275,7 +344,7 @@ export default async function TasksPage({
           <i />
           Завтра {groupCount("tomorrow")}
         </span>
-      </div>
+      </form>
       <main className="task-list">
         {groups.map((group) => (
           <section className="task-group" key={group.key}>
@@ -285,39 +354,16 @@ export default async function TasksPage({
               <span>{group.label}</span>
               <b>{group.tasks.length}</b>
             </div>
-            {group.tasks.map((task) => (
-              <div className="task-row" key={task.id}>
-                <TaskCompletion taskId={task.id} actorId={profile.id} />
-                <span className="task-type" title={task.typeName}>
-                  {task.typeName.slice(0, 1)}
-                </span>
-                <span className="task-main">
-                  <strong>
-                    {task.title?.trim() || `${task.typeName} — без названия`}
-                  </strong>
-                  <span>
-                    {task.deal_id ? (
-                      <a href={`/deals/${task.deal_id}`}>{task.contactName}</a>
-                    ) : (
-                      task.contactName
-                    )}
-                    <em>·</em>
-                    {task.stageName}
-                  </span>
-                </span>
-                <span
-                  className={`task-due ${task.overdueLabel ? "is-overdue" : ""}`}
-                >
-                  {task.overdueLabel ?? task.dueLabel}
-                </span>
-                <span className="task-avatar" title={task.assigneeName}>
-                  {initials(task.assigneeName)}
-                </span>
-              </div>
-            ))}
+            {group.tasks.map((task) => <TaskRow key={task.id} task={task} actorId={profile.id} />)}
           </section>
         ))}
-        {!groups.length && <div className="tasks-empty">Задач пока нет</div>}
+        {!groups.length && (
+          <EmptyState
+            title={query || fromDate || toDate ? "По этим фильтрам задач нет" : "Задач пока нет"}
+            description="Здесь появятся задачи для следующего шага по контакту или сделке."
+            action={(query || fromDate || toDate || typeId || assignee !== profile.id) ? <Link href="/tasks">Сбросить фильтры</Link> : undefined}
+          />
+        )}
         {totalPages > 1 && (
           <nav className="tasks-pagination" aria-label="Страницы задач">
             {safePage > 1 ? (

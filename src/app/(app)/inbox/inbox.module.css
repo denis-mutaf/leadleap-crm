@@ -1,0 +1,79 @@
+.tabs {
+  display: flex;
+  gap: 2px;
+}
+
+.tabs a {
+  height: var(--h-control);
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: var(--radius);
+  color: var(--muted-foreground);
+  text-decoration: none;
+}
+
+.tabs a:hover,
+.activeTab {
+  background: var(--accent);
+  color: var(--foreground) !important;
+}
+
+.search {
+  min-width: 240px;
+  height: var(--h-control);
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border: 1px solid var(--input);
+  border-radius: var(--radius);
+  color: var(--muted-foreground);
+}
+
+.search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 13px;
+}
+
+.preview {
+  overflow: hidden;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.channels {
+  display: grid;
+  gap: 1px;
+  margin: 0 12px 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.channel {
+  min-height: var(--h-row);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--px-cell);
+  background: var(--card);
+  font-size: 13px;
+}
+
+.channel small {
+  color: var(--muted-foreground);
+}
+
+.channel .connected {
+  color: var(--success);
+}
