@@ -3,10 +3,18 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { DealsTableView, type TableDeal } from "../table-view";
+import { DealsTableView, type TableDeal } from "./table-view";
 
 const PAGE_SIZE = 50;
-const SORT_FIELDS = new Set(["updated", "budget"]);
+const SORT_FIELDS = new Set([
+  "contact",
+  "stage",
+  "tags",
+  "task",
+  "activity",
+  "created",
+  "owner",
+]);
 const firstString = (value: string | string[] | undefined) =>
   Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
 const clean = (value: string) =>
@@ -34,7 +42,7 @@ export default async function DealsTablePage({
       ? Math.min(requestedPage, 100_000)
       : 0;
   const sortParam = firstString(params.sort);
-  const sort = SORT_FIELDS.has(sortParam) ? sortParam : "updated";
+  const sort = SORT_FIELDS.has(sortParam) ? sortParam : "activity";
   const direction = firstString(params.dir) === "asc" ? "asc" : "desc";
   const query = clean(firstString(params.q)).slice(0, 80);
   const ownerParam = firstString(params.owner);
@@ -43,42 +51,45 @@ export default async function DealsTablePage({
   const stage = isUuid(stageParam) ? stageParam : "";
   const supabase = await createClient();
 
-  const buildCountQuery = () => {
-    let countQuery = supabase
-      .from("deals")
-      .select("id", { count: "exact", head: true });
-    if (owner) countQuery = countQuery.eq("owner_id", owner);
-    if (stage) countQuery = countQuery.eq("stage_id", stage);
-    if (query) {
-      const filter = `%${query}%`;
-      countQuery = countQuery.or(
-        `object_text.ilike.${filter},title.ilike.${filter}`,
-      );
-    }
-    return countQuery;
+  const sortColumn: Record<string, string> = {
+    created: "created_at",
+    activity: "updated_at",
+    contact: "contact_id",
+    stage: "stage_id",
+    owner: "owner_id",
+    tags: "id",
+    task: "updated_at",
   };
-  const isTransientCountError = (
-    response: { status?: number },
-    error: { code?: string },
-  ) => {
-    const status = response.status;
-    return (
-      status === 0 ||
-      status === 408 ||
-      status === 429 ||
-      (status !== undefined && status >= 500) ||
-      error.code?.startsWith("08") === true
+  const selectedSortColumn = sortColumn[sort] ?? "updated_at";
+  const filter = query ? `%${query}%` : "";
+  const offset = page * PAGE_SIZE;
+  const lastRow = offset + PAGE_SIZE - 1;
+  let dataQuery = supabase
+    .from("deals")
+    .select(
+      "id, contact_id, owner_id, stage_id, status, title, object_text, created_at, updated_at, contact:contacts(full_name), deal_tags(tag:tags(name)), tasks(title, due_at, done_at), notes(body, created_at), calls(direction, started_at), stage_transitions(changed_at)",
+      { count: "exact" },
     );
-  };
-  let countResponse = await buildCountQuery();
-  for (let attempt = 1; countResponse.error && attempt < 3; attempt += 1) {
-    if (!isTransientCountError(countResponse, countResponse.error)) break;
-    await new Promise((resolve) =>
-      setTimeout(resolve, attempt === 1 ? 100 : 250),
-    );
-    countResponse = await buildCountQuery();
+  dataQuery = dataQuery.is("deleted_at", null);
+  if (owner) {
+    dataQuery = dataQuery.eq("owner_id", owner);
   }
-  if (countResponse.error) {
+  if (stage) {
+    dataQuery = dataQuery.eq("stage_id", stage);
+  }
+  if (query) {
+    dataQuery = dataQuery.or(
+      `object_text.ilike.${filter},title.ilike.${filter}`,
+    );
+  }
+  const rows =
+    lastRow >= offset
+      ? await dataQuery
+          .order(selectedSortColumn, { ascending: direction === "asc" })
+          .order("id", { ascending: true })
+          .range(offset, lastRow)
+      : { data: [], error: null, count: 0 };
+  if (rows.error) {
     const retryParams = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
       const item = Array.isArray(value) ? value[0] : value;
@@ -93,89 +104,32 @@ export default async function DealsTablePage({
         <div className="deals-table-empty" role="alert">
           <strong>Список сделок временно недоступен</strong>
           <span>
-            Не удалось получить точное количество сделок. Данные не заменены
-            пустым списком.
+            Не удалось получить сделки. Данные не заменены пустым списком.
           </span>
           <Link href={`/deals/table?${retryParams}`}>Повторить</Link>
         </div>
       </div>
     );
   }
-  let dataQuery = supabase
-    .from("deals")
-    .select(
-      "id, contact_id, owner_id, stage_id, status, object_text, source_id, budget, budget_currency, updated_at",
-    );
-  if (owner) {
-    dataQuery = dataQuery.eq("owner_id", owner);
-  }
-  if (stage) {
-    dataQuery = dataQuery.eq("stage_id", stage);
-  }
-  if (query) {
-    const filter = `%${query}%`;
-    dataQuery = dataQuery.or(
-      `object_text.ilike.${filter},title.ilike.${filter}`,
-    );
-  }
-  const total = countResponse.count ?? 0;
+  const total = rows.count ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(page, pageCount - 1);
-  const offset = safePage * PAGE_SIZE;
-  const lastRow = Math.min(offset + PAGE_SIZE, total) - 1;
-  const rows =
-    offset < total
-      ? await dataQuery
-          .order(sort === "budget" ? "budget" : "updated_at", {
-            ascending: direction === "asc",
-          })
-          .order("id", { ascending: true })
-          .range(offset, lastRow)
-      : { data: [], error: null };
-  if (rows.error) throw new Error(`Сделки: ${rows.error.message}`);
   const deals = rows.data ?? [];
-  const dealIds = deals.map((deal) => deal.id);
-  const contactIdsOnPage = deals.map((deal) => deal.contact_id);
   const ownerIdsOnPage = deals.flatMap((deal) =>
     deal.owner_id ? [deal.owner_id] : [],
   );
-  const [contacts, owners, stages, sources, projects, links, tasks] =
-    await Promise.all([
-      contactIdsOnPage.length
-        ? supabase
-            .from("contacts")
-            .select("id, full_name")
-            .in("id", contactIdsOnPage)
-        : Promise.resolve({ data: [], error: null }),
-      supabase
-        .from("profiles")
-        .select("id, full_name")
-        .eq("is_active", true)
-        .in("role", ["manager", "head", "admin"])
-        .order("full_name"),
-      supabase
-        .from("stages")
-        .select("id, name, kind")
-        .eq("is_active", true)
-        .order("position"),
-      supabase.from("sources").select("id, name"),
-      supabase.from("projects").select("id, name, code"),
-      dealIds.length
-        ? supabase
-            .from("deal_projects")
-            .select("deal_id, project_id")
-            .in("deal_id", dealIds)
-        : Promise.resolve({ data: [], error: null }),
-      dealIds.length
-        ? supabase
-            .from("tasks")
-            .select("deal_id, title, due_at")
-            .in("deal_id", dealIds)
-            .is("done_at", null)
-            .order("due_at")
-        : Promise.resolve({ data: [], error: null }),
-    ]);
-  const [tags, lostReasons] = await Promise.all([
+  const [owners, stages, tags, lostReasons] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, full_name")
+      .eq("is_active", true)
+      .in("role", ["manager", "head", "admin"])
+      .order("full_name"),
+    supabase
+      .from("stages")
+      .select("id, name, kind")
+      .eq("is_active", true)
+      .order("position"),
     supabase
       .from("tags")
       .select("id, name")
@@ -189,9 +143,8 @@ export default async function DealsTablePage({
       .order("position")
       .limit(200),
   ]);
-  const missingOwnerIds = ownerIdsOnPage.filter(
-    (id) => !(owners.data ?? []).some((row) => row.id === id),
-  );
+  const activeOwnerIds = new Set((owners.data ?? []).map((row) => row.id));
+  const missingOwnerIds = ownerIdsOnPage.filter((id) => !activeOwnerIds.has(id));
   const historicalOwners = missingOwnerIds.length
     ? await supabase
         .from("profiles")
@@ -199,9 +152,9 @@ export default async function DealsTablePage({
         .in("id", missingOwnerIds)
     : { data: [], error: null };
   const activeStageIds = new Set((stages.data ?? []).map((row) => row.id));
-  const missingStageIds = [
-    ...new Set(deals.map((deal) => deal.stage_id)),
-  ].filter((id) => !activeStageIds.has(id));
+  const missingStageIds = [...new Set(deals.map((deal) => deal.stage_id))].filter(
+    (id) => !activeStageIds.has(id),
+  );
   const historicalStages = missingStageIds.length
     ? await supabase
         .from("stages")
@@ -209,13 +162,8 @@ export default async function DealsTablePage({
         .in("id", missingStageIds)
     : { data: [], error: null };
   for (const response of [
-    contacts,
     owners,
     stages,
-    sources,
-    projects,
-    links,
-    tasks,
     tags,
     lostReasons,
     historicalOwners,
@@ -223,9 +171,6 @@ export default async function DealsTablePage({
   ])
     if (response.error)
       throw new Error(`Связанные данные: ${response.error.message}`);
-  const contactMap = new Map(
-    (contacts.data ?? []).map((row) => [row.id, row.full_name]),
-  );
   const ownerMap = new Map(
     [...(owners.data ?? []), ...(historicalOwners.data ?? [])].map((row) => [
       row.id,
@@ -238,42 +183,65 @@ export default async function DealsTablePage({
       row,
     ]),
   );
-  const sourceMap = new Map(
-    (sources.data ?? []).map((row) => [row.id, row.name]),
-  );
-  const projectMap = new Map(
-    (projects.data ?? []).map((row) => [row.id, row.name]),
-  );
-  const projectByDeal = new Map<string, string[]>();
-  for (const link of links.data ?? []) {
-    const name = projectMap.get(link.project_id);
-    if (name)
-      projectByDeal.set(link.deal_id, [
-        ...(projectByDeal.get(link.deal_id) ?? []),
-        name,
-      ]);
-  }
-  const taskByDeal = new Map<string, string>();
-  for (const task of tasks.data ?? [])
-    if (!taskByDeal.has(task.deal_id)) taskByDeal.set(task.deal_id, task.title);
   const tableRows: TableDeal[] = deals.map((deal) => {
     const stageRow = stageMap.get(deal.stage_id);
+    const contact = Array.isArray(deal.contact) ? deal.contact[0] : deal.contact;
+    const task = (deal.tasks ?? [])
+      .filter((row) => !row.done_at)
+      .sort((a, b) => a.due_at.localeCompare(b.due_at))[0];
+    const activities = [
+      ...(deal.notes ?? []).map((row) => ({
+        text: row.body ? `Заметка: ${row.body}` : "Заметка",
+        at: row.created_at,
+      })),
+      ...(deal.calls ?? []).map((row) => ({
+        text: row.direction === "in" ? "Входящий звонок" : "Исходящий звонок",
+        at: row.started_at,
+      })),
+      ...(deal.stage_transitions ?? []).map((row) => ({
+        text: "Этап изменён",
+        at: row.changed_at,
+      })),
+    ].sort((a, b) => b.at.localeCompare(a.at));
     return {
       id: deal.id,
-      contact: contactMap.get(deal.contact_id) ?? "Без имени",
-      stage: stageRow?.name ?? "—",
+      contact: contact?.full_name ?? "Без имени",
+      stage: stageRow?.name ?? "Без этапа",
       stageKind: stageRow?.kind ?? "open",
-      projects: projectByDeal.get(deal.id) ?? [],
-      object: deal.object_text ?? "",
-      budget: deal.budget,
-      currency: deal.budget_currency,
-      task: taskByDeal.get(deal.id) ?? "",
-      owner: deal.owner_id ? (ownerMap.get(deal.owner_id) ?? "—") : "",
+      tags: (deal.deal_tags ?? [])
+        .map((row) => {
+          const tag = row.tag as unknown as
+            | { name?: string }
+            | { name?: string }[]
+            | null;
+          return Array.isArray(tag) ? tag[0]?.name : tag?.name;
+        })
+        .filter((name): name is string => Boolean(name)),
+      task: task?.title ?? "",
+      taskDueAt: task?.due_at ?? null,
+      activity: activities[0]?.text ?? "Нет активности",
+      activityAt: activities[0]?.at ?? null,
+      created: deal.created_at,
+      owner: deal.owner_id ? ownerMap.get(deal.owner_id) ?? "" : "",
       ownerId: deal.owner_id,
       stageId: deal.stage_id,
-      source: deal.source_id ? (sourceMap.get(deal.source_id) ?? "—") : "",
-      updated: deal.updated_at,
     };
+  });
+  const sortValue = (row: TableDeal): string => {
+    if (sort === "tags") return row.tags.join(" ");
+    if (sort === "task") return row.taskDueAt ?? "";
+    if (sort === "activity") return row.activityAt ?? "";
+    if (sort === "created") return row.created;
+    if (sort === "owner") return row.owner;
+    if (sort === "stage") return row.stage;
+    return row.contact;
+  };
+  tableRows.sort((left, right) => {
+    const comparison = sortValue(left).localeCompare(sortValue(right), "ru", {
+      numeric: true,
+      sensitivity: "base",
+    });
+    return direction === "asc" ? comparison : -comparison;
   });
   return (
     <div className="deals-page">
@@ -293,7 +261,6 @@ export default async function DealsTablePage({
       <div className="filterbar">
         <span className="static-filter">Сортировка и фильтры</span>
         <span className="header-spacer" />
-        <span className="summary">Серверный поиск</span>
       </div>
       <DealsTableView
         rows={tableRows}
