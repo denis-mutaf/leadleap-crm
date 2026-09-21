@@ -34,13 +34,15 @@ export function DictionariesClient({
   initialData,
   initialError = "",
   role,
+  singleKey,
 }: {
   initialData: DictionaryData[];
   initialError?: string;
   role: UserRole;
+  singleKey?: string;
 }) {
   const [data, setData] = useState(initialData),
-    [active, setActive] = useState("tags"),
+    [active, setActive] = useState(singleKey ?? initialData[0]?.key ?? "sources"),
     [menu, setMenu] = useState<string | null>(null),
     [editing, setEditing] = useState<Row | null>(null),
     [merge, setMerge] = useState<Row | null>(null),
@@ -183,7 +185,7 @@ export function DictionariesClient({
   }, []);
   if (initialError) {
     return (
-      <div className={styles.page} role="alert">
+      <div className={`${styles.page} settings-content`} role="alert">
         <header className={styles.header}>
           <div>
             <p className={styles.eyebrow}>Настройки</p>
@@ -205,12 +207,13 @@ export function DictionariesClient({
       </div>
     );
   }
+  const sectionTitle = singleKey === "tags" ? "Метки" : singleKey === "projects" ? "Площадки" : "Справочники";
   return (
-    <div className={styles.page}>
+    <div className={`${styles.page} settings-content`}>
       <header className={styles.header}>
         <div>
           <p className={styles.eyebrow}>Настройки</p>
-          <h1>Справочники</h1>
+            <h1>{sectionTitle}</h1>
           <p className={styles.subtitle}>
             Значения из справочников подставляются в карточку. Свободного ввода
             нет.
@@ -226,7 +229,7 @@ export function DictionariesClient({
           </button>
         )}
       </header>
-      <nav className={styles.tabs} aria-label="Справочники">
+      {!singleKey && <nav className={styles.tabs} aria-label="Справочники">
         {data.map((item) => (
           <button
             className={item.key === active ? styles.selected : ""}
@@ -239,10 +242,8 @@ export function DictionariesClient({
             {item.label}
           </button>
         ))}
-        <span className={styles.disabledTab}>
-          Способы оплаты <small>enum</small>
-        </span>
-      </nav>
+        <span className={styles.disabledTab}>Способы оплаты <small>enum</small></span>
+      </nav>}
       <section className={styles.card}>
         <div className={styles.tableHead}>
           <span>Значение</span>

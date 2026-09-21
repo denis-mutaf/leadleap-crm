@@ -54,6 +54,7 @@ export default function TrashClient({
   const [items, setItems] = useState(rows);
   const [pending, setPending] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<TrashRow | null>(null);
+  const [clearOpen, setClearOpen] = useState(false);
   const [error, setError] = useState("");
   const pendingRef = useRef(false);
   const dialogRef = useRef<HTMLElement>(null);
@@ -121,13 +122,8 @@ export default function TrashClient({
   const pages = Math.max(1, Math.ceil(total / limit));
   return (
     <div className={styles.page}>
-      <div className={styles.back}>
-        <Link href="/settings">← Настройки</Link>
-        <span>Корзина</span>
-      </div>
       <header className={styles.header}>
         <div>
-          <p className={styles.eyebrow}>Удалённые записи</p>
           <h1>Корзина</h1>
           <p className={styles.subtitle}>
             Восстановить запись можно в течение 30 дней.
@@ -146,7 +142,7 @@ export default function TrashClient({
             </Link>
           ))}
         </nav>
-        <span className={styles.count}>{total} записей</span>
+        <div className={styles.toolbarActions}><span className={styles.count}>{total} записей</span><button className={styles.clearButton} onClick={() => setClearOpen(true)}>Очистить корзину</button></div>
       </div>
       {error && (
         <p className={styles.error} role="alert">
@@ -238,6 +234,21 @@ export default function TrashClient({
                 Вернуть
               </button>
             </div>
+          </section>
+        </div>
+      )}
+      {clearOpen && (
+        <div className={`${styles.backdrop} motion-veil`} onMouseDown={(event) => event.target === event.currentTarget && setClearOpen(false)}>
+          <section className={`${styles.dialog} motion-dialog`} role="dialog" aria-modal="true" aria-labelledby="clear-trash-title">
+            <h2 id="clear-trash-title">Очистить корзину?</h2>
+            <p>После окончательного удаления восстановить записи нельзя. Вместе со сделками исчезнут связанные данные:</p>
+            <ul className={styles.consequences}>
+              <li>{items.filter((row) => row.entity === "notes").length} примечаний</li>
+              <li>{items.filter((row) => row.entity === "tasks").length} задач</li>
+              <li>звонки и история этапов — останутся в журнале</li>
+            </ul>
+            <p className={styles.clearNotice}>Окончательная очистка выполняется автоматически через 30 дней. Ручное стирание сейчас недоступно.</p>
+            <div><button onClick={() => setClearOpen(false)}>Понятно</button></div>
           </section>
         </div>
       )}

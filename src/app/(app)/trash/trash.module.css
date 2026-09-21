@@ -245,3 +245,20 @@
     scroll-behavior: auto !important;
   }
 }
+
+.page { padding: 0 12px 16px; }
+.back { display: none; }
+.header { height: var(--h-header); box-sizing: border-box; display: flex; align-items: center; margin: 0 -12px 0; padding: 0 12px; border-bottom: 1px solid var(--border); }
+.header h1 { font-size: 14px; font-weight: 600; }
+.subtitle, .eyebrow { display: none; }
+.toolbar { height: var(--h-toolbar); margin: 0 -12px; padding: 0 12px; border-bottom: 1px solid var(--border); }
+.filters a { height: var(--h-control); box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 8px; }
+.toolbarActions { display: flex; align-items: center; gap: 16px; }
+.clearButton { border: 0; background: transparent; color: var(--muted-foreground); font: inherit; font-size: 13px; cursor: pointer; }
+.clearButton:hover { color: var(--foreground); }
+.tableWrap { border: 0; border-radius: 0; }
+.table th { height: var(--h-row-header); }
+.table td { height: var(--h-row); padding: 0 var(--px-cell); }
+.restore { height: var(--h-control-sm); padding: 0 8px; }
+.consequences { margin: 12px 0; padding-left: 24px; color: var(--muted-foreground); font-size: 13px; line-height: 26px; }
+.clearNotice { padding: 10px 12px; border-radius: var(--radius); background: var(--muted); }

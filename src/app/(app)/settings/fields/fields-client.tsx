@@ -18,7 +18,6 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import Link from "next/link";
 import styles from "./fields.module.css";
 
 export type FieldRow = {
@@ -350,11 +349,7 @@ export default function FieldsClient({
     }
   }
   return (
-    <div className={styles.page}>
-      <div className={styles.back}>
-        <Link href="/settings">← Настройки</Link>
-        <span>Настройки / Поля карточки</span>
-      </div>
+    <div className={`${styles.page} settings-content`}>
       <header className={styles.header}>
         <div>
           <h1>Поля карточки</h1>
