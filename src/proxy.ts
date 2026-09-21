@@ -7,6 +7,7 @@ export async function proxy(request: NextRequest) {
 
   if (
     pathname.startsWith("/api/webhooks/") ||
+    pathname.startsWith("/api/cron/") ||
     pathname.startsWith("/_next/") ||
     pathname === "/favicon.ico" ||
     pathname.match(/\.(svg|png|jpg|jpeg|gif|webp|ico|css|js|woff2?)$/)

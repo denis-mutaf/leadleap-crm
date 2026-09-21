@@ -35,6 +35,12 @@ const NAV: NavEntry[] = [
     roles: ["manager", "head", "admin"],
   },
   {
+    href: "/calls",
+    label: "Звонки",
+    icon: "calls",
+    roles: ["manager", "head", "admin"],
+  },
+  {
     href: "/contacts",
     label: "Контакты",
     icon: "contacts",
@@ -71,6 +77,7 @@ export default async function AppLayout({
   // Диалоги, где последним написал клиент. Счёт идёт под RLS, поэтому
   // менеджер видит только то, что ему и так доступно.
   let unanswered = 0;
+  let missedCalls = 0;
   if (profile.role !== "builder") {
     const supabase = await createClient();
     const { count } = await supabase
@@ -78,6 +85,14 @@ export default async function AppLayout({
       .select("id", { count: "exact", head: true })
       .eq("last_direction", "in");
     unanswered = count ?? 0;
+    // Пропущенные без обратного звонка — счётчик пункта «Звонки».
+    const { count: missed } = await supabase
+      .from("calls")
+      .select("id", { count: "exact", head: true })
+      .eq("direction", "in")
+      .or("duration_sec.is.null,duration_sec.eq.0")
+      .is("called_back_at", null);
+    missedCalls = missed ?? 0;
   }
 
   const visibleNav = NAV.filter((item) =>
@@ -87,7 +102,9 @@ export default async function AppLayout({
       ? { ...item, label: "Дашборд" }
       : item.href === "/inbox"
         ? { ...item, badge: unanswered }
-        : item,
+        : item.href === "/calls"
+          ? { ...item, badge: missedCalls }
+          : item,
   );
 
   return (

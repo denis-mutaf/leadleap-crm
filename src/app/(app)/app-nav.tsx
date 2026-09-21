@@ -7,6 +7,7 @@ import {
   Contact,
   Inbox,
   LayoutDashboard,
+  Phone,
   Settings,
 } from "lucide-react";
 import Link, { useLinkStatus } from "next/link";
@@ -25,6 +26,7 @@ export type AppNavIcon =
   | "deals"
   | "tasks"
   | "inbox"
+  | "calls"
   | "contacts"
   | "reports"
   | "settings"
@@ -34,6 +36,7 @@ const ICONS = {
   deals: LayoutDashboard,
   tasks: CheckSquare,
   inbox: Inbox,
+  calls: Phone,
   contacts: Contact,
   reports: BarChart3,
   settings: Settings,
