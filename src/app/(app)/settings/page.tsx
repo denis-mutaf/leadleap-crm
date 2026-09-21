@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Stage } from "@/lib/types";
 import styles from "./settings.module.css";
 import { StageTable } from "./stage-settings-table";
+import Link from "next/link";
 
 async function countDeals(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -126,6 +127,10 @@ export default async function SettingsPage() {
           переведите сделки на другой этап. История переходов сохраняется.
         </p>
       </aside>
+
+      <Link className={styles.usersLink} href="/settings/users">
+        Управление пользователями и ролями <span aria-hidden="true">→</span>
+      </Link>
     </div>
   );
 }

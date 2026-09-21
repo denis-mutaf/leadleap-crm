@@ -287,6 +287,17 @@
   color: var(--muted-foreground);
   font-size: 13px;
 }
+.usersLink {
+  display: inline-flex;
+  gap: 8px;
+  margin-top: 20px;
+  color: var(--foreground);
+  font-size: 13px;
+  text-decoration: none;
+}
+.usersLink:hover {
+  text-decoration: underline;
+}
 .note p {
   margin: 0;
 }
