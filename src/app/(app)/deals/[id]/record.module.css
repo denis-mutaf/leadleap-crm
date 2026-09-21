@@ -1,8 +1,12 @@
 .main { padding: 0; background: var(--background); }
 .highlights { display: grid; grid-template-columns: 1.4fr 1.1fr .75fr .75fr; gap: 8px; padding: 0 0 12px; }
-.highlight { min-width: 0; height: 64px; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); }
+.highlight { min-width: 0; min-height: 64px; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); }
 .highlight span, .muted { color: var(--secondary-text, var(--muted-foreground)); font-size: 13px; line-height: 18px; }
 .highlight strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.highlightMeta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--secondary-text, var(--muted-foreground)); font-size: 12px; font-style: normal; line-height: 16px; }
+.highlightAction { align-items: stretch; font: inherit; text-align: left; cursor: pointer; }
+.highlightAction strong { color: var(--accent, var(--primary)); }
+.highlightAction:hover { border-color: var(--accent, var(--primary)); }
 .overdue { border-color: color-mix(in srgb, var(--destructive) 32%, var(--background)); background: color-mix(in srgb, var(--destructive) 9%, var(--background)); }
 .overdue strong { color: var(--destructive); }
 .body { flex: 1; min-height: 0; display: grid; grid-template-columns: 360px minmax(0, 1fr); overflow: hidden; }

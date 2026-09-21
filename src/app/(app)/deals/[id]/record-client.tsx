@@ -40,6 +40,42 @@ const labels: Record<string, string> = { open: "В работе", postponed: "О
 const attributionLabels: Record<keyof Attribution, string> = { utm_source: "utm_source", utm_medium: "utm_medium", utm_campaign: "utm_campaign", utm_content: "utm_content", utm_term: "utm_term", UTM_ID: "UTM_ID", fbclid: "fbclid", FORMNAME: "Форма", TRANID: "TRANID", _ym_uid: "_ym_uid" };
 const fmtMoney = (value: number | null | undefined, currency = "EUR") => value == null ? null : `${new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(value)} ${currency}`;
 const fmtDate = (value: string) => new Date(value).toLocaleString("ru-RU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+// «Следующий шаг: Позвонить» без срока бесполезен: весь смысл шага в том, когда
+// он наступит. Сегодня и завтра называются словом, дальше — датой.
+const fmtDue = (value: string) => {
+  const due = new Date(value);
+  const time = due.toLocaleString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  const day = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  const shift = Math.round((day(due) - day(new Date())) / 86400000);
+  if (shift === 0) return `сегодня ${time}`;
+  if (shift === 1) return `завтра ${time}`;
+  if (shift === -1) return `вчера ${time}`;
+  return `${due.toLocaleString("ru-RU", { day: "2-digit", month: "short" })}, ${time}`;
+};
+
+// Самая заметная плашка карточки говорила «Не назначен» — и на этом всё. Теперь
+// она либо называет шаг и срок, либо предлагает шаг поставить.
+function NextStep({ tasks, onPlan }: { tasks: Task[]; onPlan: () => void }) {
+  const next = tasks
+    .filter((task) => !task.done_at)
+    .sort((a, b) => a.due_at.localeCompare(b.due_at))[0];
+  if (!next) {
+    return (
+      <button type="button" className={`${styles.highlight} ${styles.highlightAction}`} onClick={onPlan}>
+        <span>Следующий шаг</span>
+        <strong>Поставить задачу</strong>
+      </button>
+    );
+  }
+  const overdue = new Date(next.due_at) < new Date();
+  return (
+    <div className={`${styles.highlight} ${overdue ? styles.overdue : ""}`}>
+      <span>Следующий шаг{overdue ? " · просрочен" : ""}</span>
+      <strong title={next.title}>{next.title}</strong>
+      <em className={styles.highlightMeta}>{fmtDue(next.due_at)}</em>
+    </div>
+  );
+}
 const dayLabel = (value: string) => new Date(value).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
 const initials = (value: string) => value.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
 
@@ -74,7 +110,7 @@ function StageField({ data }: { data: DealRecordData }) {
 }
 
 export function DealRecordClient({ data }: { data: DealRecordData }) {
-  const router = useRouter(); const [tab, setTab] = useState("all"); const [note, setNote] = useState(""); const [taskTitle, setTaskTitle] = useState(""); const [taskDue, setTaskDue] = useState(""); const [saving, setSaving] = useState(false); const [feedback, setFeedback] = useState<string | null>(null); const [completionTask, setCompletionTask] = useState<Task | null>(null); const [completionResult, setCompletionResult] = useState(""); const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null); const [sourceOpen, setSourceOpen] = useState(false); const deleteTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const router = useRouter(); const [tab, setTab] = useState("all"); const [note, setNote] = useState(""); const [taskTitle, setTaskTitle] = useState(""); const [taskDue, setTaskDue] = useState(""); const [saving, setSaving] = useState(false); const [feedback, setFeedback] = useState<string | null>(null); const [completionTask, setCompletionTask] = useState<Task | null>(null); const [completionResult, setCompletionResult] = useState(""); const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null); const [sourceOpen, setSourceOpen] = useState(false); const deleteTriggerRef = useRef<HTMLButtonElement | null>(null); const taskInputRef = useRef<HTMLInputElement | null>(null);
   const people = useMemo(() => new Map(data.people.map((person) => [person.id, person])), [data.people]); const stageNames = useMemo(() => new Map(data.transitionStages.map((stage) => [stage.id, stage.name])), [data.transitionStages]); const customValues = useMemo(() => new Map(data.fieldValues.map((value) => [value.field_id, value])), [data.fieldValues]);
   const attributionValues = useMemo(() => { const byKey = new Map(data.fieldDefs.map((definition) => [definition.key, valueToString(customValues.get(definition.id)?.value)])); return buildAttribution(data.deal.utm, data.deal.amo_custom_fields, byKey); }, [customValues, data.deal.amo_custom_fields, data.deal.utm, data.fieldDefs]);
   const semanticDefinitions = useMemo(() => {
@@ -108,7 +144,7 @@ export function DealRecordClient({ data }: { data: DealRecordData }) {
         : <InlineField label={label} table="deals" id={data.deal.id} column={column} type={type} value={value} />;
   };
   return <main className={`${styles.main} record-main`}>
-    <div className={styles.highlights}><div className={`${styles.highlight} ${data.tasks.some((task) => !task.done_at && new Date(task.due_at) < new Date()) ? styles.overdue : ""}`}><span>Следующий шаг</span><strong>{data.tasks.find((task) => !task.done_at)?.title ?? "Не назначен"}</strong></div><div className={styles.highlight}><span>Этап</span><strong>{data.stage?.name ?? "—"}</strong></div><div className={styles.highlight}><span>Ежемесячный платёж</span><strong>{monthlyAmount(data.deal.monthly_payment_text as string | null) ?? fmtMoney(data.deal.monthly_payment as number | null, data.deal.budget_currency) ?? "—"}</strong></div><div className={styles.highlight}><span>Первый взнос</span><strong>{shortAmount(data.deal.down_payment_text as string | null) ?? fmtMoney(data.deal.down_payment as number | null, data.deal.budget_currency) ?? "—"}</strong></div></div>
+    <div className={styles.highlights}><NextStep tasks={data.tasks} onPlan={() => { setTab("all"); taskInputRef.current?.focus(); }} /><div className={styles.highlight}><span>Этап</span><strong>{data.stage?.name ?? "—"}</strong></div><div className={styles.highlight}><span>Ежемесячный платёж</span><strong>{monthlyAmount(data.deal.monthly_payment_text as string | null) ?? fmtMoney(data.deal.monthly_payment as number | null, data.deal.budget_currency) ?? "—"}</strong></div><div className={styles.highlight}><span>Первый взнос</span><strong>{shortAmount(data.deal.down_payment_text as string | null) ?? fmtMoney(data.deal.down_payment as number | null, data.deal.budget_currency) ?? "—"}</strong></div></div>
     <div className={styles.body}><aside className={styles.left}>
       <section className={styles.section}><div className={styles.contactHead}><div className={styles.avatar}>{initials(data.contact?.full_name ?? "?")}</div><h2>{data.contact?.full_name ?? "Без имени"}</h2></div><ReadField label="Имя" value={data.contact?.full_name} /><ReadField label="Телефоны" value={data.phones.length ? data.phones.map((phone) => phone.phone).join(", ") : null} /><ReadField label="Канал" value={data.channels.length ? data.channels.map((channel) => channel.channel).join(", ") : null} /></section>
       <section className={styles.section}><h3>Сделка</h3><StageField data={data} /><InlineField label="Ответственный" table="deals" id={data.deal.id} column="owner_id" type="select" value={data.deal.owner_id} options={[{ value: "", label: "Общий котёл" }, ...data.allOwners.map((owner) => ({ value: owner.id, label: owner.full_name }))]} /><ReadField label="Статус" value={labels[data.deal.status] ?? data.deal.status} /><InlineField label="Объект" table="deals" id={data.deal.id} column="object_text" value={data.deal.object_text} /><InlineField label="Источник" table="deals" id={data.deal.id} column="source_id" type="select" value={data.deal.source_id} options={[{ value: "", label: "— не выбран —" }, ...data.allSources.map((source) => ({ value: source.id, label: source.name }))]} /><InlineField label="Бюджет" table="deals" id={data.deal.id} column="budget" type="number" value={data.deal.budget === null ? null : String(data.deal.budget)} format={(value) => fmtMoney(Number(value), data.deal.budget_currency) ?? "—"} /></section>
@@ -118,11 +154,11 @@ export function DealRecordClient({ data }: { data: DealRecordData }) {
       <section className={styles.section}><button type="button" className={styles.sourceToggle} aria-expanded={sourceOpen} onClick={() => setSourceOpen((open) => !open)}><span>{hasAttribution ? "Источник и атрибуция" : "Атрибуция не записана"}</span><span>{sourceOpen ? "−" : "+"}</span></button><div className={`${styles.sourcePanel} ${sourceOpen ? styles.sourcePanelOpen : ""}`}><div>{(Object.keys(attributionValues) as (keyof Attribution)[]).map((key) => <AttributionField key={key} label={key} value={attributionValues[key]} deal={data.deal} />)}</div></div></section>
     </aside><section className={styles.right}>
       <div className={styles.tabs} role="tablist">{([["all", "Все"], ["calls", "Звонки"], ["notes", "Примечания"], ["tasks", "Задачи"], ["stages", "Этапы"]] as const).map(([value, label]) => <button type="button" role="tab" aria-selected={tab === value} className={tab === value ? styles.activeTab : ""} onClick={() => setTab(value)} key={value}>{label}{value !== "all" ? ` ${counts[value]}` : ""}</button>)}</div>
-      <div className={styles.quickActions}><form onSubmit={createNote}><input value={note} onChange={(event) => setNote(event.target.value)} placeholder="Написать примечание…" aria-label="Примечание" /><button disabled={saving || !note.trim()}><Plus size={14} /> Примечание</button></form><form onSubmit={createTask}><input value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} placeholder="Новая задача" aria-label="Название задачи" /><input type="datetime-local" value={taskDue} onChange={(event) => setTaskDue(event.target.value)} aria-label="Дата и время задачи" /><button disabled={saving || !taskTitle.trim() || !taskDue}><Plus size={14} /> Задача</button></form></div>
+      <div className={styles.quickActions}><form onSubmit={createNote}><input value={note} onChange={(event) => setNote(event.target.value)} placeholder="Написать примечание…" aria-label="Примечание" /><button disabled={saving || !note.trim()}><Plus size={14} /> Примечание</button></form><form onSubmit={createTask}><input ref={taskInputRef} value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} placeholder="Новая задача" aria-label="Название задачи" /><input type="datetime-local" value={taskDue} onChange={(event) => setTaskDue(event.target.value)} aria-label="Дата и время задачи" /><button disabled={saving || !taskTitle.trim() || !taskDue}><Plus size={14} /> Задача</button></form></div>
       <div className={styles.feed}>{groupedFeed.length === 0 ? <div className={styles.emptyState}><MessageCircle size={18} /><strong>Пока нет записей</strong><EmptyLine>Добавьте примечание или задачу — они появятся здесь.</EmptyLine></div> : groupedFeed.map((group) => <div className={styles.feedGroup} key={group.date}><h3>{group.date}</h3>{group.entries.map((entry) => <div className={styles.feedRow} key={`${entry.type}-${entry.item.id}`}>
         {entry.type === "calls" && <><Phone size={15} /><div><strong>{entry.item.direction === "in" ? "Входящий звонок" : "Исходящий звонок"}</strong><span className={styles.muted}>{entry.item.from_phone ?? entry.item.to_phone ?? ""} · {entry.item.duration_sec ? `${Math.floor(entry.item.duration_sec / 60)} мин` : entry.item.status ?? "без ответа"}</span>{entry.item.recording_url && <audio controls src={entry.item.recording_url} />}</div><time>{fmtDate(entry.date)}</time></>}
         {entry.type === "notes" && <><FileText size={15} /><div><p>{entry.item.body}</p><span className={styles.muted}>{people.get(entry.item.author_id ?? "")?.full_name ?? "Сотрудник"}</span><button className={styles.deleteAction} type="button" onClick={(event) => { deleteTriggerRef.current = event.currentTarget; setDeleteTarget({ entity: "notes", id: entry.item.id, label: entry.item.body }); }}><Trash2 size={14} /> Удалить</button></div><time>{fmtDate(entry.date)}</time></>}
-        {entry.type === "tasks" && <><Check size={15} /><div><button type="button" className={`${styles.taskButton} ${entry.item.done_at ? styles.done : ""}`} onClick={() => !entry.item.done_at && setCompletionTask(entry.item)}><span className={styles.taskCheck}>{entry.item.done_at ? <Check size={12} /> : null}</span>{entry.item.title}<span className={styles.muted}>{entry.item.done_at ? "Выполнена" : fmtDate(entry.item.due_at)}</span></button>{entry.item.done_at && entry.item.result_text && <p className={styles.taskResult}>“{entry.item.result_text}”</p>}<button className={styles.deleteAction} type="button" onClick={(event) => { deleteTriggerRef.current = event.currentTarget; setDeleteTarget({ entity: "tasks", id: entry.item.id, label: entry.item.title }); }}><Trash2 size={14} /> Удалить</button></div><time>{fmtDate(entry.date)}</time></>}
+        {entry.type === "tasks" && <><Check size={15} /><div><button type="button" className={`${styles.taskButton} ${entry.item.done_at ? styles.done : ""}`} onClick={() => !entry.item.done_at && setCompletionTask(entry.item)}><span className={styles.taskCheck}>{entry.item.done_at ? <Check size={12} /> : null}</span>{entry.item.title}<span className={styles.muted}>{entry.item.done_at ? "Выполнена" : "Запланирована"}</span></button>{entry.item.done_at && entry.item.result_text && <p className={styles.taskResult}>“{entry.item.result_text}”</p>}<button className={styles.deleteAction} type="button" onClick={(event) => { deleteTriggerRef.current = event.currentTarget; setDeleteTarget({ entity: "tasks", id: entry.item.id, label: entry.item.title }); }}><Trash2 size={14} /> Удалить</button></div><time>{fmtDate(entry.date)}</time></>}
         {entry.type === "stages" && <><Clock3 size={15} /><div><strong>{entry.item.from_stage_id && entry.item.from_stage_id !== entry.item.to_stage_id ? `${stageNames.get(entry.item.from_stage_id) ?? "Этап"} → ${stageNames.get(entry.item.to_stage_id) ?? "Этап"}` : `Заведена на этапе «${stageNames.get(entry.item.to_stage_id) ?? "Этап"}»`}</strong><span className={styles.muted}>{labels[entry.item.to_status] ?? entry.item.to_status} · {people.get(entry.item.changed_by ?? "")?.full_name ?? "Система"}</span></div><time>{fmtDate(entry.date)}</time></>}
       </div>)}</div>)}</div>
     </section></div>
