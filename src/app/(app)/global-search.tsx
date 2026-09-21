@@ -123,6 +123,26 @@ export function GlobalSearch() {
       setError(null);
       try {
         const db = createClient();
+        const textSearch = !phone
+          ? Promise.all([
+              db
+                .from("deals")
+                .select("id, title, object_text, status")
+                .ilike("title", `%${pattern}%`)
+                .limit(LIMIT),
+              db
+                .from("deals")
+                .select("id, title, object_text, status")
+                .ilike("object_text", `%${pattern}%`)
+                .limit(LIMIT),
+              db
+                .from("tasks")
+                .select("id, title, due_at, deal_id")
+                .is("done_at", null)
+                .ilike("title", `%${pattern}%`)
+                .limit(LIMIT),
+            ])
+          : null;
         let contactIds: string[] = [];
         if (phone) {
           const [a, b] = await Promise.all([
@@ -158,6 +178,23 @@ export function GlobalSearch() {
         const contacts = await chunks(contactIds.slice(0, LIMIT), (ids) =>
           db.from("contacts").select("id, full_name").in("id", ids),
         );
+        if (current !== requestId.current) return;
+        const names = new Map(contacts.map((row) => [row.id, row.full_name]));
+        if (contactIds.length) {
+          setGroups([
+            {
+              label: "Контакты",
+              icon: Users,
+              items: contactIds.slice(0, LIMIT).map((id) => ({
+                id,
+                kind: "contact",
+                title: names.get(id) ?? "Контакт",
+                meta: phone ? "Найден по номеру" : undefined,
+                href: `/contacts/${id}`,
+              })),
+            },
+          ]);
+        }
         const directDeals = contactIds.length
           ? await chunks<Row>(contactIds, (ids) =>
               db
@@ -225,24 +262,8 @@ export function GlobalSearch() {
           ];
         }
         if (!phone) {
-          const [a, b, c] = await Promise.all([
-            db
-              .from("deals")
-              .select("id, title, object_text, status")
-              .ilike("title", `%${pattern}%`)
-              .limit(LIMIT),
-            db
-              .from("deals")
-              .select("id, title, object_text, status")
-              .ilike("object_text", `%${pattern}%`)
-              .limit(LIMIT),
-            db
-              .from("tasks")
-              .select("id, title, due_at, deal_id")
-              .is("done_at", null)
-              .ilike("title", `%${pattern}%`)
-              .limit(LIMIT),
-          ]);
+          const [a, b, c] = await textSearch!;
+          if (current !== requestId.current) return;
           if (a.error || b.error || c.error)
             throw new Error(
               a.error?.message ?? b.error?.message ?? c.error?.message,
@@ -260,8 +281,8 @@ export function GlobalSearch() {
             ).values(),
           ];
         }
-        const names = new Map(contacts.map((row) => [row.id, row.full_name])),
-          next: { label: string; icon: typeof Users; items: Result[] }[] = [];
+        const next: { label: string; icon: typeof Users; items: Result[] }[] =
+          [];
         if (contactIds.length)
           next.push({
             label: "Контакты",
