@@ -1,5 +1,6 @@
 .wrap {
   min-width: 0;
+  max-width: 100%;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -33,12 +34,29 @@
 .filters button { border-color: var(--primary-border); background: var(--primary); color: var(--primary-foreground); cursor: pointer; }
 .filters button:hover { background: var(--primary-border); }
 .filters a { color: var(--muted-foreground); font-size: 13px; }
+.sortChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--h-control-sm);
+  padding: 0 8px;
+  border: 1px solid var(--input);
+  border-radius: var(--radius);
+  background: var(--background);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.sortChip a { display: inline-flex; color: var(--muted-foreground); }
 
 .scroll {
   min-height: 0;
   flex: 1;
   overflow: auto;
 }
+
+/* Место под плавающую пилюлю bulk, чтобы она не накрывала строки и итог. */
+.scrollWithBulk { padding-bottom: calc(var(--h-toolbar) + 20px); }
+.bulkSpacer { flex: none; height: calc(var(--h-toolbar) + 20px); }
 
 .table {
   width: max(100%, 1120px);
@@ -58,6 +76,9 @@
 }
 
 .table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   height: var(--h-row-header);
   background: var(--secondary);
   color: var(--secondary-text);
@@ -95,6 +116,19 @@
 .selectCell input { accent-color: var(--primary); }
 .contact { display: block; min-width: 0; overflow: hidden; color: var(--foreground); font-weight: 500; text-overflow: ellipsis; text-decoration: none; }
 .contact:hover { text-decoration: underline; }
+.contactCell { display: flex; min-width: 0; align-items: center; gap: 8px; }
+.avatar {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: .2px;
+}
 .stageDot { display: inline-block; width: 8px; height: 8px; margin-right: 7px; border-radius: 50%; background: var(--primary); }
 .stageCell { display: flex; min-width: 0; align-items: center; }
 .won { background: var(--success); }
@@ -107,6 +141,14 @@
 .activity { color: var(--secondary-text); }
 .muted { color: var(--muted-foreground); }
 
+.table tfoot td {
+  height: var(--h-row);
+  background: var(--secondary);
+  color: var(--secondary-text);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.totalCell { white-space: normal; }
 .menuCell { width: 36px; padding: 0 !important; text-align: center !important; }
 .menuButton { display: inline-flex; align-items: center; justify-content: center; width: var(--h-control); height: var(--h-control); border: 0; border-radius: var(--radius); background: transparent; color: var(--muted-foreground); cursor: pointer; }
 .menuButton:hover, .menuButton:focus-visible { background: var(--accent); color: var(--destructive); }
@@ -119,7 +161,8 @@
 .pageLinks a { display: inline-flex; align-items: center; gap: 3px; color: var(--foreground); text-decoration: none; }
 .message { margin: 8px var(--px-cell); padding: 8px; border: 1px solid var(--border); color: var(--muted-foreground); }
 
-.bulk { position: fixed; z-index: 5; bottom: 16px; left: 50%; display: flex; align-items: center; gap: 8px; padding: 8px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--background); box-shadow: var(--shadow-overlay); transform: translateX(-50%); }
+.bulk { position: fixed; z-index: 5; bottom: 24px; left: 50%; display: flex; height: 44px; align-items: center; gap: 4px; padding: 0 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--background); box-shadow: var(--shadow-overlay); transform: translateX(-50%); max-width: calc(100vw - 16px); overflow-x: auto; }
+.bulk strong { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; border-radius: 4px; background: var(--primary); color: var(--primary-foreground); font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .bulk button,
 .dialog button,
 .dialog select { height: var(--h-control); border: 1px solid var(--input); border-radius: var(--radius); background: var(--secondary); color: var(--foreground); padding: 0 10px; font: inherit; font-size: 13px; cursor: pointer; }

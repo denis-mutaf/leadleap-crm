@@ -2,6 +2,7 @@
 
 import {
   ArrowDown,
+  ArrowDownUp,
   ArrowUp,
   ChevronLeft,
   ChevronRight,
@@ -11,6 +12,8 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { StageIndicator } from "@/components/crm/stage-indicator";
+import { stageHueVars, type StageHue } from "@/lib/stage-colors";
 import { createClient } from "@/lib/supabase/client";
 import styles from "./table.module.css";
 import { startRouteProgress } from "../../route-progress";
@@ -20,6 +23,7 @@ export type TableDeal = {
   contact: string;
   stage: string;
   stageKind: string;
+  stageHue: StageHue;
   tags: string[];
   task: string;
   taskDueAt: string | null;
@@ -43,7 +47,7 @@ type Props = {
   owner: string;
   stage: string;
   owners: { id: string; full_name: string }[];
-  stages: { id: string; name: string; kind: string }[];
+  stages: { id: string; name: string; kind: string; position: number }[];
   tags: Option[];
   lostReasons: Option[];
   canExport: boolean;
@@ -105,6 +109,58 @@ function csvCell(value: string) {
   const safe = /^[\s\u0000-\u001f]*[=+\-@]/.test(value) ? `'${value}` : value;
   return `"${safe.replaceAll('"', '""')}"`;
 }
+
+// Компактный аватар контакта: инициалы из реального имени, оттенок —
+// детерминированный хеш имени по существующим hue-токенам, новых данных нет.
+const AVATAR_HUES: readonly StageHue[] = [
+  "blue",
+  "cyan",
+  "green",
+  "olive",
+  "amber",
+  "pink",
+  "violet",
+  "magenta",
+];
+
+function contactInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "·";
+  const first = parts[0]?.charAt(0) ?? "";
+  const second = parts.length > 1 ? (parts[1]?.charAt(0) ?? "") : "";
+  return `${first}${second}`.toUpperCase();
+}
+
+function avatarHue(name: string): StageHue {
+  let hash = 0;
+  for (const char of name) hash = (hash * 31 + (char.codePointAt(0) ?? 0)) >>> 0;
+  return AVATAR_HUES[hash % AVATAR_HUES.length] ?? "grey";
+}
+
+function ContactAvatar({ name }: { name: string }) {
+  const vars = stageHueVars(avatarHue(name));
+  return (
+    <span
+      aria-hidden="true"
+      className={styles.avatar}
+      style={{ background: vars.bg, color: vars.text }}
+    >
+      {contactInitials(name)}
+    </span>
+  );
+}
+
+const SORT_LABELS: Record<string, string> = {
+  contact: "Контакт",
+  stage: "Этап",
+  tags: "Метки",
+  task: "Следующий шаг",
+  activity: "Последняя активность",
+  created: "Создана",
+  owner: "Ответственный",
+};
+const DEFAULT_SORT = "activity";
+const DEFAULT_DIRECTION = "desc";
 
 export function DealsTableView(p: Props) {
   const router = useRouter();
@@ -267,6 +323,19 @@ export function DealsTableView(p: Props) {
         <input type="hidden" name="dir" value={p.direction} />
         <button type="submit">Применить</button>
         {(p.query || p.owner || p.stage) && <Link href="/deals/table">Сбросить</Link>}
+        <span className={styles.sortChip} title="Активная сортировка">
+          <ArrowDownUp size={12} aria-hidden="true" />
+          Сортировка: {SORT_LABELS[p.sort] ?? p.sort}
+          {p.direction === "asc" ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+          {(p.sort !== DEFAULT_SORT || p.direction !== DEFAULT_DIRECTION) && (
+            <Link
+              href={href({ q: p.query, owner: p.owner, stage: p.stage, sort: DEFAULT_SORT, dir: DEFAULT_DIRECTION })}
+              aria-label="Сбросить сортировку"
+            >
+              <X size={12} />
+            </Link>
+          )}
+        </span>
       </form>
       {p.rows.length === 0 ? (
         <div className={styles.empty}>
@@ -275,7 +344,7 @@ export function DealsTableView(p: Props) {
           <Link href="/deals">Открыть воронку</Link>
         </div>
       ) : (
-        <div className={styles.scroll}>
+        <div className={`${styles.scroll} ${count > 0 ? styles.scrollWithBulk : ""}`}>
           <table className={styles.table}>
             <thead>
               <tr>
@@ -307,8 +376,8 @@ export function DealsTableView(p: Props) {
                   }}
                 >
                   <td className={styles.selectCell} onClick={(event) => event.stopPropagation()}><input type="checkbox" checked={selected.has(row.id)} onChange={() => toggle(row.id)} aria-label={`Выбрать сделку ${row.contact}`} /></td>
-                  <td><Link className={styles.contact} href={`/deals/${row.id}`} onClick={(event) => event.stopPropagation()} title={row.contact}>{row.contact}</Link></td>
-                  <td title={row.stage}><span className={styles.stageCell}><span className={`${styles.stageDot} ${row.stageKind === "won" ? styles.won : row.stageKind === "lost" ? styles.lost : ""}`} /><span className={styles.truncate}>{row.stage}</span></span></td>
+                  <td><Link className={styles.contact} href={`/deals/${row.id}`} onClick={(event) => event.stopPropagation()} title={row.contact}><span className={styles.contactCell}><ContactAvatar name={row.contact} /><span className={styles.truncate}>{row.contact}</span></span></Link></td>
+                  <td title={row.stage}><StageIndicator hue={row.stageHue} name={row.stage} variant="inline" /></td>
                   <td><TagCell tags={row.tags} /></td>
                   <td className={styles.truncate} title={row.task}>{row.task && <>{row.task} · {displayDate(row.taskDueAt)}</>}</td>
                   <td className={styles.activity} title={row.activity}>{row.activity}{row.activityAt && ` · ${displayDate(row.activityAt)}`}</td>
@@ -320,6 +389,13 @@ export function DealsTableView(p: Props) {
                 </tr>
               ))}
             </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={9} className={styles.totalCell}>
+                  Показано {p.rows.length} из {p.total}
+                </td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       )}
@@ -330,6 +406,7 @@ export function DealsTableView(p: Props) {
           {p.page + 1 < pages && <Link href={href({ ...common, page: p.page + 1 })}>Вперёд<ChevronRight size={16} /></Link>}
         </span>
       </nav>
+      {count > 0 && <div className={styles.bulkSpacer} aria-hidden="true" />}
       {message && <div className={styles.message} role="status">{message}</div>}
       {count > 0 && <div className={styles.bulk} role="toolbar" aria-label="Массовые действия">
         <strong>Выбрано {count}</strong>
