@@ -29,6 +29,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { monthlyAmount, shortAmount } from "@/lib/amo-amount";
 import { createClient } from "@/lib/supabase/client";
+import { startRouteProgress } from "../route-progress";
 
 type OpenEvent = { metaKey: boolean; ctrlKey: boolean; button: number };
 type OpenDeal = (event?: OpenEvent) => void;
@@ -318,6 +319,7 @@ export function DealsBoard(props: Props) {
   const openDeal = (id: string, event?: OpenEvent) => {
     if (Date.now() - lastDragAt.current <= 300) return;
     if (event && (event.metaKey || event.ctrlKey || event.button === 1)) { window.open(`/deals/${id}`, "_blank", "noopener"); return; }
+    startRouteProgress();
     router.push(`/deals/${id}`);
   };
   const createDeal = () => window.dispatchEvent(new CustomEvent("crm:create-deal-open"));

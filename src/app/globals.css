@@ -2263,3 +2263,38 @@
 .main-shell > * > header:first-child {
   padding-right: 44px;
 }
+
+/* Полоса перехода: видна только пока идёт навигация, поверх всего. */
+.route-progress {
+  position: fixed;
+  z-index: 100;
+  inset: 0 0 auto;
+  height: 2px;
+  opacity: 0;
+  pointer-events: none;
+  background: var(--primary);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: opacity 120ms linear;
+}
+.route-progress.is-pending {
+  opacity: 1;
+  animation: route-progress-run 1.6s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+@keyframes route-progress-run {
+  0% { transform: scaleX(0); }
+  60% { transform: scaleX(0.82); }
+  100% { transform: scaleX(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .route-progress.is-pending { animation: none; transform: scaleX(1); }
+}
+
+.nav-item-pending {
+  position: absolute;
+  inset-inline: 8px;
+  bottom: 0;
+  height: 2px;
+  border-radius: var(--radius);
+  background: var(--primary);
+}

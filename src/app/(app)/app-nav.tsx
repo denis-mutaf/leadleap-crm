@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+import { setRouteProgress } from "./route-progress";
 
 export type AppNavItem = {
   href: string;
@@ -51,24 +53,20 @@ function NavLinkContent({
 }) {
   const { pending } = useLinkStatus();
 
+  // Двухпиксельная чёрточка под пунктом меню терялась: весь экран при этом
+  // секунду стоял прежним. Пункт помечается сам и заодно зажигает общую
+  // полосу перехода наверху окна.
+  useEffect(() => {
+    if (!pending) return;
+    setRouteProgress(true);
+    return () => setRouteProgress(false);
+  }, [pending]);
+
   return (
     <>
       <Icon size={16} />
       {label}
-      {pending && (
-        <span
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            insetInlineStart: 8,
-            insetInlineEnd: 8,
-            bottom: 0,
-            height: 2,
-            borderRadius: "var(--radius)",
-            background: "var(--primary)",
-          }}
-        />
-      )}
+      {pending && <span className="nav-item-pending" aria-hidden="true" />}
     </>
   );
 }

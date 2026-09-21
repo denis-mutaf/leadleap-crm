@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import styles from "./table.module.css";
+import { startRouteProgress } from "../../route-progress";
 
 export type TableDeal = {
   id: string;
@@ -295,11 +296,12 @@ export function DealsTableView(p: Props) {
                   tabIndex={0}
                   // Cmd-клик и клик колесом по строке — привычный способ открыть
                   // сделку рядом, не теряя место в таблице. <tr> ссылкой не бывает.
-                  onClick={(event) => { if (event.metaKey || event.ctrlKey) { window.open(`/deals/${row.id}`, "_blank", "noopener"); return; } router.push(`/deals/${row.id}`); }}
+                  onClick={(event) => { if (event.metaKey || event.ctrlKey) { window.open(`/deals/${row.id}`, "_blank", "noopener"); return; } startRouteProgress(); router.push(`/deals/${row.id}`); }}
                   onAuxClick={(event) => { if (event.button === 1) { event.preventDefault(); window.open(`/deals/${row.id}`, "_blank", "noopener"); } }}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
+                      startRouteProgress();
                       router.push(`/deals/${row.id}`);
                     }
                   }}

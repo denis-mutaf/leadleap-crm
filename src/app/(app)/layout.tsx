@@ -7,6 +7,8 @@ import { GlobalSearch } from "./global-search";
 import { NotificationsPanel } from "./notifications-panel";
 import { IncomingCallOverlay } from "./incoming-call-overlay";
 import { Toaster } from "@/components/ui/sonner";
+import { Suspense } from "react";
+import { RouteProgress } from "./route-progress";
 
 type NavEntry = AppNavItem & {
   roles: string[];
@@ -75,6 +77,9 @@ export default async function AppLayout({
 
   return (
     <div className="app-shell">
+      <Suspense fallback={null}>
+        <RouteProgress />
+      </Suspense>
       <aside className="nav">
         <div className="nav-brand">ISRAGRUP</div>
         {profile.role !== "builder" && <GlobalSearch />}
