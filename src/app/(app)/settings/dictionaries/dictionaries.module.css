@@ -171,6 +171,17 @@
   color: var(--muted-foreground);
   font-size: 12px;
 }
+.unavailable {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 24px;
+  font-size: 13px;
+}
+.unavailable strong {
+  font-weight: 500;
+}
 .error {
   color: var(--destructive);
   font-size: 12px;
