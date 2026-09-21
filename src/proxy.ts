@@ -45,14 +45,6 @@ export async function proxy(request: NextRequest) {
     return redirect;
   }
 
-  if (!user && !isLoginPage) {
-    return redirectWithSession("/login");
-  }
-
-  if (user && isLoginPage) {
-    return redirectWithSession("/deals");
-  }
-
   if (!user && pathname.startsWith("/api/")) {
     const unauthorized = NextResponse.json(
       { error: "Unauthorized" },
@@ -62,6 +54,14 @@ export async function proxy(request: NextRequest) {
       .getAll()
       .forEach((cookie) => unauthorized.cookies.set(cookie));
     return unauthorized;
+  }
+
+  if (!user && !isLoginPage) {
+    return redirectWithSession("/login");
+  }
+
+  if (user && isLoginPage) {
+    return redirectWithSession("/deals");
   }
 
   return response;
