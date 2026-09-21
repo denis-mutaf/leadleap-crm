@@ -2,20 +2,28 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import {
   ArrowLeft,
-  Clock3,
   Mail,
-  MessageSquare,
+  MessageCircle,
   Phone,
   StickyNote,
   Tag,
 } from "lucide-react";
+import { EmptyLine, EmptyState } from "@/components/crm/empty-state";
+import { InlineField, ReadField } from "@/components/crm/inline-field";
 import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import ContactMergeButton from "../contact-merge-button";
 import ContactDeleteButton from "../contact-delete-button";
-import "../contacts.module.css";
+import ContactMergeButton from "../contact-merge-button";
+import { ContactEmails, ContactPhones, ContactTags, EditableCustomField } from "../contact-editors";
+import styles from "../contacts.module.css";
 
 const LIMIT = 50;
+type AmoField = {
+  field_id?: number | string;
+  field_name?: string;
+  field_code?: string;
+  values?: Array<{ value?: unknown; enum?: string; enum_code?: string }>;
+};
 
 export default async function ContactPage({
   params,
@@ -28,403 +36,154 @@ export default async function ContactPage({
   const { id } = await params;
   const db = await createClient();
 
-  const contact = await db
+  const contactResult = await db
     .from("contacts")
-    .select("id, full_name, created_at")
+    .select("id, full_name, created_at, amo_custom_fields")
     .eq("id", id)
     .is("merged_into", null)
     .maybeSingle();
-  if (contact.error) throw new Error(`Контакт: ${contact.error.message}`);
-  if (!contact.data) notFound();
-
-  const [
-    phoneRows,
-    importedRows,
-    emailRows,
-    channelRows,
-    tagLinks,
-    directDeals,
-    linkedDeals,
-    directNotes,
-    directCalls,
-    conversations,
-  ] = await Promise.all([
-    db
-      .from("contact_phones")
-      .select("phone, is_primary")
-      .eq("contact_id", id)
-      .order("is_primary", { ascending: false })
-      .limit(LIMIT),
-    db
-      .from("imported_contact_phones")
-      .select("raw_phone, ordinal")
-      .eq("contact_id", id)
-      .order("ordinal")
-      .limit(LIMIT),
-    db
-      .from("contact_emails")
-      .select("email, ordinal")
-      .eq("contact_id", id)
-      .order("ordinal")
-      .limit(LIMIT),
-    db
-      .from("contact_channels")
-      .select("channel, handle")
-      .eq("contact_id", id)
-      .limit(LIMIT),
-    db.from("contact_tags").select("tag_id").eq("contact_id", id).limit(LIMIT),
-    db
-      .from("deals")
-      .select("id", { count: "exact" })
-      .eq("contact_id", id)
-      .order("created_at", { ascending: false })
-      .range(0, LIMIT - 1),
-    db
-      .from("deal_contacts")
-      .select("deal_id")
-      .eq("contact_id", id)
-      .order("deal_id")
-      .range(0, LIMIT - 1),
-    db
-      .from("notes")
-      .select("id, body, created_at, deal_id")
-      .eq("contact_id", id)
-      .or("amo_note_type.is.null,amo_note_type.not.in.(call_in,call_out)")
-      .order("created_at", { ascending: false })
-      .limit(LIMIT),
-    db
-      .from("calls")
-      .select("id, direction, status, started_at, duration_sec, deal_id")
-      .eq("contact_id", id)
-      .order("started_at", { ascending: false })
-      .limit(LIMIT),
-    db
-      .from("conversations")
-      .select("id, channel")
-      .eq("contact_id", id)
-      .limit(LIMIT),
+  if (contactResult.error) throw new Error(`Контакт: ${contactResult.error.message}`);
+  if (!contactResult.data) notFound();
+  const [customDefsResult, customValuesResult] = await Promise.all([
+    db.from("custom_field_defs").select("id, key, label, field_type, options").eq("entity", "contact").eq("is_active", true).order("position"),
+    db.from("custom_field_values").select("id, field_id, value").eq("entity_id", id),
   ]);
-  for (const result of [
-    phoneRows,
-    importedRows,
-    emailRows,
-    channelRows,
-    tagLinks,
-    directDeals,
-    linkedDeals,
-    directNotes,
-    directCalls,
-    conversations,
-  ]) {
-    if (result.error)
-      throw new Error(`Данные контакта: ${result.error.message}`);
+  if (customDefsResult.error || customValuesResult.error) throw new Error(`Поля контакта: ${(customDefsResult.error ?? customValuesResult.error)?.message}`);
+
+  const [phoneRows, importedRows, emailRows, channelRows, tagLinks, directDeals, linkedDeals, notes, calls, conversations] = await Promise.all([
+    db.from("contact_phones").select("id, phone, is_primary").eq("contact_id", id).order("is_primary", { ascending: false }).order("created_at").limit(LIMIT),
+    db.from("imported_contact_phones").select("raw_phone, ordinal, label").eq("contact_id", id).order("ordinal").limit(LIMIT),
+    db.from("contact_emails").select("email, ordinal, label").eq("contact_id", id).order("ordinal").limit(LIMIT),
+    db.from("contact_channels").select("channel, handle").eq("contact_id", id).limit(LIMIT),
+    db.from("contact_tags").select("tag_id").eq("contact_id", id).limit(LIMIT),
+    db.from("deals").select("id").eq("contact_id", id).order("created_at", { ascending: false }).limit(LIMIT),
+    db.from("deal_contacts").select("deal_id").eq("contact_id", id).limit(LIMIT),
+    db.from("notes").select("id, body, created_at, deal_id").eq("contact_id", id).order("created_at", { ascending: false }).limit(LIMIT),
+    db.from("calls").select("id, direction, status, started_at, duration_sec, deal_id").eq("contact_id", id).order("started_at", { ascending: false }).limit(LIMIT),
+    db.from("conversations").select("id, channel").eq("contact_id", id).limit(LIMIT),
+  ]);
+  for (const result of [phoneRows, importedRows, emailRows, channelRows, tagLinks, directDeals, linkedDeals, notes, calls, conversations]) {
+    if (result.error) throw new Error(`Данные контакта: ${result.error.message}`);
   }
 
-  const dealIds = [
-    ...new Set([
-      ...(directDeals.data ?? []).map((row) => row.id),
-      ...(linkedDeals.data ?? []).map((row) => row.deal_id),
-    ]),
-  ];
-  const [dealRows, tags] = await Promise.all([
-    dealIds.length
-      ? db
-          .from("deals")
-          .select(
-            "id, title, object_text, status, budget, budget_currency, stage_id, owner_id, created_at",
-          )
-          .in("id", dealIds.slice(0, LIMIT))
-          .order("created_at", { ascending: false })
-          .limit(LIMIT)
-      : Promise.resolve({ data: [], error: null }),
-    (tagLinks.data ?? []).length
-      ? db
-          .from("tags")
-          .select("id, name")
-          .in(
-            "id",
-            tagLinks.data!.map((row) => row.tag_id),
-          )
-      : Promise.resolve({ data: [], error: null }),
+  const dealIds = [...new Set([
+    ...(directDeals.data ?? []).map((row) => row.id),
+    ...(linkedDeals.data ?? []).map((row) => row.deal_id),
+  ])].slice(0, LIMIT);
+  const tagIds = (tagLinks.data ?? []).map((row) => row.tag_id);
+  const [dealRows, tags, allTags] = await Promise.all([
+    dealIds.length ? db.from("deals").select("id, title, object_text, status, budget, budget_currency, stage_id, owner_id, created_at").in("id", dealIds).order("created_at", { ascending: false }) : Promise.resolve({ data: [], error: null }),
+    tagIds.length ? db.from("tags").select("id, name").in("id", tagIds) : Promise.resolve({ data: [], error: null }),
+    db.from("tags").select("id, name").order("name").limit(100),
   ]);
-  if (dealRows.error)
-    throw new Error(`Сделки контакта: ${dealRows.error.message}`);
-  if (tags.error) throw new Error(`Теги контакта: ${tags.error.message}`);
+  if (dealRows.error || tags.error || allTags.error) throw new Error(`Связанные данные: ${(dealRows.error ?? tags.error ?? allTags.error)?.message}`);
 
-  const visibleDealIds = (dealRows.data ?? []).map((row) => row.id);
-  const [stages, owners, dealNotes, messages] = await Promise.all([
-    [...new Set((dealRows.data ?? []).map((row) => row.stage_id))].length
-      ? db
-          .from("stages")
-          .select("id, name")
-          .in("id", [
-            ...new Set((dealRows.data ?? []).map((row) => row.stage_id)),
-          ])
-      : Promise.resolve({ data: [], error: null }),
-    [
-      ...new Set(
-        (dealRows.data ?? []).map((row) => row.owner_id).filter(Boolean),
-      ),
-    ].length
-      ? db
-          .from("profiles")
-          .select("id, full_name")
-          .in("id", [
-            ...new Set(
-              (dealRows.data ?? []).map((row) => row.owner_id).filter(Boolean),
-            ),
-          ])
-      : Promise.resolve({ data: [], error: null }),
-    visibleDealIds.length
-      ? db
-          .from("notes")
-          .select("id, body, created_at, deal_id")
-          .in("deal_id", visibleDealIds.slice(0, LIMIT))
-          .or("amo_note_type.is.null,amo_note_type.not.in.(call_in,call_out)")
-          .order("created_at", { ascending: false })
-          .limit(LIMIT)
-      : Promise.resolve({ data: [], error: null }),
-    (conversations.data ?? []).length
-      ? db
-          .from("messages")
-          .select("id, body, sent_at, direction, conversation_id")
-          .in(
-            "conversation_id",
-            conversations.data!.map((row) => row.id),
-          )
-          .order("sent_at", { ascending: false })
-          .limit(LIMIT)
-      : Promise.resolve({ data: [], error: null }),
+  const stageIds = [...new Set((dealRows.data ?? []).map((deal) => deal.stage_id))];
+  const ownerIds = [...new Set((dealRows.data ?? []).map((deal) => deal.owner_id).filter(Boolean))];
+  const [stages, owners] = await Promise.all([
+    stageIds.length ? db.from("stages").select("id, name").in("id", stageIds) : Promise.resolve({ data: [], error: null }),
+    ownerIds.length ? db.from("profiles").select("id, full_name").in("id", ownerIds) : Promise.resolve({ data: [], error: null }),
   ]);
-  for (const result of [stages, owners, dealNotes, messages])
-    if (result.error)
-      throw new Error(`Лента контакта: ${result.error.message}`);
+  if (stages.error || owners.error) throw new Error(`Справочники контакта: ${(stages.error ?? owners.error)?.message}`);
 
-  const stageMap = new Map(
-    (stages.data ?? []).map((row) => [row.id, row.name]),
-  );
-  const ownerMap = new Map(
-    (owners.data ?? []).map((row) => [row.id, row.full_name]),
-  );
-  const feed: Array<{
-    id: string;
-    kind: "note" | "call" | "message";
-    at: string;
-    body?: string | null;
-    direction?: string;
-    duration?: number | null;
-    status?: string | null;
-  }> = [
-    ...(directNotes.data ?? []).map((row) => ({
-      id: row.id,
-      kind: "note" as const,
-      at: row.created_at,
-      body: row.body,
-    })),
-    ...(dealNotes.data ?? []).map((row) => ({
-      id: row.id,
-      kind: "note" as const,
-      at: row.created_at,
-      body: row.body,
-    })),
-    ...(directCalls.data ?? []).map((row) => ({
-      id: row.id,
-      kind: "call" as const,
-      at: row.started_at,
-      direction: row.direction,
-      duration: row.duration_sec,
-      status: row.status,
-    })),
-    ...(messages.data ?? []).map((row) => ({
-      id: row.id,
-      kind: "message" as const,
-      at: row.sent_at,
-      body: row.body,
-      direction: row.direction,
-    })),
-  ]
-    .filter(
-      (item, index, items) =>
-        items.findIndex((candidate) => candidate.id === item.id) === index,
-    )
-    .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
-    .slice(0, LIMIT);
-  const allPhones = [
-    ...(phoneRows.data ?? []).map((row) => row.phone),
-    ...(importedRows.data ?? []).map((row) => row.raw_phone),
-  ].filter((value, index, values) => values.indexOf(value) === index);
-  const shownDeals = dealRows.data?.length ?? 0;
-  const shownFeed = feed.length;
+  const fields = Array.isArray(contactResult.data.amo_custom_fields) ? contactResult.data.amo_custom_fields as AmoField[] : [];
+  const customDefinitions = (customDefsResult.data ?? []) as Array<{ id: string; key: string; label: string; field_type: "text" | "number" | "date" | "select" | "checkbox"; options: unknown }>;
+  const customValues = new Map((customValuesResult.data ?? []).map((row) => [row.field_id, row]));
+  const phones = phoneRows.data ?? [];
+  const importedPhones = importedRows.data ?? [];
+  const emails = emailRows.data ?? [];
+  const customSource = findField(fields, /source|источник|канал/i);
+  const normalizedSource = customDefinitions.find((definition) => /source|источник|канал/i.test(`${definition.key} ${definition.label}`));
+  const firstSource = normalizedSource ? customValueText(customValues.get(normalizedSource.id)?.value) : fieldValue(customSource);
+  const stageMap = new Map((stages.data ?? []).map((row) => [row.id, row.name]));
+  const ownerMap = new Map((owners.data ?? []).map((row) => [row.id, row.full_name]));
+  const statusLabels: Record<string, string> = { open: "В работе", postponed: "Отложена", won: "Выиграна", lost: "Проиграна" };
+  const feed = [
+    ...(notes.data ?? []).map((item) => ({ id: `note-${item.id}`, at: item.created_at, kind: "note" as const, body: item.body, dealId: item.deal_id })),
+    ...(calls.data ?? []).map((item) => ({ id: `call-${item.id}`, at: item.started_at, kind: "call" as const, body: item.status, dealId: item.deal_id, direction: item.direction, duration: item.duration_sec })),
+  ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, LIMIT);
+  const groupedFeed = groupByDay(feed);
+  const allPhones = [...new Set([...phones.map((row) => row.phone), ...importedPhones.map((row) => row.raw_phone)])];
 
   return (
-    <section className="contact-record">
-      <header className="record-header">
-        <Link href="/contacts" className="record-back">
-          <ArrowLeft size={16} /> Контакты
-        </Link>
-        <span className="record-separator">/</span>
-        <strong>{contact.data.full_name}</strong>
+    <section className={styles.contactRecord}>
+      <header className={styles.recordHeader}>
+        <Link href="/contacts" className={styles.recordBack}><ArrowLeft size={15} /> Контакты</Link>
+        <span className={styles.recordSeparator}>/</span>
+        <span className={styles.truncate}>{contactResult.data.full_name}</span>
+        <span className={styles.headerSpacer} />
+        <Link href="/contacts" className={styles.iconButton} aria-label="Закрыть карточку">×</Link>
       </header>
-      <div className="contact-record-title">
-        <span className="contact-avatar large">
-          {contact.data.full_name.slice(0, 2).toUpperCase()}
-        </span>
-        <h1>{contact.data.full_name}</h1>
-        <span className="quiet-chip">Контакт</span>
-        <ContactMergeButton
-          current={{
-            id: contact.data.id,
-            fullName: contact.data.full_name,
-            phones: allPhones,
-            emails: (emailRows.data ?? []).map((row) => row.email),
-            dealCount: directDeals.count ?? 0,
-          }}
-        />
-        <ContactDeleteButton contactId={contact.data.id} />
+      <div className={styles.recordToolbar}>
+        <span className={`${styles.contactAvatar} ${styles.avatarLarge}`}>{initials(contactResult.data.full_name)}</span>
+        <strong>{contactResult.data.full_name}</strong>
+        <span className={styles.recordType}>Контакт</span>
+        <span className={styles.headerSpacer} />
+        {phones[0] && <a className={styles.toolbarButton} href={`tel:${phones[0].phone}`}><Phone size={14} /> Позвонить</a>}
+        {emails[0] && <a className={styles.toolbarButton} href={`mailto:${emails[0].email}`}><Mail size={14} /> Написать</a>}
+        <ContactMergeButton current={{ id: contactResult.data.id, fullName: contactResult.data.full_name, phones: allPhones, emails: emails.map((row) => row.email), dealCount: dealIds.length, createdAt: contactResult.data.created_at, source: firstSource }} />
+        <ContactDeleteButton contactId={contactResult.data.id} />
       </div>
-      <div className="contact-layout">
-        <aside className="contact-sidebar">
-          <Info title="Контакт">
-            <Field
-              icon={<Phone size={14} />}
-              label="Телефоны"
-              value={allPhones.join(", ") || "Не заполнено"}
-            />
-            <Field
-              icon={<Mail size={14} />}
-              label="Почта"
-              value={
-                (emailRows.data ?? []).map((row) => row.email).join(", ") ||
-                "Не заполнено"
-              }
-            />
-            <Field
-              icon={<MessageSquare size={14} />}
-              label="Каналы"
-              value={
-                (channelRows.data ?? [])
-                  .map((row) => row.handle || row.channel)
-                  .join(", ") || "Не заполнено"
-              }
-            />
-          </Info>
-          <Info title="Теги">
-            <div className="tag-list">
-              {(tags.data ?? []).map((tag) => (
-                <span className="tag" key={tag.id}>
-                  <Tag size={12} />
-                  {tag.name}
-                </span>
-              ))}
-              {!tags.data?.length && <span className="muted">Нет тегов</span>}
-            </div>
-          </Info>
+      <div className={styles.recordBody}>
+        <aside className={styles.recordLeft}>
+          <section>
+            <p className={styles.groupHead}>Контакт</p>
+            <InlineField label="Имя" table="contacts" id={id} column="full_name" value={contactResult.data.full_name} />
+            <div className={styles.collectionField}><span>Телефоны</span><ContactPhones contactId={id} phones={phones} /></div>
+            {importedPhones.map((phone) => <ReadField key={`${phone.ordinal}-${phone.raw_phone}`} label={phone.label || `Импортированный телефон ${phone.ordinal + 1}`} value={phone.raw_phone} />)}
+            <div className={styles.collectionField}><span>Почта</span><ContactEmails contactId={id} emails={emails} /></div>
+            <ReadField label="Каналы" value={channelRows.data?.length ? channelRows.data.map((row) => row.handle || row.channel).join(", ") : "WhatsApp не подключён"} />
+            {!channelRows.data?.length && <EmptyLine>Переписка появится, когда подключим WhatsApp.</EmptyLine>}
+          </section>
+          <section>
+            <p className={styles.groupHead}>Источник</p>
+            <ReadField label="В базе с" value={formatDateTime(contactResult.data.created_at)} />
+            <ReadField label="Источник первого обращения" value={firstSource} />
+            <ReadField label="Первое обращение" value={fieldValue(findField(fields, /first|перв.*обращ/i))} />
+          </section>
+          <section>
+            <p className={styles.groupHead}><Tag size={14} /> Метки</p>
+            <ContactTags contactId={id} tags={(tags.data ?? []) as Array<{ id: string; name: string }>} allTags={(allTags.data ?? []) as Array<{ id: string; name: string }>} />
+          </section>
+          <section>
+            <p className={styles.groupHead}>Данные Amo</p>
+            {customDefinitions.length ? customDefinitions.map((definition) => <EditableCustomField key={definition.id} contactId={id} definition={definition} current={customValues.get(definition.id)} />) : <ReadField label="Поля Amo" value={null} />}
+          </section>
         </aside>
-        <main className="contact-main">
-          <Info title={`Связанные сделки · показано ${shownDeals}`}>
-            <div className="deal-list">
-              {(dealRows.data ?? []).map((deal) => (
-                <Link
-                  href={`/deals/${deal.id}`}
-                  className="contact-deal"
-                  key={deal.id}
-                >
-                  <span className="status-dot" />
-                  <span>
-                    <strong>
-                      {deal.title || deal.object_text || "Сделка без названия"}
-                    </strong>
-                    <small>
-                      {stageMap.get(deal.stage_id) ?? deal.status} ·{" "}
-                      {ownerMap.get(deal.owner_id ?? "") ??
-                        "Без ответственного"}
-                    </small>
-                  </span>
-                  <b>
-                    {deal.budget
-                      ? `${deal.budget} ${deal.budget_currency ?? ""}`
-                      : ""}
-                  </b>
-                </Link>
-              ))}
-              {!shownDeals && (
-                <span className="muted">Связанных сделок нет</span>
-              )}
-            </div>
-          </Info>
-          <Info title={`Лента · Последние ${shownFeed} записей`}>
-            <div className="activity-list">
-              {feed.map((item) => (
-                <div className="activity" key={item.id}>
-                  {item.kind === "call" ? (
-                    <Phone size={15} />
-                  ) : item.kind === "message" ? (
-                    <MessageSquare size={15} />
-                  ) : (
-                    <StickyNote size={15} />
-                  )}
-                  <span>
-                    <strong>
-                      {item.kind === "call"
-                        ? item.direction === "in"
-                          ? "Входящий звонок"
-                          : "Исходящий звонок"
-                        : item.kind === "message"
-                          ? "Сообщение"
-                          : "Примечание"}
-                    </strong>
-                    <small>
-                      {item.kind === "call"
-                        ? `${item.duration ? `${Math.round(item.duration / 60)} мин` : (item.status ?? "без ответа")}`
-                        : (item.body ?? "")}
-                    </small>
-                  </span>
-                </div>
-              ))}
-              {!feed.length && <span className="muted">Записей пока нет</span>}
-            </div>
-          </Info>
+        <main className={styles.recordRight}>
+          <div className={styles.dealsHeader}><span>Сделки</span><span className={styles.countBadge}>{dealRows.data?.length ?? 0}</span></div>
+          <div className={styles.dealList}>
+            {(dealRows.data ?? []).map((deal) => (
+              <Link href={`/deals/${deal.id}`} className={styles.dealCard} key={deal.id}>
+                <span className={`${styles.statusDot} ${styles[`status${deal.status}`] ?? ""}`} />
+                <span className={styles.dealMain}><strong>{deal.title || deal.object_text || "Сделка без названия"}</strong><span>{statusLabels[deal.status] ?? deal.status} · {stageMap.get(deal.stage_id) ?? "Без этапа"}</span></span>
+                <span className={styles.dealMeta}>{deal.owner_id ? ownerMap.get(deal.owner_id) : "Без ответственного"}</span>
+                <span className={styles.dealMeta}>{formatDate(deal.created_at)}</span>
+              </Link>
+            ))}
+            {!dealRows.data?.length && <EmptyState title="Сделок пока нет" description="Создайте сделку, чтобы вести переговоры и этапы клиента." action={<Link className={styles.primaryButton} href="/deals">Новая сделка</Link>} />}
+          </div>
+          <div className={styles.feedHeader}><span>Лента</span><span className={styles.feedHint}>{feed.length ? `${feed.length} записей` : "Примечания и звонки"}</span></div>
+          <div className={styles.feed}>
+            {groupedFeed.map(([day, items]) => <div className={styles.feedGroup} key={day}><p className={styles.feedDate}>{day}</p>{items.map((item) => <div className={styles.feedRow} key={item.id}>{item.kind === "call" ? <Phone size={15} /> : <StickyNote size={15} />}<span>{item.kind === "call" ? `${item.direction === "in" ? "Входящий" : "Исходящий"} звонок${item.duration ? ` · ${Math.round(item.duration / 60)} мин` : ""}` : "Примечание"}<small>{item.body || "Без текста"} · {formatTime(item.at)}</small></span></div>)}</div>)}
+            {!feed.length && <EmptyLine>Записей пока нет — заметки и звонки этого контакта появятся здесь.</EmptyLine>}
+          </div>
+          {!conversations.data?.length && <div className={styles.channelNotice}><MessageCircle size={15} /> Переписка появится, когда подключим WhatsApp.</div>}
         </main>
       </div>
-      <p className="bounded-note">
-        <Clock3 size={14} /> История ограничена последними {LIMIT} записями.
-      </p>
     </section>
   );
 }
 
-function Info({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="contact-info">
-      <div className="contact-info-heading">
-        <h2>{title}</h2>
-      </div>
-      {children}
-    </section>
-  );
-}
-function Field({
-  label,
-  value,
-  icon,
-}: {
-  label: string;
-  value: string;
-  icon?: React.ReactNode;
-}) {
-  return (
-    <div className="contact-field">
-      <span>
-        {icon}
-        {label}
-      </span>
-      <strong>{value}</strong>
-    </div>
-  );
+function initials(name: string): string { return name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase(); }
+function formatDate(value: string): string { return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short" }).format(new Date(value)); }
+function formatDateTime(value: string): string { return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", year: "numeric" }).format(new Date(value)); }
+function formatTime(value: string): string { return new Intl.DateTimeFormat("ru-RU", { hour: "2-digit", minute: "2-digit" }).format(new Date(value)); }
+function fieldValue(field: AmoField | undefined): string | null { if (!field) return null; return (field.values ?? []).map((item) => typeof item.value === "string" || typeof item.value === "number" ? String(item.value) : item.enum ?? item.enum_code ?? "").filter(Boolean).join(", ") || null; }
+function customValueText(value: unknown): string | null { if (value === null || value === undefined || value === "") return null; if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value); if (Array.isArray(value)) return value.map(String).join(", "); return JSON.stringify(value); }
+function findField(fields: AmoField[], pattern: RegExp): AmoField | undefined { return fields.find((field) => pattern.test(`${field.field_name ?? ""} ${field.field_code ?? ""}`)); }
+function groupByDay<T extends { at: string }>(items: T[]): Array<[string, T[]]> {
+  const groups = new Map<string, T[]>();
+  for (const item of items) { const key = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", year: "numeric" }).format(new Date(item.at)); groups.set(key, [...(groups.get(key) ?? []), item]); }
+  return [...groups.entries()];
 }
