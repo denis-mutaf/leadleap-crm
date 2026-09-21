@@ -869,7 +869,12 @@
 }
 .column-head strong {
   font-weight: 500;
-  max-width: 180px;
+  min-width: 0;
+  flex: 1;
+  max-width: none;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  line-height: 18px;
 }
 .column-more {
   margin-left: auto;
@@ -2210,7 +2215,10 @@
 .deal-card-dragging .deal-card { opacity: 0; }
 .drop-target { background: var(--accent); border: 1px solid var(--accent); border-radius: var(--radius); }
 .deal-channel { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; color: var(--muted-foreground); font-size: 11px; font-weight: 400; white-space: nowrap; }
-.deal-channel span { max-width: 82px; overflow: hidden; text-overflow: ellipsis; }
+.deal-title > span:first-child { min-width: 0; overflow-wrap: anywhere; white-space: normal; }
+.deal-channel { align-items: flex-start; max-width: 42%; white-space: normal; text-align: right; }
+.deal-channel span { max-width: none; overflow-wrap: anywhere; white-space: normal; }
+.deal-object span { min-width: 0; overflow-wrap: anywhere; white-space: normal; }
 .deal-object { margin-top: 7px; }
 .deal-tags { min-height: 20px; }
 .card-placeholder { color: var(--muted-foreground); font-size: 12px; }
@@ -2218,11 +2226,11 @@
 .deal-footer { min-width: 0; margin-top: 9px; padding-top: 8px; }
 .owner-mark { display: inline-flex; align-items: center; gap: 4px; flex: none; }
 .no-step-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted-foreground); }
-.last-activity { min-width: 0; margin-left: auto; color: var(--muted-foreground); font-size: 11px; }
+.last-activity { min-width: 0; margin-left: auto; color: var(--muted-foreground); font-size: 11px; overflow-wrap: anywhere; white-space: normal; text-align: right; }
 .task-state.overdue { margin-left: 6px; color: var(--warning); font-size: 11px; white-space: nowrap; }
 .kettle-card { min-height: 116px; margin-bottom: 8px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); cursor: grab; touch-action: none; }
-.kettle-card strong { display: block; margin-top: 7px; font-size: 14px; font-weight: 500; }
-.kettle-card p { margin: 7px 0; color: var(--muted-foreground); font-size: 13px; }
+.kettle-card strong { display: block; margin-top: 7px; font-size: 14px; font-weight: 500; overflow-wrap: anywhere; white-space: normal; }
+.kettle-card p { margin: 7px 0; color: var(--muted-foreground); font-size: 13px; overflow-wrap: anywhere; white-space: normal; }
 .kettle-meta { display: flex; align-items: center; gap: 5px; color: var(--muted-foreground); font-size: 12px; }
 .kettle-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); color: var(--muted-foreground); font-size: 12px; }
 .kettle-claim { height: var(--h-control-sm); padding-inline: 8px; }

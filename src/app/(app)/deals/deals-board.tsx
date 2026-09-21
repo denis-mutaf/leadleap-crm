@@ -143,7 +143,7 @@ function cardMoney(deal: BoardCard) {
   if (price) return price;
   const monthly = textAmount(deal.monthly_payment_text);
   const down = textAmount(deal.down_payment_text);
-  if (!monthly && !down) return "—";
+  if (!monthly && !down) return null;
   return [monthly && `${monthly} / мес`, down && `взнос ${down}`].filter(Boolean).join(" · ");
 }
 
@@ -176,30 +176,30 @@ function PresentationalCard({
       tabIndex={onOpen ? 0 : undefined}
     >
       <div className="deal-title">
-        <span className="truncate">{deal.contact_name || deal.phone || "Без имени"}</span>
-        <span className="deal-channel" title={deal.source_name ?? "Канал не указан"}>
+        <span>{deal.contact_name || deal.phone}</span>
+        {deal.source_name && <span className="deal-channel" title={deal.source_name}>
           {channelIcon(deal.source_name)}
-          <span>{deal.source_name || "Канал не указан"}</span>
-        </span>
+          <span>{deal.source_name}</span>
+        </span>}
       </div>
-      <div className="deal-object">
+      {deal.object_text && <div className="deal-object">
         <House size={14} aria-hidden="true" />
-        <span className="truncate">{deal.object_text || "Объект не указан"}</span>
-      </div>
-      <div className="deal-tags">
-        {deal.projects.length > 0 ? deal.projects.map((project) => (
+        <span>{deal.object_text}</span>
+      </div>}
+      {(deal.projects.length > 0 || deal.tags.length > 0) && <div className="deal-tags">
+        {deal.projects.map((project) => (
           <span className={`tag ${project.code === "select" ? "tag-select" : project.code === "next" ? "tag-next" : "tag-grey"}`} key={project.id ?? project.name}>{project.name}</span>
-        )) : <span className="card-placeholder">Проект —</span>}
+        ))}
         {deal.tags.map((tag) => <span className="tag tag-grey" key={tag.id ?? tag.name}>{tag.name}</span>)}
-      </div>
-      <div className="deal-money">{cardMoney(deal)}</div>
+      </div>}
+      {cardMoney(deal) && <div className="deal-money">{cardMoney(deal)}</div>}
       <div className="deal-footer">
         <span className="owner-mark">
           <span className="avatar">{deal.owner_name ? initials(deal.owner_name) : "—"}</span>
           {noNextStep && <span className="no-step-dot" title="Следующий шаг не назначен" />}
         </span>
         {overdue && <span className="task-state overdue">Просрочено</span>}
-        <span className="last-activity truncate">{activityLabel(deal.last_activity)}</span>
+        <span className="last-activity">{activityLabel(deal.last_activity)}</span>
       </div>
     </article>
   );
@@ -218,9 +218,9 @@ function KettleCard({ deal, onOpen, onClaim }: { deal: BoardCard; onOpen: () => 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: deal.id });
   return (
     <article ref={setNodeRef} {...listeners} {...attributes} className={`kettle-card ${isDragging ? "deal-card-dragging" : ""}`} onClick={onOpen}>
-      <div className="kettle-meta">{channelIcon(deal.source_name)} {deal.source_name || "Канал не указан"} · {time(deal.updated_at)}</div>
-      <strong className="truncate">{deal.contact_name || deal.phone || "Без имени"}</strong>
-      <p className="truncate">{deal.title || deal.object_text || "Обращение без текста"}</p>
+      <div className="kettle-meta">{deal.source_name && channelIcon(deal.source_name)} {deal.source_name && <span>{deal.source_name} · </span>}{time(deal.updated_at)}</div>
+      <strong>{deal.contact_name || deal.phone}</strong>
+      {(deal.title || deal.object_text) && <p>{deal.title || deal.object_text}</p>}
       <div className="kettle-footer"><span>ждёт {relative(deal.updated_at)}</span><button className="btn kettle-claim" type="button" onClick={(event) => { event.stopPropagation(); onClaim(); }}>Взять</button></div>
     </article>
   );
