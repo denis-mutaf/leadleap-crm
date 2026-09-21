@@ -888,8 +888,10 @@
   align-items: flex-start;
   gap: 12px;
   min-width: 0;
+  max-width: 100%;
   flex: 1;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
   padding: 12px;
   background: var(--background);
 }
@@ -897,11 +899,30 @@
 .kanban-column {
   width: 268px;
   flex: 0 0 268px;
+  min-width: 0;
   min-height: calc(100vh - 160px);
+  display: flex;
+  flex-direction: column;
+}
+.kanban-column .column-track,
+.kettle .column-track {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px;
+  border-radius: var(--radius-card);
+  background: var(--surface-track);
 }
 .kettle {
   border-right: 1px solid var(--border);
   padding-right: 12px;
+}
+.kanban-column.drop-target .column-track,
+.kettle.drop-target .column-track {
+  background: var(--surface-select);
 }
 .column-head {
   height: 39px;
@@ -922,6 +943,19 @@
   white-space: normal;
   line-height: 18px;
 }
+.column-head .st {
+  flex: 1;
+  min-width: 0;
+  color: var(--secondary-text, #606164);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 18px;
+}
+.deals-page {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
 .column-more {
   margin-left: auto;
   color: var(--muted-foreground);
@@ -929,11 +963,11 @@
 .deal-card {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-card);
   padding: 10px 12px;
-  margin-bottom: 8px;
-  min-height: 116px;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.02);
+  margin-bottom: 0;
+  min-height: 0;
+  box-shadow: var(--shadow-card);
 }
 .deal-card-warning {
   border-left: 2px solid var(--warning);
@@ -2472,13 +2506,14 @@
 .column-menu { position: absolute; z-index: 4; top: calc(100% + 2px); right: 0; min-width: 150px; padding: 4px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); box-shadow: 0 8px 18px rgb(28 31 38 / 12%); }
 .column-menu button { width: 100%; height: var(--h-control); padding: 0 8px; border: 0; border-radius: var(--radius); background: transparent; color: var(--foreground); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
 .column-menu button:hover { background: var(--accent); }
-.deal-card { min-height: 0; padding: 10px 12px; cursor: grab; transition: transform var(--motion-fast) var(--ease), box-shadow var(--motion-fast) var(--ease), opacity var(--motion-fast) var(--ease); }
-.deal-card:hover { box-shadow: 0 3px 10px rgb(28 31 38 / 7%); }
+.deal-card { min-height: 0; padding: 10px 12px; border-radius: var(--radius-card); background: var(--card); box-shadow: var(--shadow-card); cursor: grab; transition: transform var(--motion-fast) var(--ease), box-shadow var(--motion-fast) var(--ease), opacity var(--motion-fast) var(--ease); }
+.deal-card:hover { border-color: var(--input); box-shadow: var(--shadow-card-hover); }
 .deal-card-overdue { border-left: 2px solid var(--warning); }
 .deal-card-overlay { box-shadow: var(--shadow-drag); transform: rotate(-1deg); }
-.deal-card-dragging { opacity: .35; border: 1px dashed var(--input); border-radius: var(--radius); }
+.deal-card-dragging { opacity: .35; border: 1px dashed var(--input); border-radius: var(--radius-card); }
 .deal-card-dragging .deal-card { opacity: 0; }
-.drop-target { background: var(--accent); border: 1px solid var(--accent); border-radius: var(--radius); }
+.kanban-column.drop-target, .kettle.drop-target, .closed-column.drop-target { background: transparent; border-color: transparent; }
+.closed-column.drop-target { background: var(--surface-select); border: 1px solid var(--surface-select); border-radius: var(--radius-card); }
 .deal-channel { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; color: var(--muted-foreground); font-size: 11px; font-weight: 400; white-space: nowrap; }
 .deal-title > span:first-child { min-width: 0; overflow-wrap: anywhere; white-space: normal; }
 .deal-channel { align-items: flex-start; max-width: 42%; white-space: normal; text-align: right; }
@@ -2495,15 +2530,16 @@
 .last-activity-text { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .last-activity-at { flex: none; white-space: nowrap; }
 .task-state.overdue { margin-left: 6px; color: var(--warning); font-size: 11px; white-space: nowrap; }
-.kettle-card { min-height: 116px; margin-bottom: 8px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); cursor: grab; touch-action: none; }
+.kettle-card { min-height: 116px; margin-bottom: 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--card); box-shadow: var(--shadow-card); cursor: grab; touch-action: none; }
+.kettle-card:hover { border-color: var(--input); box-shadow: var(--shadow-card-hover); }
 .kettle-card strong { display: block; margin-top: 7px; font-size: 14px; font-weight: 500; overflow-wrap: anywhere; white-space: normal; }
 .kettle-card p { margin: 7px 0; color: var(--muted-foreground); font-size: 13px; overflow-wrap: anywhere; white-space: normal; }
 .kettle-meta { display: flex; align-items: center; gap: 5px; color: var(--muted-foreground); font-size: 12px; }
 .kettle-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); color: var(--muted-foreground); font-size: 12px; }
 .kettle-claim { height: var(--h-control-sm); padding-inline: 8px; }
-.column-add-button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; width: 100%; height: var(--h-control); margin-top: 2px; border: 1px dashed var(--input); border-radius: var(--radius); background: transparent; color: var(--muted-foreground); font: inherit; font-size: 13px; cursor: pointer; }
-.column-add-button:hover { border-color: var(--primary); background: var(--accent); color: var(--foreground); }
-.empty-column { margin-bottom: 8px; padding: 14px 10px; }
+.column-add-button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; width: 100%; height: var(--h-control); margin-top: 0; border: 1px dashed var(--input); border-radius: var(--radius-card); background: transparent; color: var(--secondary-text, #606164); font: inherit; font-size: 13px; cursor: pointer; }
+.column-add-button:hover { border-color: var(--input); background: var(--card); color: var(--foreground); }
+.empty-column { margin-bottom: 0; padding: 14px 10px; color: var(--muted-foreground); font-size: 13px; text-align: center; }
 .hidden-column { align-self: flex-start; width: 44px; min-height: var(--h-control); padding: 6px; border: 1px dashed var(--input); border-radius: var(--radius); background: transparent; color: var(--muted-foreground); font: inherit; font-size: 11px; cursor: pointer; writing-mode: vertical-rl; }
 .column-collapse { display: inline-grid; place-items: center; width: var(--h-control); height: var(--h-control); padding: 0; border: 0; background: transparent; color: var(--muted-foreground); cursor: pointer; }
 .closed-column { position: relative; justify-content: flex-start; padding-top: 8px; border: 1px dashed var(--input); border-radius: var(--radius); background: transparent; cursor: pointer; }
