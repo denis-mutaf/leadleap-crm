@@ -34,21 +34,33 @@ export async function POST(req: Request) {
   let admin;
   try {
     admin = createAdminClient();
-  } catch {
-    // Свои сбои форме не показываем: чужая страница должна увидеть 200.
-    return NextResponse.json({ ok: true }, { status: 200 });
+  } catch (error) {
+    console.error("web-form admin client unavailable", error);
+    return NextResponse.json({ ok: false, error: "Temporary intake failure" }, { status: 503 });
   }
 
   const dedupKey = buildDedupKey(rawBody);
 
-  // Двойной сабмит: такое событие уже есть — новую сделку не создаём.
-  const { data: seen } = await admin
+  // A processed duplicate is complete; an unprocessed one must be retried.
+  const { data: seen, error: seenError } = await admin
     .from("inbound_events")
-    .select("id,processed_at")
+    .select("id, processed_at, payload")
     .eq("dedup_key", dedupKey)
     .maybeSingle();
+  if (seenError) {
+    console.error("web-form dedup lookup failed", seenError);
+    return NextResponse.json({ ok: false, error: "Temporary intake failure" }, { status: 503 });
+  }
   if (seen) {
-    return NextResponse.json({ ok: true }, { status: 200 });
+    if (seen.processed_at) return NextResponse.json({ ok: true }, { status: 200 });
+    try {
+      const result = await processWebFormEvent(admin, seen.id, (seen.payload ?? rawBody) as Record<string, unknown>);
+      return NextResponse.json({ ok: true, deal_id: result.dealId }, { status: 200 });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await admin.from("inbound_events").update({ error: message }).eq("id", seen.id);
+      return NextResponse.json({ ok: false, error: "Temporary intake failure" }, { status: 503 });
+    }
   }
 
   // Сырое событие пишем до разбора: даже упавший разбор оставляет след.
@@ -58,11 +70,27 @@ export async function POST(req: Request) {
     .select("id")
     .single();
   if (insertError || !event) {
-    // Гонка двух одинаковых сабмитов: второй тихо выходим без дубля.
+    // The concurrent winner owns the raw event; retry its unprocessed work.
     if ((insertError as { code?: string } | null)?.code === "23505") {
-      return NextResponse.json({ ok: true }, { status: 200 });
+      const { data: winner, error: winnerError } = await admin
+        .from("inbound_events")
+        .select("id, processed_at, payload")
+        .eq("dedup_key", dedupKey)
+        .single();
+      if (winnerError || !winner) {
+        return NextResponse.json({ ok: false, error: "Temporary intake failure" }, { status: 503 });
+      }
+      if (winner.processed_at) return NextResponse.json({ ok: true }, { status: 200 });
+      try {
+        const result = await processWebFormEvent(admin, winner.id, winner.payload as Record<string, unknown>);
+        return NextResponse.json({ ok: true, deal_id: result.dealId }, { status: 200 });
+      } catch (error) {
+        await admin.from("inbound_events").update({ error: error instanceof Error ? error.message : String(error) }).eq("id", winner.id);
+        return NextResponse.json({ ok: false, error: "Temporary intake failure" }, { status: 503 });
+      }
     }
-    return NextResponse.json({ ok: true }, { status: 200 });
+    console.error("web-form event insert failed", insertError);
+    return NextResponse.json({ ok: false, error: "Temporary intake failure" }, { status: 503 });
   }
   const eventId = (event as { id: string }).id;
 
@@ -72,7 +100,7 @@ export async function POST(req: Request) {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     await admin.from("inbound_events").update({ error: message }).eq("id", eventId);
-    // processed_at остаётся пустым — событие можно переиграть.
-    return NextResponse.json({ ok: true }, { status: 200 });
+    // processed_at остаётся пустым — следующий retry переиграет событие.
+    return NextResponse.json({ ok: false, error: "Temporary intake failure" }, { status: 503 });
   }
 }
