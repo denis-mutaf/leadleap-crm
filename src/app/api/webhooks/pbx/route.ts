@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { mapPbxDirection, mapPbxStatus, normalizePhone, parsePbxStart } from "@/lib/pbx/protocol";
+import {
+  mapPbxDirection,
+  mapPbxStatus,
+  normalizePhone,
+  parsePbxStart,
+} from "@/lib/pbx/protocol";
 
 export const dynamic = "force-dynamic";
 
@@ -37,9 +42,17 @@ async function readBody(req: NextRequest): Promise<Record<string, string>> {
 
 type Db = ReturnType<typeof serviceDb>;
 
-async function profileIdByLogin(db: Db, login: string | undefined): Promise<string | null> {
+async function profileIdByLogin(
+  db: Db,
+  login: string | undefined,
+): Promise<string | null> {
   if (!login) return null;
-  const { data } = await db.from("profiles").select("id").eq("pbx_login", login).maybeSingle();
+  const { data, error } = await db
+    .from("profiles")
+    .select("id")
+    .eq("pbx_login", login)
+    .maybeSingle();
+  if (error) throw error;
   return (data?.id as string | undefined) ?? null;
 }
 
@@ -54,20 +67,25 @@ async function findContactByPhone(
     .from("contact_phones")
     .select("contact_id")
     .or(`phone.eq.${normalized},phone.like.%${last8}`);
-  if (phoneError) throw new Error(`contact_phones lookup failed: ${phoneError.message}`);
+  if (phoneError)
+    throw new Error(`contact_phones lookup failed: ${phoneError.message}`);
 
   const { data: importedRows, error: importedError } = await db
     .from("imported_contact_phones")
     .select("contact_id, normalized_phone")
     .or(`normalized_phone.eq.${normalized},normalized_phone.like.%${last8}`);
   if (importedError) {
-    throw new Error(`imported_contact_phones lookup failed: ${importedError.message}`);
+    throw new Error(
+      `imported_contact_phones lookup failed: ${importedError.message}`,
+    );
   }
 
   const candidateIds = new Set<string>([
     ...(phoneRows ?? []).map((row) => row.contact_id as string),
     ...(importedRows ?? [])
-      .filter((row) => normalizePhone(row.normalized_phone as string) === normalized)
+      .filter(
+        (row) => normalizePhone(row.normalized_phone as string) === normalized,
+      )
       .map((row) => row.contact_id as string),
   ]);
   if (candidateIds.size === 0) return null;
@@ -86,7 +104,8 @@ async function findContactByPhone(
         .select("id, merged_into")
         .eq("id", currentId)
         .maybeSingle();
-      if (error) throw new Error(`contact merge lookup failed: ${error.message}`);
+      if (error)
+        throw new Error(`contact merge lookup failed: ${error.message}`);
       if (!current) break;
       if (!current.merged_into) {
         resolvedIds.add(current.id as string);
@@ -109,8 +128,12 @@ async function findContactByPhone(
     .select("id, full_name")
     .eq("id", contactId)
     .single();
-  if (contactError) throw new Error(`contact lookup failed: ${contactError.message}`);
-  return { contactId: contact.id as string, fullName: contact.full_name as string };
+  if (contactError)
+    throw new Error(`contact lookup failed: ${contactError.message}`);
+  return {
+    contactId: contact.id as string,
+    fullName: contact.full_name as string,
+  };
 }
 
 async function openDeals(db: Db, contactId: string) {
@@ -121,7 +144,11 @@ async function openDeals(db: Db, contactId: string) {
     .eq("status", "open")
     .order("created_at", { ascending: true });
   if (error) throw new Error(`open deals lookup failed: ${error.message}`);
-  return (data ?? []) as { id: string; title: string | null; owner_id: string | null }[];
+  return (data ?? []) as {
+    id: string;
+    title: string | null;
+    owner_id: string | null;
+  }[];
 }
 
 async function firstStageId(db: Db): Promise<string | null> {
@@ -137,13 +164,22 @@ async function firstStageId(db: Db): Promise<string | null> {
 }
 
 async function phoneSourceId(db: Db): Promise<string | null> {
-  const { data, error } = await db.from("sources").select("id").eq("code", "phone").maybeSingle();
+  const { data, error } = await db
+    .from("sources")
+    .select("id")
+    .eq("code", "phone")
+    .maybeSingle();
   if (error) throw new Error(`phone source lookup failed: ${error.message}`);
   return (data?.id as string | undefined) ?? null;
 }
 
 async function callTaskTypeId(db: Db): Promise<string | null> {
-  const { data } = await db.from("task_types").select("id").eq("code", "call").maybeSingle();
+  const { data, error } = await db
+    .from("task_types")
+    .select("id")
+    .eq("code", "call")
+    .maybeSingle();
+  if (error) throw error;
   return (data?.id as string | undefined) ?? null;
 }
 
@@ -155,7 +191,8 @@ async function ensureContactAndDeal(
   const existing = await findContactByPhone(db, rawPhone);
   if (existing) {
     const deals = await openDeals(db, existing.contactId);
-    if (deals.length > 0) return { contactId: existing.contactId, dealId: deals[0].id };
+    if (deals.length > 0)
+      return { contactId: existing.contactId, dealId: deals[0].id };
     const stageId = await firstStageId(db);
     const sourceId = await phoneSourceId(db);
     const { data: deal, error } = await db
@@ -226,7 +263,7 @@ export async function POST(req: NextRequest) {
   const db = serviceDb();
 
   // Любое событие сперва пишем в inbound_events сырым.
-  const { data: inbound, error: inboundError } = await db
+  let { data: inbound, error: inboundError } = await db
     .from("inbound_events")
     .insert({
       channel: "phone",
@@ -237,17 +274,61 @@ export async function POST(req: NextRequest) {
     .select("id")
     .single();
   if (inboundError) {
-    // Повтор вебхука от оператора: дубля не создаём, отвечаем OK.
-    if (inboundError.code === "23505") return NextResponse.json({}, { status: 200 });
-    return NextResponse.json(INVALID_PARAMS, { status: 400 });
+    const inboundErrorCode = inboundError.code;
+    let retryingIncoming = false;
+    // For INCOMING, retry an unprocessed duplicate so a transient notification
+    // insert failure cannot permanently lose the overlay.
+    if (inboundErrorCode === "23505" && kind === "event:INCOMING") {
+      const { data: existing, error: existingError } = await db
+        .from("inbound_events")
+        .select("id,processed_at,error")
+        .eq("dedup_key", dedupKey)
+        .maybeSingle();
+      if (existingError) {
+        return NextResponse.json(
+          { error: "Inbound event lookup failed" },
+          { status: 503 },
+        );
+      }
+      if (existing && !existing.processed_at) {
+        inbound = existing as typeof inbound;
+        inboundError = null;
+        retryingIncoming = true;
+      }
+    }
+    if (!retryingIncoming) {
+      if (inboundErrorCode === "23505")
+        return NextResponse.json({}, { status: 200 });
+      return NextResponse.json(
+        { error: "Inbound event insert failed" },
+        { status: 503 },
+      );
+    }
   }
+  if (!inbound) return NextResponse.json(INVALID_PARAMS, { status: 400 });
   const inboundId = inbound.id as string;
   const fail = async (status: number, payload: unknown) => {
-    await db.from("inbound_events").update({ error: JSON.stringify(payload) }).eq("id", inboundId);
+    const update = await db
+      .from("inbound_events")
+      .update({ error: JSON.stringify(payload) })
+      .eq("id", inboundId);
+    if (update.error)
+      return NextResponse.json(
+        { error: "Inbound event update failed" },
+        { status: 503 },
+      );
     return NextResponse.json(payload, { status });
   };
   const done = async (payload: unknown = {}) => {
-    await db.from("inbound_events").update({ processed_at: new Date().toISOString() }).eq("id", inboundId);
+    const update = await db
+      .from("inbound_events")
+      .update({ processed_at: new Date().toISOString(), error: null })
+      .eq("id", inboundId);
+    if (update.error)
+      return NextResponse.json(
+        { error: "Inbound event update failed" },
+        { status: 503 },
+      );
     return NextResponse.json(payload, { status: 200 });
   };
 
@@ -260,7 +341,12 @@ export async function POST(req: NextRequest) {
       let responsible: string | null = null;
       const ownerId = deals.find((d) => d.owner_id)?.owner_id ?? null;
       if (ownerId) {
-        const { data: profile } = await db.from("profiles").select("pbx_login").eq("id", ownerId).maybeSingle();
+        const { data: profile, error: profileError } = await db
+          .from("profiles")
+          .select("pbx_login")
+          .eq("id", ownerId)
+          .maybeSingle();
+        if (profileError) throw profileError;
         responsible = (profile?.pbx_login as string | undefined) ?? null;
       }
       if (!responsible) return done({});
@@ -268,10 +354,25 @@ export async function POST(req: NextRequest) {
     }
 
     if (cmd === "event") {
-      if (!body.phone || !body.user || !body.callid || !body.direction || !type) {
+      if (
+        !body.phone ||
+        !body.user ||
+        !body.callid ||
+        !body.direction ||
+        !type
+      ) {
         return fail(400, INVALID_PARAMS);
       }
-      if (!["INCOMING", "ACCEPTED", "COMPLETED", "CANCELLED", "OUTGOING", "TRANSFERRED"].includes(type)) {
+      if (
+        ![
+          "INCOMING",
+          "ACCEPTED",
+          "COMPLETED",
+          "CANCELLED",
+          "OUTGOING",
+          "TRANSFERRED",
+        ].includes(type)
+      ) {
         return fail(400, INVALID_PARAMS);
       }
       const direction = mapPbxDirection(body.direction);
@@ -282,24 +383,61 @@ export async function POST(req: NextRequest) {
         const found = await findContactByPhone(db, body.phone);
         if (found) {
           const deals = await openDeals(db, found.contactId);
-          const owners = [...new Set(deals.map((d) => d.owner_id).filter(Boolean))] as string[];
-          const recipients = owners.length > 0 ? owners : staffId ? [staffId] : [];
-          const dealTitles = deals.map((d) => d.title ?? "Без названия").join(", ") || "сделок нет";
+          const owners = [
+            ...new Set(deals.map((d) => d.owner_id).filter(Boolean)),
+          ] as string[];
+          const recipients =
+            owners.length > 0 ? owners : staffId ? [staffId] : [];
+          const dealTitles =
+            deals.map((d) => d.title ?? "Без названия").join(", ") ||
+            "сделок нет";
           for (const recipient of recipients) {
-            await db.from("notifications").insert({
+            const {
+              data: existingNotification,
+              error: notificationLookupError,
+            } = await db
+              .from("notifications")
+              .select("id")
+              .eq("user_id", recipient)
+              .eq("kind", "incoming_call")
+              .contains("payload", { callid: body.callid })
+              .maybeSingle();
+            if (notificationLookupError) throw notificationLookupError;
+            if (existingNotification) continue;
+            const notificationInsert = await db.from("notifications").insert({
               user_id: recipient,
               kind: "incoming_call",
               title: `Входящий звонок: ${found.fullName}`,
               body: `Сделки: ${dealTitles}`,
               contact_id: found.contactId,
               deal_id: deals.length === 1 ? deals[0].id : null,
-              payload: { phone: body.phone, callid: body.callid, deals: deals.map((d) => d.id) },
+              payload: {
+                phone: body.phone,
+                callid: body.callid,
+                deals: deals.map((d) => d.id),
+              },
             });
+            if (notificationInsert.error) throw notificationInsert.error;
           }
         } else {
-          const { contactId, dealId } = await ensureContactAndDeal(db, body.phone);
+          const { contactId, dealId } = await ensureContactAndDeal(
+            db,
+            body.phone,
+          );
           if (staffId) {
-            await db.from("notifications").insert({
+            const {
+              data: existingNotification,
+              error: notificationLookupError,
+            } = await db
+              .from("notifications")
+              .select("id")
+              .eq("user_id", staffId)
+              .eq("kind", "new_lead")
+              .contains("payload", { callid: body.callid })
+              .maybeSingle();
+            if (notificationLookupError) throw notificationLookupError;
+            if (existingNotification) return done({});
+            const notificationInsert = await db.from("notifications").insert({
               user_id: staffId,
               kind: "new_lead",
               title: `Новый лид: звонок с ${body.phone}`,
@@ -308,33 +446,39 @@ export async function POST(req: NextRequest) {
               deal_id: dealId,
               payload: { phone: body.phone, callid: body.callid },
             });
+            if (notificationInsert.error) throw notificationInsert.error;
           }
         }
         return done({});
       }
 
-      if (type === "ACCEPTED") {
+      if (type === "ACCEPTED" || type === "COMPLETED" || type === "CANCELLED") {
         // Менеджер снял трубку — всплывающую карточку можно убрать.
-        await db
+        const notificationUpdate = await db
           .from("notifications")
           .update({ read_at: new Date().toISOString() })
-          .eq("kind", "incoming_call")
+          .in("kind", ["incoming_call", "new_lead"])
           .is("read_at", null)
           .contains("payload", { callid: body.callid });
-        return done({});
+        if (notificationUpdate.error) throw notificationUpdate.error;
+        if (type !== "CANCELLED") return done({});
       }
 
       if (type === "CANCELLED") {
         // CANCELLED на входящем — пропущенный: задача «Перезвонить».
         if (direction === "in") {
           const found = await findContactByPhone(db, body.phone);
-          const contactId = found?.contactId ?? (await ensureContactAndDeal(db, body.phone)).contactId;
+          const contactId =
+            found?.contactId ??
+            (await ensureContactAndDeal(db, body.phone)).contactId;
           const deals = await openDeals(db, contactId);
           const assignee =
-            deals.find((d) => d.owner_id)?.owner_id ?? deals[0]?.owner_id ?? staffId;
+            deals.find((d) => d.owner_id)?.owner_id ??
+            deals[0]?.owner_id ??
+            staffId;
           if (!assignee) return fail(400, INVALID_PARAMS);
           const typeId = await callTaskTypeId(db);
-          await db.from("tasks").insert({
+          const taskInsert = await db.from("tasks").insert({
             deal_id: deals[0]?.id ?? null,
             contact_id: contactId,
             assignee_id: assignee,
@@ -343,14 +487,18 @@ export async function POST(req: NextRequest) {
             due_at: nextFullHour(),
             is_auto: true,
           });
+          if (taskInsert.error) throw taskInsert.error;
         }
         return done({});
       }
 
       if (type === "OUTGOING") {
-        const { contactId, dealId } = await ensureContactAndDeal(db, body.phone);
+        const { contactId, dealId } = await ensureContactAndDeal(
+          db,
+          body.phone,
+        );
         const deals = await openDeals(db, contactId);
-        await db.from("calls").upsert(
+        const callUpsert = await db.from("calls").upsert(
           {
             external_id: body.callid,
             direction: "out",
@@ -362,13 +510,18 @@ export async function POST(req: NextRequest) {
           },
           { onConflict: "external_id", ignoreDuplicates: true },
         );
+        if (callUpsert.error) throw callUpsert.error;
         return done({});
       }
 
       if (type === "TRANSFERRED") {
         // Звонок перевели на другого сотрудника — перепривязываем.
         if (staffId) {
-          await db.from("calls").update({ user_id: staffId }).eq("external_id", body.callid);
+          const transferUpdate = await db
+            .from("calls")
+            .update({ user_id: staffId })
+            .eq("external_id", body.callid);
+          if (transferUpdate.error) throw transferUpdate.error;
         }
         return done({});
       }
@@ -378,7 +531,15 @@ export async function POST(req: NextRequest) {
     }
 
     // cmd=history: данные о состоявшемся звонке и ссылка на запись.
-    if (!body.phone || !body.user || !body.callid || !body.type || !body.start || !body.duration || !body.status) {
+    if (
+      !body.phone ||
+      !body.user ||
+      !body.callid ||
+      !body.type ||
+      !body.start ||
+      !body.duration ||
+      !body.status
+    ) {
       return fail(400, INVALID_PARAMS);
     }
     const direction = mapPbxDirection(body.type);
@@ -391,20 +552,22 @@ export async function POST(req: NextRequest) {
     const staffId = await profileIdByLogin(db, body.user);
     const { contactId } = await ensureContactAndDeal(db, body.phone);
     const deals = await openDeals(db, contactId);
-    const { data: existingCall } = await db
+    const { data: existingCall, error: existingCallError } = await db
       .from("calls")
       .select("id, deal_id")
       .eq("external_id", body.callid)
       .maybeSingle();
+    if (existingCallError) throw existingCallError;
     const row = {
       external_id: body.callid,
       direction,
       status,
-      from_phone: direction === "in" ? body.phone : (body.telnum || null),
-      to_phone: direction === "in" ? (body.diversion || null) : body.phone,
+      from_phone: direction === "in" ? body.phone : body.telnum || null,
+      to_phone: direction === "in" ? body.diversion || null : body.phone,
       contact_id: contactId,
       // Сделку не выбираем сами при нескольких: менеджер выберет в интерфейсе.
-      deal_id: existingCall?.deal_id ?? (deals.length === 1 ? deals[0].id : null),
+      deal_id:
+        existingCall?.deal_id ?? (deals.length === 1 ? deals[0].id : null),
       user_id: staffId,
       started_at: startedAt,
       duration_sec: Math.trunc(durationSec),
@@ -412,7 +575,10 @@ export async function POST(req: NextRequest) {
       raw: body,
     };
     if (existingCall) {
-      const { error } = await db.from("calls").update(row).eq("id", existingCall.id);
+      const { error } = await db
+        .from("calls")
+        .update(row)
+        .eq("id", existingCall.id);
       if (error) throw error;
     } else {
       const { error } = await db.from("calls").insert(row);
@@ -420,10 +586,19 @@ export async function POST(req: NextRequest) {
     }
     return done({});
   } catch (e) {
-    await db
+    const inboundUpdate = await db
       .from("inbound_events")
       .update({ error: e instanceof Error ? e.message : String(e) })
       .eq("id", inboundId);
-    return NextResponse.json(INVALID_PARAMS, { status: 400 });
+    if (inboundUpdate.error) {
+      return NextResponse.json(
+        { error: "Inbound event processing failed" },
+        { status: 503 },
+      );
+    }
+    return NextResponse.json(
+      { error: "Inbound event processing failed" },
+      { status: 503 },
+    );
   }
 }
