@@ -10,6 +10,8 @@ export type InlineOption = { value: string; label: string };
 type Base = {
   /** Подпись слева. Видна всегда, даже когда значения нет. */
   label: string;
+  /** Иконка ТИПА атрибута (text/number/select/date/user) слева от подписи. */
+  icon?: React.ReactNode;
   /** Таблица и строка, куда пишем. */
   table: string;
   id: string;
@@ -35,6 +37,7 @@ type Props = Base &
  */
 export function InlineField({
   label,
+  icon,
   table,
   id,
   column,
@@ -104,7 +107,7 @@ export function InlineField({
 
   return (
     <div className={`field-row ${saving ? "field-saving" : ""}`}>
-      <span>{label}</span>
+      <span>{icon}{label}</span>
       {editing ? (
         type === "select" ? (
           <select
@@ -167,17 +170,19 @@ export function InlineField({
 /** Поле только для чтения — та же сетка, чтобы карточка не расползалась. */
 export function ReadField({
   label,
+  icon,
   value,
   placeholder = "—",
 }: {
   label: string;
+  icon?: React.ReactNode;
   value: string | number | null | undefined;
   placeholder?: string;
 }) {
   const empty = value === null || value === undefined || value === "";
   return (
     <div className="field-row">
-      <span>{label}</span>
+      <span>{icon}{label}</span>
       <span className={`field-value ${empty ? "is-empty" : ""}`} style={{ cursor: "default" }}>
         {empty ? placeholder : String(value)}
       </span>

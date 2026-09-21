@@ -10,6 +10,7 @@ import {
   Users,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { StageIndicator } from "@/components/crm/stage-indicator";
 import { TaskCompletion } from "./task-completion";
 
 const icons = {
@@ -32,6 +33,8 @@ export function TaskRow({
     typeName: string;
     contactName: string;
     stageName: string;
+    stage: { id: string; kind: "open" | "won" | "lost"; position: number } | null;
+    allStages: { id: string; kind: "open" | "won" | "lost"; position: number }[];
     assigneeName: string;
     dueLabel: string;
     overdueLabel?: string;
@@ -83,7 +86,16 @@ export function TaskRow({
             task.contactName
           )}
           <em>·</em>
-          {task.stageName}
+          {task.stage ? (
+            <StageIndicator
+              stage={task.stage}
+              stages={task.allStages}
+              name={task.stageName}
+              variant="inline"
+            />
+          ) : (
+            task.stageName
+          )}
         </span>
       </span>
       <span

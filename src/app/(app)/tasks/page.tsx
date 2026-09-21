@@ -25,11 +25,15 @@ type Related = {
   code?: string;
   stage_id?: string | null;
   contact_id?: string | null;
+  kind?: string;
+  position?: number;
 };
 type ViewTask = TaskRow & {
   typeName: string;
   contactName: string;
   stageName: string;
+  stage: { id: string; kind: "open" | "won" | "lost"; position: number } | null;
+  allStages: { id: string; kind: "open" | "won" | "lost"; position: number }[];
   assigneeName: string;
   dueLabel: string;
   overdueLabel?: string;
@@ -229,8 +233,7 @@ export default async function TasksPage({
     ),
   ]);
   const dealContactIds = unique(deals.map((deal) => deal.contact_id));
-  const stageIds = unique(deals.map((deal) => deal.stage_id));
-  const [fallbackContacts, stages] = await Promise.all([
+  const [fallbackContacts, stagesResult] = await Promise.all([
     relationRows(
       () =>
         supabase
@@ -240,12 +243,10 @@ export default async function TasksPage({
       "Контакты сделок",
       dealContactIds,
     ),
-    relationRows(
-      () => supabase.from("stages").select("id, name").in("id", stageIds),
-      "Этапы",
-      stageIds,
-    ),
+    supabase.from("stages").select("id, name, kind, position").order("position"),
   ]);
+  if (stagesResult.error) throw new Error(`Этапы: ${stagesResult.error.message}`);
+  const stages = stagesResult.data ?? [];
   const typeMap = new Map(types.map((item) => [item.id, item]));
   const contactMap = new Map(
     [...contacts, ...fallbackContacts].map((item) => [
@@ -257,6 +258,11 @@ export default async function TasksPage({
   const stageMap = new Map(
     stages.map((item) => [item.id, item.name ?? "Без этапа"]),
   );
+  const stageObjects = stages.map((item) => ({
+    id: item.id,
+    kind: (item.kind === "won" || item.kind === "lost" ? item.kind : "open") as "open" | "won" | "lost",
+    position: item.position ?? 0,
+  }));
   const peopleMap = new Map(
     people.map((item) => [item.id, item.full_name ?? profile.full_name]),
   );
@@ -274,6 +280,8 @@ export default async function TasksPage({
       typeName: type?.name ?? typeFallback[type?.code ?? ""] ?? "Задача",
       contactName: contactMap.get(contactId ?? "") ?? "Контакт не указан",
       stageName: stageMap.get(deal?.stage_id ?? "") ?? "Без этапа",
+      stage: stageObjects.find((stage) => stage.id === (deal?.stage_id ?? "")) ?? null,
+      allStages: stageObjects,
       assigneeName: peopleMap.get(row.assignee_id ?? "") ?? profile.full_name,
       dueLabel:
         dueDate === today || dueDate === tomorrow
