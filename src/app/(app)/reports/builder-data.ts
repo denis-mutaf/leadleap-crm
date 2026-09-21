@@ -237,6 +237,7 @@ export async function loadBuilderDashboard(
         supabase
           .from("deals")
           .select("id,created_at,stage_id,status,budget,budget_currency")
+          .is("deleted_at", null)
           .gt("id", cursor || "00000000-0000-0000-0000-000000000000")
           .order("id")
           .limit(PAGE_SIZE),
@@ -307,18 +308,27 @@ function buildDashboard(
   const dealById = new Map(deals.map((deal) => [deal.id, deal]));
   const linksByDeal = new Map<string, string[]>();
   for (const link of links)
-    linksByDeal.set(link.deal_id, [
-      ...(linksByDeal.get(link.deal_id) ?? []),
-      link.project_id,
-    ]);
+    if (dealById.has(link.deal_id))
+      linksByDeal.set(link.deal_id, [
+        ...(linksByDeal.get(link.deal_id) ?? []),
+        link.project_id,
+      ]);
   const reservationTransitions = uniqueTransitions(
-    transitions.filter((row) => row.to_stage_id === reservationStageId),
+    transitions.filter(
+      (row) =>
+        dealById.has(row.deal_id) && row.to_stage_id === reservationStageId,
+    ),
   );
   const contractTransitions = uniqueTransitions(
-    transitions.filter((row) => row.to_stage_id === contractStageId),
+    transitions.filter(
+      (row) => dealById.has(row.deal_id) && row.to_stage_id === contractStageId,
+    ),
   );
   const meetingTransitions = uniqueTransitions(
-    transitions.filter((row) => meetingStageIds.has(row.to_stage_id)),
+    transitions.filter(
+      (row) =>
+        dealById.has(row.deal_id) && meetingStageIds.has(row.to_stage_id),
+    ),
   );
   const createRow = (id: string, name: string) => ({
     id,
