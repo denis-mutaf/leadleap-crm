@@ -1,0 +1,218 @@
+.page {
+  min-height: 100vh;
+  padding: 28px 32px 56px;
+  color: var(--foreground);
+  background: var(--background);
+}
+.top {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 22px;
+}
+.back {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  text-decoration: none;
+}
+.eyebrow {
+  margin: 14px 0 4px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.top h1 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+.subtitle {
+  margin: 6px 0 0;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+.primary {
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius);
+  padding: 8px 13px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.primary:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+.card {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+.tableScroll {
+  overflow-x: auto;
+}
+.table {
+  width: 100%;
+  min-width: 850px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.table th {
+  height: 39px;
+  padding: 0 14px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+.table td {
+  height: 48px;
+  padding: 6px 14px;
+  border-top: 1px solid var(--border);
+  white-space: nowrap;
+}
+.table tbody tr:hover {
+  background: var(--accent);
+}
+.disabled {
+  background: var(--secondary);
+  color: var(--muted-foreground);
+}
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-right: 9px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 10px;
+  font-weight: 600;
+}
+.number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.table select,
+.dialog input,
+.dialog select {
+  min-height: 30px;
+  border: 1px solid var(--input);
+  border-radius: var(--radius);
+  padding: 4px 8px;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 12px;
+}
+.status,
+.statusOff {
+  border: 0;
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: #e9f8f0;
+  color: #18794e;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.statusOff {
+  background: var(--muted);
+  color: var(--muted-foreground);
+}
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+.policy {
+  margin-top: 20px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--secondary);
+}
+.policy h2 {
+  margin: 0;
+  font-size: 14px;
+}
+.policy p {
+  margin: 7px 0 0;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.error {
+  margin: 0 0 14px;
+  color: var(--destructive);
+  font-size: 13px;
+}
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: #0006;
+}
+.dialog {
+  width: min(460px, 100%);
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--background);
+  box-shadow: 0 20px 60px #0003;
+}
+.dialog h2 {
+  margin: 0;
+  font-size: 17px;
+}
+.dialog label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+}
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+.dialogActions > button:first-child {
+  border: 1px solid var(--input);
+  border-radius: var(--radius);
+  padding: 7px 12px;
+  background: var(--secondary);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 13px;
+}
+@media (max-width: 600px) {
+  .page {
+    padding: 20px 14px 40px;
+  }
+  .top {
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .top h1 {
+    font-size: 19px;
+  }
+  .primary {
+    padding: 7px 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page * {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}
