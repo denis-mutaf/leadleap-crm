@@ -289,7 +289,8 @@ export default async function DealsPage({
         <span className="avatar">{initials(profile.full_name)}</span>
       </header>
       <div className="toolbar">
-        <span className="toolbar-label">Воронка</span>
+        <span className="view-switch active">Воронка</span>
+        <Link className="view-switch" href="/deals/table">Таблица</Link>
         <span className="header-spacer" />
         <span className="summary">Сделки в воронке</span>
         <CreateDealModal
