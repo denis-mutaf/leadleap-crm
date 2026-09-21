@@ -39,7 +39,7 @@ declare
   target_deal_id uuid;
   stage_id uuid;
   source_id uuid;
-  field_id uuid;
+  target_field_id uuid;
   field_key text;
   field_value jsonb;
 begin
@@ -140,19 +140,19 @@ begin
   end if;
 
   for field_key, field_value in select key, value from jsonb_each(coalesce(p_unknown, '{}'::jsonb)) loop
-    select id into field_id from public.custom_field_defs
+    select id into target_field_id from public.custom_field_defs
     where entity = 'deal' and key = field_key;
-    if field_id is null then
+    if target_field_id is null then
       insert into public.custom_field_defs (entity, key, label, field_type, auto_created)
       values ('deal', field_key, coalesce(nullif(p_unknown_labels ->> field_key, ''), field_key), 'text', true)
       on conflict (entity, key) do update set key = excluded.key
-      returning id into field_id;
-      if field_id is null then
-        select id into field_id from public.custom_field_defs where entity = 'deal' and key = field_key;
+      returning id into target_field_id;
+      if target_field_id is null then
+        select id into target_field_id from public.custom_field_defs where entity = 'deal' and key = field_key;
       end if;
     end if;
     insert into public.custom_field_values (field_id, entity_id, value)
-    values (field_id, target_deal_id, field_value)
+    values (target_field_id, target_deal_id, field_value)
     on conflict (field_id, entity_id) do update set value = excluded.value;
   end loop;
 
