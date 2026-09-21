@@ -1,759 +1,110 @@
 "use client";
 
-import { Check, Clock3, FileText, Phone, Plus, Trash2, X } from "lucide-react";
-import {
-  FormEvent,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { Check, Clock3, FileText, MessageCircle, Phone, Plus, Trash2, X } from "lucide-react";
+import { FormEvent, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { InlineField, ReadField } from "@/components/crm/inline-field";
+import { buildAttribution, normalizeOptions, type Attribution, type DealFieldDefinition, type DealFieldValue, valueToString } from "@/lib/deal-fields";
 import { createClient } from "@/lib/supabase/client";
+import styles from "./record.module.css";
 
 type Person = { id: string; full_name: string; role?: string };
-type Task = {
-  id: string;
-  deal_id: string;
-  assignee_id: string | null;
-  title: string;
-  due_at: string;
-  done_at: string | null;
-  done_by: string | null;
-  created_at: string;
-  is_auto: boolean;
-  result_text: string | null;
-};
-type Note = {
-  id: string;
-  deal_id: string;
-  author_id: string | null;
-  body: string;
-  created_at: string;
-  amo_id: number | null;
-  amo_note_type: string | null;
-};
-type Call = {
-  id: string;
-  external_id: string | null;
-  direction: "in" | "out";
-  status: string | null;
-  from_phone: string | null;
-  to_phone: string | null;
-  user_id: string | null;
-  started_at: string;
-  answered_at: string | null;
-  duration_sec: number | null;
-  recording_url: string | null;
-};
-type Transition = {
-  id: string;
-  from_stage_id: string | null;
-  to_stage_id: string;
-  from_status: string | null;
-  to_status: string;
-  changed_by: string | null;
-  changed_at: string;
-};
+type Task = { id: string; deal_id: string; assignee_id: string | null; title: string; due_at: string; done_at: string | null; done_by: string | null; created_at: string; is_auto: boolean; result_text: string | null };
+type Note = { id: string; deal_id: string; author_id: string | null; body: string; created_at: string; amo_id: number | null; amo_note_type: string | null };
+type Call = { id: string; external_id: string | null; direction: "in" | "out"; status: string | null; from_phone: string | null; to_phone: string | null; user_id: string | null; started_at: string; answered_at: string | null; duration_sec: number | null; recording_url: string | null };
+type Transition = { id: string; from_stage_id: string | null; to_stage_id: string; from_status: string | null; to_status: string; changed_by: string | null; changed_at: string };
 type FeedEntry =
   | { type: "calls"; date: string; item: Call }
   | { type: "notes"; date: string; item: Note }
   | { type: "tasks"; date: string; item: Task }
   | { type: "stages"; date: string; item: Transition };
 type DeleteTarget = { entity: "notes" | "tasks"; id: string; label: string };
+type Stage = { id: string; name: string; kind: string; position: number; requires_next_step?: boolean; requires_qualification_tag?: boolean };
+type Project = { id: string; code: string; name: string };
+type TagOption = { id: string; name: string };
+type Source = { id: string; name: string };
+
 export type DealRecordData = {
-  deal: Record<string, unknown> & {
-    id: string;
-    contact_id: string;
-    owner_id: string | null;
-    stage_id: string;
-    status: string;
-    title: string | null;
-    object_text: string | null;
-    budget: number | null;
-    budget_currency: string;
-    amount?: number | null;
-    created_at: string;
-    updated_at: string;
-    source_id: string | null;
-    payment: string | null;
-    horizon: string | null;
-    residency: string | null;
-    rooms: number | null;
-    purpose: string | null;
-    down_payment?: number | null;
-    monthly_payment?: number | null;
-    down_payment_text?: string | null;
-    monthly_payment_text?: string | null;
-    purchase_timing_text?: string | null;
-    residency_detail?: string | null;
-    desired_area_text?: string | null;
-    desired_floor_text?: string | null;
-    wishes?: string | null;
-  };
-  contact: {
-    id: string;
-    full_name: string;
-    created_at: string;
-    updated_at?: string | null;
-  } | null;
+  deal: Record<string, unknown> & { id: string; contact_id: string; owner_id: string | null; stage_id: string; status: string; title: string | null; object_text: string | null; budget: number | null; budget_currency: string; amount?: number | null; created_at: string; updated_at: string; source_id: string | null; utm?: Record<string, unknown>; amo_custom_fields?: unknown; construction_stage?: string | null; payment: string | null; horizon: string | null; residency: string | null; rooms: number | null; purpose: string | null; down_payment?: number | null; monthly_payment?: number | null; down_payment_text?: string | null; monthly_payment_text?: string | null; purchase_timing_text?: string | null; residency_detail?: string | null; desired_area_text?: string | null; desired_floor_text?: string | null; wishes?: string | null };
+  contact: { id: string; full_name: string; created_at: string; updated_at?: string | null } | null;
   phones: { id: string; phone: string; is_primary: boolean }[];
-  channels: {
-    id: string;
-    channel: string;
-    handle: string | null;
-    external_id: string;
-  }[];
-  owner: Person | null;
-  stage: { id: string; name: string; kind: string } | null;
-  projects: { id: string; code: string; name: string }[];
-  tags: { id: string; name: string }[];
-  source: { id: string; name: string } | null;
-  tasks: Task[];
-  notes: Note[];
-  calls: Call[];
-  transitions: Transition[];
-  people: Person[];
-  transitionStages: { id: string; name: string }[];
-  currentUser: Person;
-  feedCounts: { tasks: number; notes: number; calls: number; stages: number };
+  channels: { id: string; channel: string; handle: string | null; external_id: string }[];
+  owner: Person | null; stage: { id: string; name: string; kind: string } | null; projects: Project[]; tags: TagOption[]; source: Source | null;
+  tasks: Task[]; notes: Note[]; calls: Call[]; transitions: Transition[]; people: Person[]; transitionStages: { id: string; name: string }[]; currentUser: Person;
+  feedCounts: { tasks: number; notes: number; calls: number; stages: number }; fieldDefs: DealFieldDefinition[]; fieldValues: DealFieldValue[]; allStages: Stage[]; allProjects: Project[]; allTags: TagOption[]; allOwners: Person[]; allSources: Source[];
 };
 
-const labels: Record<string, string> = {
-  open: "В работе",
-  postponed: "Отложена",
-  won: "Выиграна",
-  lost: "Проиграна",
-  cash: "Наличные",
-  mortgage: "Ипотека",
-  installment: "Рассрочка",
-  local: "Местный",
-  diaspora: "Диаспора",
-  living: "Для жизни",
-  investment: "Инвестиция",
-};
-const fmtDate = (value: string) =>
-  new Date(value).toLocaleString("ru-RU", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-const fmtMoney = (value: number | null | undefined, currency = "EUR") =>
-  value == null
-    ? null
-    : `${new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(value)} ${currency}`;
+const labels: Record<string, string> = { open: "В работе", postponed: "Отложена", won: "Выиграна", lost: "Проиграна", cash: "Наличные", mortgage: "Ипотека", installment: "Рассрочка", local: "Местный", diaspora: "Диаспора", living: "Для жизни", investment: "Инвестиция" };
+const attributionLabels: Record<keyof Attribution, string> = { utm_source: "utm_source", utm_medium: "utm_medium", utm_campaign: "utm_campaign", utm_content: "utm_content", utm_term: "utm_term", UTM_ID: "UTM_ID", fbclid: "fbclid", FORMNAME: "Форма", TRANID: "TRANID", _ym_uid: "_ym_uid" };
+const fmtMoney = (value: number | null | undefined, currency = "EUR") => value == null ? null : `${new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(value)} ${currency}`;
+const fmtDate = (value: string) => new Date(value).toLocaleString("ru-RU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+const dayLabel = (value: string) => new Date(value).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
+const initials = (value: string) => value.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
 
-function Field({ label, value }: { label: string; value: unknown }) {
-  if (value === null || value === undefined || value === "") return null;
-  return (
-    <div className="record-field">
-      <span>{label}</span>
-      <strong>
-        {typeof value === "string" && labels[value]
-          ? labels[value]
-          : String(value)}
-      </strong>
-    </div>
-  );
+function EmptyLine({ children }: { children: React.ReactNode }) { return <p className={styles.emptyLine}>{children}</p>; }
+
+function CustomValueField({ definition, value, dealId }: { definition: DealFieldDefinition; value: DealFieldValue | undefined; dealId: string }) {
+  const router = useRouter(); const [current, setCurrent] = useState(valueToString(value?.value)); const [editing, setEditing] = useState(false); const [draft, setDraft] = useState(current ?? ""); const [saving, setSaving] = useState(false); const options = normalizeOptions(definition.options);
+  async function commit(next: string) {
+    const stored = next.trim() || null; setEditing(false); if (stored === current) return; const previous = current; setCurrent(stored); setSaving(true); const db = createClient();
+    const result = value ? await db.from("custom_field_values").update({ value: stored }).eq("id", value.id) : await db.from("custom_field_values").upsert({ field_id: definition.id, entity_id: dealId, value: stored }, { onConflict: "field_id,entity_id" });
+    setSaving(false); if (result.error) { setCurrent(previous); toast.error(`Не сохранилось: ${result.error.message}`); return; } toast.success(`${definition.label} — сохранено`); router.refresh();
+  }
+  return <div className={`${styles.fieldRow} ${saving ? styles.fieldSaving : ""}`}><span>{definition.label}</span>{editing ? definition.field_type === "select" ? <select className={styles.fieldControl} autoFocus value={draft} onChange={(event) => commit(event.target.value)} onBlur={() => setEditing(false)} onKeyDown={(event) => event.key === "Escape" && setEditing(false)}><option value="">— не выбрано —</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select> : <input className={styles.fieldControl} autoFocus type={definition.field_type === "number" ? "number" : definition.field_type === "date" ? "date" : "text"} value={draft} onChange={(event) => setDraft(event.target.value)} onBlur={(event) => commit(event.target.value)} onKeyDown={(event) => { if (event.key === "Escape") setEditing(false); if (event.key === "Enter") commit(draft); }} /> : <button type="button" className={`${styles.fieldValue} ${current ? "" : styles.isEmpty}`} onClick={() => { setDraft(current ?? ""); setEditing(true); }} title="Нажмите, чтобы изменить">{current ?? "—"}</button>}</div>;
 }
-function FeedItem({
-  children,
-  icon,
-}: {
-  children: React.ReactNode;
-  icon: React.ReactNode;
-}) {
-  return (
-    <div className="record-feed-item">
-      <span className="record-feed-icon">{icon}</span>
-      <div>{children}</div>
-    </div>
-  );
+
+function AttributionField({ label, value, deal }: { label: string; value: string | null; deal: DealRecordData["deal"] }) {
+  const router = useRouter(); const [current, setCurrent] = useState(value); const [editing, setEditing] = useState(false); const [draft, setDraft] = useState(value ?? "");
+  async function commit(next: string) { const stored = next.trim() || null; setEditing(false); if (stored === current) return; const previous = current; setCurrent(stored); const result = await createClient().from("deals").update({ utm: { ...(deal.utm ?? {}), [label]: stored } }).eq("id", deal.id); if (result.error) { setCurrent(previous); toast.error(`Не сохранилось: ${result.error.message}`); return; } toast.success(`${label} — сохранено`); router.refresh(); }
+  return <div className={styles.fieldRow}><span>{attributionLabels[label as keyof Attribution]}</span>{editing ? <input className={styles.fieldControl} autoFocus value={draft} onChange={(event) => setDraft(event.target.value)} onBlur={(event) => commit(event.target.value)} onKeyDown={(event) => { if (event.key === "Escape") setEditing(false); if (event.key === "Enter") commit(draft); }} /> : <button type="button" className={`${styles.fieldValue} ${current ? "" : styles.isEmpty}`} onClick={() => { setDraft(current ?? ""); setEditing(true); }}>{current ?? "—"}</button>}</div>;
+}
+
+function RelationEditor({ label, selected, options, table, id, name }: { label: string; selected: { id: string; name: string }[]; options: { id: string; name: string }[]; table: "deal_projects" | "deal_tags"; id: string; name: string }) {
+  const router = useRouter(); const [editing, setEditing] = useState(false); const [busy, setBusy] = useState(false); const selectedIds = selected.map((item) => item.id);
+  async function save(next: string[]) { setBusy(true); const db = createClient(); const deleted = await db.from(table).delete().eq("deal_id", id); const inserted = next.length ? await db.from(table).insert(next.map((itemId) => ({ deal_id: id, [name]: itemId }))) : { error: null }; setBusy(false); if (deleted.error || inserted.error) { toast.error((deleted.error ?? inserted.error)?.message ?? "Не сохранилось"); return; } setEditing(false); toast.success(`${label} — сохранено`); router.refresh(); }
+  return <div className={styles.relationRow}><span>{label}</span>{editing ? <select className={styles.multiSelect} multiple autoFocus defaultValue={selectedIds} disabled={busy} onBlur={(event) => save(Array.from(event.currentTarget.selectedOptions, (option) => option.value))} onKeyDown={(event) => event.key === "Escape" && setEditing(false)}>{options.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</select> : <button type="button" className={`${styles.relationValue} ${selected.length ? "" : styles.isEmpty}`} onClick={() => setEditing(true)}>{selected.length ? selected.map((item) => <span className={styles.chip} key={item.id}>{item.name}</span>) : "—"}</button>}</div>;
+}
+
+function StageField({ data }: { data: DealRecordData }) {
+  const router = useRouter(); const [editing, setEditing] = useState(false); const [busy, setBusy] = useState(false);
+  async function save(stageId: string) { setBusy(true); const result = await createClient().rpc("transition_crm_deal", { p_deal_id: data.deal.id, p_stage_id: stageId, p_owner_id: data.deal.owner_id, p_lost_reason_id: null, p_lost_comment: null, p_qualification: null, p_task_title: null, p_task_due_at: null, p_task_type_id: null, p_task_assignee_id: null }); setBusy(false); if (result.error) { toast.error(result.error.message); return; } setEditing(false); toast.success("Этап — сохранено"); router.refresh(); }
+  return <div className={styles.fieldRow}><span>Этап</span>{editing ? <select className={styles.fieldControl} autoFocus disabled={busy} defaultValue={data.stage?.id ?? data.deal.stage_id} onChange={(event) => save(event.target.value)} onBlur={() => setEditing(false)}>{data.allStages.map((stage) => <option key={stage.id} value={stage.id}>{stage.name}</option>)}</select> : <button type="button" className={styles.fieldValue} onClick={() => setEditing(true)}>{data.stage?.name ?? "—"}</button>}</div>;
 }
 
 export function DealRecordClient({ data }: { data: DealRecordData }) {
-  const router = useRouter();
-  const [tab, setTab] = useState("all");
-  const [note, setNote] = useState("");
-  const [taskTitle, setTaskTitle] = useState("");
-  const [taskDue, setTaskDue] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [feedback, setFeedback] = useState<string | null>(null);
-  const [completionTask, setCompletionTask] = useState<Task | null>(null);
-  const [completionResult, setCompletionResult] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
-  const deleteInFlight = useRef(false);
-  const deleteDialogRef = useRef<HTMLFormElement>(null);
-  const deleteTriggerRef = useRef<HTMLButtonElement | null>(null);
-  const people = useMemo(
-    () => new Map(data.people.map((person) => [person.id, person])),
-    [data.people],
-  );
-  const stageNames = useMemo(
-    () => new Map(data.transitionStages.map((stage) => [stage.id, stage.name])),
-    [data.transitionStages],
-  );
-  const feed: FeedEntry[] = [
-    ...data.calls.map((item) => ({
-      type: "calls" as const,
-      date: item.started_at,
-      item,
-    })),
-    ...data.notes.map((item) => ({
-      type: "notes" as const,
-      date: item.created_at,
-      item,
-    })),
-    ...data.tasks.map((item) => ({
-      type: "tasks" as const,
-      date: item.due_at,
-      item,
-    })),
-    ...data.transitions.map((item) => ({
-      type: "stages" as const,
-      date: item.changed_at,
-      item,
-    })),
-  ]
-    .filter((item) => tab === "all" || item.type === tab)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  const shownCounts = {
-    calls: data.calls.length,
-    notes: data.notes.length,
-    tasks: data.tasks.length,
-    stages: data.transitions.length,
-  };
-  const activeLimit =
-    tab !== "all" ? shownCounts[tab as keyof typeof shownCounts] : 0;
-  const activeTotal =
-    tab !== "all" ? data.feedCounts[tab as keyof typeof data.feedCounts] : 0;
-  const closeDeleteModal = useCallback(() => {
-    if (saving) return;
-    setDeleteTarget(null);
-    window.setTimeout(() => deleteTriggerRef.current?.focus(), 0);
-  }, [saving]);
-  useEffect(() => {
-    if (!completionTask && !deleteTarget) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !saving) {
-        setCompletionTask(null);
-        closeDeleteModal();
-      }
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [completionTask, deleteTarget, saving, closeDeleteModal]);
-  useEffect(() => {
-    if (!deleteTarget) return;
-    const dialog = deleteDialogRef.current;
-    if (!dialog) return;
-    const focusable = () =>
-      Array.from(
-        dialog.querySelectorAll<HTMLElement>(
-          "button:not(:disabled), [href], input:not(:disabled), textarea:not(:disabled)",
-        ),
-      );
-    const first = focusable()[0];
-    first?.focus();
-    const trapFocus = (event: KeyboardEvent) => {
-      if (event.key !== "Tab") return;
-      const elements = focusable();
-      if (elements.length === 0) return;
-      const current = document.activeElement;
-      const index = elements.indexOf(current as HTMLElement);
-      const next = event.shiftKey
-        ? index <= 0
-          ? elements.length - 1
-          : index - 1
-        : index === elements.length - 1
-          ? 0
-          : index + 1;
-      event.preventDefault();
-      elements[next].focus();
-    };
-    document.addEventListener("keydown", trapFocus);
-    return () => document.removeEventListener("keydown", trapFocus);
-  }, [deleteTarget]);
-  function showError(error: { message: string } | null) {
-    if (error) setFeedback(error.message);
-  }
-  async function createNote(event: FormEvent) {
-    event.preventDefault();
-    if (!note.trim() || saving) return;
-    setSaving(true);
-    const result = await createClient().from("notes").insert({
-      deal_id: data.deal.id,
-      author_id: data.currentUser.id,
-      body: note.trim(),
-    });
-    setSaving(false);
-    if (result.error) showError(result.error);
-    else {
-      setNote("");
-      setFeedback("Примечание добавлено");
-      router.refresh();
-    }
-  }
-  async function createTask(event: FormEvent) {
-    event.preventDefault();
-    if (!taskTitle.trim() || !taskDue || saving) return;
-    setSaving(true);
-    const result = await createClient()
-      .from("tasks")
-      .insert({
-        deal_id: data.deal.id,
-        assignee_id: data.currentUser.id,
-        title: taskTitle.trim(),
-        due_at: new Date(taskDue).toISOString(),
-        created_by: data.currentUser.id,
-      });
-    setSaving(false);
-    if (result.error) showError(result.error);
-    else {
-      setTaskTitle("");
-      setTaskDue("");
-      setFeedback("Задача добавлена");
-      router.refresh();
-    }
-  }
-  async function completeTask(event: FormEvent) {
-    event.preventDefault();
-    if (!completionTask || !completionResult.trim() || saving) return;
-    setSaving(true);
-    const result = await createClient()
-      .from("tasks")
-      .update({
-        result_text: completionResult.trim(),
-        done_at: new Date().toISOString(),
-        done_by: data.currentUser.id,
-      })
-      .eq("id", completionTask.id)
-      .is("done_at", null)
-      .select("id, result_text, done_at, done_by")
-      .maybeSingle();
-    setSaving(false);
-    if (
-      result.error ||
-      !result.data ||
-      !result.data.result_text?.trim() ||
-      !result.data.done_at
-    )
-      showError(result.error ?? { message: "Задача недоступна" });
-    else {
-      setCompletionTask(null);
-      setCompletionResult("");
-      setFeedback("Задача выполнена");
-      router.refresh();
-    }
-  }
-  async function softDelete(event: FormEvent) {
-    event.preventDefault();
-    if (!deleteTarget || saving || deleteInFlight.current) return;
-    deleteInFlight.current = true;
-    setSaving(true);
-    try {
-      const result = await createClient().rpc("soft_delete_crm_record", {
-        p_entity: deleteTarget.entity,
-        p_id: deleteTarget.id,
-      });
-      if (result.error) {
-        setFeedback("Не удалось удалить запись. Попробуйте ещё раз.");
-      } else {
-        setDeleteTarget(null);
-        setFeedback("Запись удалена");
-        router.refresh();
-      }
-    } catch {
-      setFeedback("Не удалось удалить запись. Попробуйте ещё раз.");
-    } finally {
-      deleteInFlight.current = false;
-      setSaving(false);
-    }
-  }
-  return (
-    <main className="record-main">
-      <div className="record-highlights">
-        <div className="record-highlight">
-          <span>Этап</span>
-          <strong>{data.stage?.name ?? "—"}</strong>
-        </div>
-        <div className="record-highlight">
-          <span>Ответственный</span>
-          <strong>{data.owner?.full_name ?? "Общий котёл"}</strong>
-        </div>
-        <div className="record-highlight">
-          <span>Сумма</span>
-          <strong>
-            {fmtMoney(data.deal.amount, data.deal.budget_currency) ?? "—"}
-          </strong>
-        </div>
-        <div className="record-highlight">
-          <span>Обновлено</span>
-          <strong>{fmtDate(data.deal.updated_at)}</strong>
-        </div>
-      </div>
-      <div className="record-body">
-        <aside className="record-left">
-          <section>
-            <h2>{data.contact?.full_name ?? "Без имени"}</h2>
-            {data.phones.length > 0 && (
-              <div className="record-phones">
-                {data.phones.map((phone) => (
-                  <a href={`tel:${phone.phone}`} key={phone.id}>
-                    <Phone size={14} />
-                    {phone.phone}
-                  </a>
-                ))}
-              </div>
-            )}
-          </section>
-          <section>
-            <h3>Сделка</h3>
-            <Field label="Объект" value={data.deal.object_text} />
-            <Field label="Источник" value={data.source?.name} />
-            <Field
-              label="Цена Amo"
-              value={fmtMoney(data.deal.amount, data.deal.budget_currency)}
-            />
-            <Field
-              label="Бюджет"
-              value={fmtMoney(data.deal.budget, data.deal.budget_currency)}
-            />
-            <Field
-              label="Первоначальный взнос"
-              value={
-                data.deal.down_payment_text ??
-                fmtMoney(data.deal.down_payment, data.deal.budget_currency)
-              }
-            />
-            <Field
-              label="Ежемесячный платёж"
-              value={
-                data.deal.monthly_payment_text ??
-                fmtMoney(data.deal.monthly_payment, data.deal.budget_currency)
-              }
-            />
-            <Field
-              label="Срок покупки"
-              value={data.deal.purchase_timing_text ?? data.deal.horizon}
-            />
-            <Field
-              label="Резиденция"
-              value={data.deal.residency_detail ?? data.deal.residency}
-            />
-            <Field label="Площадь" value={data.deal.desired_area_text} />
-            <Field label="Этаж" value={data.deal.desired_floor_text} />
-            <Field label="Пожелания" value={data.deal.wishes} />
-          </section>
-          {data.projects.length > 0 && (
-            <section>
-              <h3>Проекты</h3>
-              <div className="record-chips">
-                {data.projects.map((project) => (
-                  <span key={project.id}>{project.name}</span>
-                ))}
-              </div>
-            </section>
-          )}
-          {data.tags.length > 0 && (
-            <section>
-              <h3>Метки</h3>
-              <div className="record-chips">
-                {data.tags.map((tag) => (
-                  <span key={tag.id}>{tag.name}</span>
-                ))}
-              </div>
-            </section>
-          )}
-        </aside>
-        <section className="record-right">
-          <div className="record-tabs">
-            {[
-              ["all", "Все"],
-              ["calls", "Звонки"],
-              ["notes", "Примечания"],
-              ["tasks", "Задачи"],
-              ["stages", "Этапы"],
-            ].map(([value, label]) => (
-              <button
-                className={tab === value ? "is-active" : ""}
-                onClick={() => setTab(value)}
-                key={value}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          {activeTotal > activeLimit && (
-            <div className="record-feed-limit">
-              Показано {activeLimit} из {activeTotal}
-            </div>
-          )}
-          <div className="record-actions">
-            <form onSubmit={createNote}>
-              <input
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
-                placeholder="Добавить примечание…"
-                aria-label="Примечание"
-              />
-              <button disabled={saving || !note.trim()}>
-                <Plus size={14} /> Примечание
-              </button>
-            </form>
-            <form onSubmit={createTask}>
-              <input
-                value={taskTitle}
-                onChange={(event) => setTaskTitle(event.target.value)}
-                placeholder="Новая задача"
-                aria-label="Название задачи"
-              />
-              <input
-                type="datetime-local"
-                value={taskDue}
-                onChange={(event) => setTaskDue(event.target.value)}
-                aria-label="Дата и время задачи"
-              />
-              <button disabled={saving || !taskTitle.trim() || !taskDue}>
-                <Plus size={14} /> Задача
-              </button>
-            </form>
-          </div>
-          <div className="record-feed">
-            {feed.length === 0 && (
-              <p className="record-empty">Записей пока нет.</p>
-            )}
-            {feed.map((entry) => (
-              <div key={`${entry.type}-${entry.item.id}`}>
-                <time>{fmtDate(entry.date)}</time>
-                {entry.type === "calls" && (
-                  <FeedItem icon={<Phone size={15} />}>
-                    <strong>
-                      {entry.item.direction === "in"
-                        ? "Входящий звонок"
-                        : "Исходящий звонок"}
-                    </strong>
-                    <span className="record-muted">
-                      {" "}
-                      {entry.item.status ?? ""}
-                    </span>
-                    {entry.item.recording_url && (
-                      <audio
-                        controls
-                        src={entry.item.recording_url}
-                        className="record-audio"
-                      />
-                    )}
-                  </FeedItem>
-                )}
-                {entry.type === "notes" && (
-                  <FeedItem icon={<FileText size={15} />}>
-                    <div className="record-feed-content">
-                      <p>{entry.item.body}</p>
-                      <small>
-                        {people.get(entry.item.author_id ?? "")?.full_name ??
-                          "Сотрудник"}
-                      </small>
-                      <button
-                        className="record-delete-action"
-                        type="button"
-                        onClick={(event) => {
-                          deleteTriggerRef.current = event.currentTarget;
-                          setDeleteTarget({
-                            entity: "notes",
-                            id: entry.item.id,
-                            label: entry.item.body,
-                          });
-                        }}
-                        disabled={saving}
-                        aria-label="Удалить примечание"
-                      >
-                        <Trash2 size={14} /> Удалить
-                      </button>
-                    </div>
-                  </FeedItem>
-                )}
-                {entry.type === "tasks" && (
-                  <FeedItem icon={<Check size={15} />}>
-                    <div className="record-feed-content">
-                      <button
-                        className={`record-task ${entry.item.done_at ? "done" : ""}`}
-                        onClick={() => {
-                          if (!entry.item.done_at) {
-                            setCompletionTask(entry.item);
-                            setCompletionResult("");
-                          }
-                        }}
-                        disabled={Boolean(entry.item.done_at) || saving}
-                      >
-                        <span className="record-check">
-                          {entry.item.done_at ? <Check size={12} /> : null}
-                        </span>
-                        <span>{entry.item.title}</span>
-                        <small>
-                          {entry.item.done_at
-                            ? "Выполнена"
-                            : fmtDate(entry.item.due_at)}
-                        </small>
-                      </button>
-                      {entry.item.done_at && entry.item.result_text && (
-                        <div className="record-task-result">
-                          “{entry.item.result_text}”
-                        </div>
-                      )}
-                      <button
-                        className="record-delete-action"
-                        type="button"
-                        onClick={(event) => {
-                          deleteTriggerRef.current = event.currentTarget;
-                          setDeleteTarget({
-                            entity: "tasks",
-                            id: entry.item.id,
-                            label: entry.item.title,
-                          });
-                        }}
-                        disabled={saving}
-                        aria-label="Удалить задачу"
-                      >
-                        <Trash2 size={14} /> Удалить
-                      </button>
-                    </div>
-                  </FeedItem>
-                )}
-                {entry.type === "stages" && (
-                  <FeedItem icon={<Clock3 size={15} />}>
-                    <strong>
-                      {stageNames.get(entry.item.to_stage_id) ?? "Этап"}
-                    </strong>
-                    <span className="record-muted">
-                      {" "}
-                      · {labels[entry.item.to_status] ?? entry.item.to_status}
-                    </span>
-                    <small>
-                      {people.get(entry.item.changed_by ?? "")?.full_name ??
-                        "Система"}
-                    </small>
-                  </FeedItem>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-      </div>
-      {completionTask && (
-        <div
-          className="record-modal-backdrop"
-          role="presentation"
-          onMouseDown={() => !saving && setCompletionTask(null)}
-        >
-          <form
-            className="record-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="completion-title"
-            onSubmit={completeTask}
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <div className="record-modal-head">
-              <h2 id="completion-title">Результат задачи</h2>
-              <button
-                type="button"
-                className="record-modal-close"
-                onClick={() => !saving && setCompletionTask(null)}
-                aria-label="Закрыть"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <p className="record-modal-task">{completionTask.title}</p>
-            <label className="record-modal-label" htmlFor="completion-result">
-              Что сделано
-            </label>
-            <textarea
-              id="completion-result"
-              autoFocus
-              required
-              minLength={1}
-              value={completionResult}
-              onChange={(event) => setCompletionResult(event.target.value)}
-              placeholder="Например: договор подписан, документы переданы"
-            />
-            <div className="record-modal-actions">
-              <button
-                type="button"
-                className="btn-ghost"
-                onClick={() => !saving && setCompletionTask(null)}
-                disabled={saving}
-              >
-                Отмена
-              </button>
-              <button
-                type="submit"
-                className="btn"
-                disabled={saving || !completionResult.trim()}
-              >
-                {saving ? "Сохраняем…" : "Выполнить задачу"}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-      {deleteTarget && (
-        <div
-          className="record-modal-backdrop"
-          role="presentation"
-          onMouseDown={closeDeleteModal}
-        >
-          <form
-            ref={deleteDialogRef}
-            className="record-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="delete-title"
-            onSubmit={softDelete}
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <div className="record-modal-head">
-              <h2 id="delete-title">Удалить запись?</h2>
-              <button
-                type="button"
-                className="record-modal-close"
-                onClick={closeDeleteModal}
-                aria-label="Закрыть"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <p className="record-modal-task">
-              «{deleteTarget.label}» будет перемещено в корзину.
-            </p>
-            <div className="record-modal-actions">
-              <button
-                type="button"
-                className="btn-ghost"
-                onClick={closeDeleteModal}
-                disabled={saving}
-              >
-                Отмена <span className="record-kbd">Esc</span>
-              </button>
-              <button
-                type="submit"
-                className="btn record-danger"
-                disabled={saving}
-              >
-                {saving ? "Удаляем…" : "Удалить"}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-      {feedback && (
-        <div className="record-feedback" role="status">
-          {feedback}
-        </div>
-      )}
-    </main>
-  );
+  const router = useRouter(); const [tab, setTab] = useState("all"); const [note, setNote] = useState(""); const [taskTitle, setTaskTitle] = useState(""); const [taskDue, setTaskDue] = useState(""); const [saving, setSaving] = useState(false); const [feedback, setFeedback] = useState<string | null>(null); const [completionTask, setCompletionTask] = useState<Task | null>(null); const [completionResult, setCompletionResult] = useState(""); const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null); const [sourceOpen, setSourceOpen] = useState(false); const deleteTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const people = useMemo(() => new Map(data.people.map((person) => [person.id, person])), [data.people]); const stageNames = useMemo(() => new Map(data.transitionStages.map((stage) => [stage.id, stage.name])), [data.transitionStages]); const customValues = useMemo(() => new Map(data.fieldValues.map((value) => [value.field_id, value])), [data.fieldValues]);
+  const attributionValues = useMemo(() => { const byKey = new Map(data.fieldDefs.map((definition) => [definition.key, valueToString(customValues.get(definition.id)?.value)])); return buildAttribution(data.deal.utm, data.deal.amo_custom_fields, byKey); }, [customValues, data.deal.amo_custom_fields, data.deal.utm, data.fieldDefs]);
+  const customDefinitions = data.fieldDefs.filter((definition) => !(Object.keys(attributionValues) as string[]).includes(definition.key));
+  const feed: FeedEntry[] = [...data.calls.map((item) => ({ type: "calls" as const, date: item.started_at, item })), ...data.notes.map((item) => ({ type: "notes" as const, date: item.created_at, item })), ...data.tasks.map((item) => ({ type: "tasks" as const, date: item.due_at, item })), ...data.transitions.map((item) => ({ type: "stages" as const, date: item.changed_at, item }))].filter((item) => tab === "all" || item.type === tab).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const groupedFeed = feed.reduce<{ date: string; entries: FeedEntry[] }[]>((groups, entry) => { const date = dayLabel(entry.date); const current = groups.find((group) => group.date === date); if (current) current.entries.push(entry); else groups.push({ date, entries: [entry] }); return groups; }, []);
+  const counts = { calls: data.calls.length, notes: data.notes.length, tasks: data.tasks.length, stages: data.transitions.length }; const saveError = (message: string) => { setFeedback(message); toast.error(message); };
+  async function createNote(event: FormEvent) { event.preventDefault(); if (!note.trim() || saving) return; setSaving(true); const result = await createClient().from("notes").insert({ deal_id: data.deal.id, author_id: data.currentUser.id, body: note.trim() }); setSaving(false); if (result.error) saveError(result.error.message); else { setNote(""); setFeedback("Примечание добавлено"); router.refresh(); } }
+  async function createTask(event: FormEvent) { event.preventDefault(); if (!taskTitle.trim() || !taskDue || saving) return; setSaving(true); const result = await createClient().from("tasks").insert({ deal_id: data.deal.id, assignee_id: data.currentUser.id, title: taskTitle.trim(), due_at: new Date(taskDue).toISOString(), created_by: data.currentUser.id }); setSaving(false); if (result.error) saveError(result.error.message); else { setTaskTitle(""); setTaskDue(""); setFeedback("Задача добавлена"); router.refresh(); } }
+  async function completeTask(event: FormEvent) { event.preventDefault(); if (!completionTask || !completionResult.trim() || saving) return; setSaving(true); const result = await createClient().from("tasks").update({ result_text: completionResult.trim(), done_at: new Date().toISOString(), done_by: data.currentUser.id }).eq("id", completionTask.id).is("done_at", null); setSaving(false); if (result.error) saveError(result.error.message); else { setCompletionTask(null); setCompletionResult(""); setFeedback("Задача выполнена"); router.refresh(); } }
+  async function deleteEntry(event: FormEvent) { event.preventDefault(); if (!deleteTarget || saving) return; setSaving(true); const result = await createClient().rpc("soft_delete_crm_record", { p_entity: deleteTarget.entity, p_id: deleteTarget.id }); setSaving(false); if (result.error) saveError(result.error.message); else { setDeleteTarget(null); setFeedback("Запись удалена"); router.refresh(); } }
+  return <main className={`${styles.main} record-main`}>
+    <div className={styles.highlights}><div className={`${styles.highlight} ${data.tasks.some((task) => !task.done_at && new Date(task.due_at) < new Date()) ? styles.overdue : ""}`}><span>Следующий шаг</span><strong>{data.tasks.find((task) => !task.done_at)?.title ?? "Не назначен"}</strong></div><div className={styles.highlight}><span>Этап</span><strong>{data.stage?.name ?? "—"}</strong></div><div className={styles.highlight}><span>Бюджет</span><strong>{fmtMoney(data.deal.budget, data.deal.budget_currency) ?? "—"}</strong></div><div className={styles.highlight}><span>Первый взнос</span><strong>{data.deal.down_payment_text ?? fmtMoney(data.deal.down_payment, data.deal.budget_currency) ?? "—"}</strong></div></div>
+    <div className={styles.body}><aside className={styles.left}>
+      <section className={styles.section}><div className={styles.contactHead}><div className={styles.avatar}>{initials(data.contact?.full_name ?? "?")}</div><h2>{data.contact?.full_name ?? "Без имени"}</h2></div><ReadField label="Имя" value={data.contact?.full_name} /><ReadField label="Телефоны" value={data.phones.length ? data.phones.map((phone) => phone.phone).join(", ") : null} /><ReadField label="Канал" value={data.channels.length ? data.channels.map((channel) => channel.channel).join(", ") : null} /></section>
+      <section className={styles.section}><h3>Сделка</h3><StageField data={data} /><InlineField label="Ответственный" table="deals" id={data.deal.id} column="owner_id" type="select" value={data.deal.owner_id} options={[{ value: "", label: "Общий котёл" }, ...data.allOwners.map((owner) => ({ value: owner.id, label: owner.full_name }))]} /><ReadField label="Статус" value={labels[data.deal.status] ?? data.deal.status} /><InlineField label="Объект" table="deals" id={data.deal.id} column="object_text" value={data.deal.object_text} /><InlineField label="Источник" table="deals" id={data.deal.id} column="source_id" type="select" value={data.deal.source_id} options={[{ value: "", label: "— не выбран —" }, ...data.allSources.map((source) => ({ value: source.id, label: source.name }))]} /><InlineField label="Бюджет" table="deals" id={data.deal.id} column="budget" type="number" value={data.deal.budget === null ? null : String(data.deal.budget)} format={(value) => fmtMoney(Number(value), data.deal.budget_currency) ?? "—"} /></section>
+      <section className={styles.section}><h3>Проекты и метки</h3><RelationEditor label="Проекты" selected={data.projects} options={data.allProjects} table="deal_projects" id={data.deal.id} name="project_id" /><RelationEditor label="Метки" selected={data.tags} options={data.allTags} table="deal_tags" id={data.deal.id} name="tag_id" /></section>
+      <section className={styles.section}><h3>Квалификация</h3><InlineField label="Этап строительства" table="deals" id={data.deal.id} column="construction_stage" value={data.deal.construction_stage ?? null} /><InlineField label="Ежемесячный платёж" table="deals" id={data.deal.id} column="monthly_payment_text" value={(data.deal.monthly_payment_text ?? fmtMoney(data.deal.monthly_payment, data.deal.budget_currency)) ?? null} /><InlineField label="Первый взнос" table="deals" id={data.deal.id} column="down_payment_text" value={(data.deal.down_payment_text ?? fmtMoney(data.deal.down_payment, data.deal.budget_currency)) ?? null} /><InlineField label="Способ оплаты" table="deals" id={data.deal.id} column="payment" type="select" value={data.deal.payment} options={[{ value: "cash", label: "Наличные" }, { value: "mortgage", label: "Ипотека" }, { value: "installment", label: "Рассрочка" }]} /><InlineField label="Срок покупки" table="deals" id={data.deal.id} column="purchase_timing_text" value={(data.deal.purchase_timing_text ?? data.deal.horizon) ?? null} /><InlineField label="В стране" table="deals" id={data.deal.id} column="residency_detail" value={(data.deal.residency_detail ?? data.deal.residency) ?? null} /><InlineField label="Цель покупки" table="deals" id={data.deal.id} column="purpose" type="select" value={data.deal.purpose} options={[{ value: "living", label: "Для жизни" }, { value: "investment", label: "Инвестиция" }]} /><InlineField label="Комнатность" table="deals" id={data.deal.id} column="rooms" type="number" value={data.deal.rooms === null ? null : String(data.deal.rooms)} /><InlineField label="Площадь" table="deals" id={data.deal.id} column="desired_area_text" value={data.deal.desired_area_text ?? null} /><InlineField label="Этаж" table="deals" id={data.deal.id} column="desired_floor_text" value={data.deal.desired_floor_text ?? null} /><InlineField label="Пожелания" table="deals" id={data.deal.id} column="wishes" type="textarea" value={data.deal.wishes ?? null} /></section>
+      <section className={styles.section}><h3>Пользовательские поля</h3>{customDefinitions.length ? customDefinitions.map((definition) => <CustomValueField key={definition.id} definition={definition} value={customValues.get(definition.id)} dealId={data.deal.id} />) : <EmptyLine>Пользовательские поля ещё не настроены.</EmptyLine>}</section>
+      <section className={styles.section}><button type="button" className={styles.sourceToggle} aria-expanded={sourceOpen} onClick={() => setSourceOpen((open) => !open)}><span>Источник и атрибуция</span><span>{sourceOpen ? "−" : "+"}</span></button><div className={`${styles.sourcePanel} ${sourceOpen ? styles.sourcePanelOpen : ""}`}><div>{(Object.keys(attributionValues) as (keyof Attribution)[]).map((key) => <AttributionField key={key} label={key} value={attributionValues[key]} deal={data.deal} />)}</div></div></section>
+    </aside><section className={styles.right}>
+      <div className={styles.tabs} role="tablist">{([["all", "Все"], ["calls", "Звонки"], ["notes", "Примечания"], ["tasks", "Задачи"], ["stages", "Этапы"]] as const).map(([value, label]) => <button type="button" role="tab" aria-selected={tab === value} className={tab === value ? styles.activeTab : ""} onClick={() => setTab(value)} key={value}>{label}{value !== "all" ? ` ${counts[value]}` : ""}</button>)}</div>
+      <div className={styles.quickActions}><form onSubmit={createNote}><input value={note} onChange={(event) => setNote(event.target.value)} placeholder="Написать примечание…" aria-label="Примечание" /><button disabled={saving || !note.trim()}><Plus size={14} /> Примечание</button></form><form onSubmit={createTask}><input value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} placeholder="Новая задача" aria-label="Название задачи" /><input type="datetime-local" value={taskDue} onChange={(event) => setTaskDue(event.target.value)} aria-label="Дата и время задачи" /><button disabled={saving || !taskTitle.trim() || !taskDue}><Plus size={14} /> Задача</button></form></div>
+      <div className={styles.feed}>{groupedFeed.length === 0 ? <div className={styles.emptyState}><MessageCircle size={18} /><strong>Пока нет записей</strong><EmptyLine>Добавьте примечание или задачу — они появятся здесь.</EmptyLine></div> : groupedFeed.map((group) => <div className={styles.feedGroup} key={group.date}><h3>{group.date}</h3>{group.entries.map((entry) => <div className={styles.feedRow} key={`${entry.type}-${entry.item.id}`}>
+        {entry.type === "calls" && <><Phone size={15} /><div><strong>{entry.item.direction === "in" ? "Входящий звонок" : "Исходящий звонок"}</strong><span className={styles.muted}>{entry.item.from_phone ?? entry.item.to_phone ?? ""} · {entry.item.duration_sec ? `${Math.floor(entry.item.duration_sec / 60)} мин` : entry.item.status ?? "без ответа"}</span>{entry.item.recording_url && <audio controls src={entry.item.recording_url} />}</div><time>{fmtDate(entry.date)}</time></>}
+        {entry.type === "notes" && <><FileText size={15} /><div><p>{entry.item.body}</p><span className={styles.muted}>{people.get(entry.item.author_id ?? "")?.full_name ?? "Сотрудник"}</span><button className={styles.deleteAction} type="button" onClick={(event) => { deleteTriggerRef.current = event.currentTarget; setDeleteTarget({ entity: "notes", id: entry.item.id, label: entry.item.body }); }}><Trash2 size={14} /> Удалить</button></div><time>{fmtDate(entry.date)}</time></>}
+        {entry.type === "tasks" && <><Check size={15} /><div><button type="button" className={`${styles.taskButton} ${entry.item.done_at ? styles.done : ""}`} onClick={() => !entry.item.done_at && setCompletionTask(entry.item)}><span className={styles.taskCheck}>{entry.item.done_at ? <Check size={12} /> : null}</span>{entry.item.title}<span className={styles.muted}>{entry.item.done_at ? "Выполнена" : fmtDate(entry.item.due_at)}</span></button>{entry.item.done_at && entry.item.result_text && <p className={styles.taskResult}>“{entry.item.result_text}”</p>}<button className={styles.deleteAction} type="button" onClick={(event) => { deleteTriggerRef.current = event.currentTarget; setDeleteTarget({ entity: "tasks", id: entry.item.id, label: entry.item.title }); }}><Trash2 size={14} /> Удалить</button></div><time>{fmtDate(entry.date)}</time></>}
+        {entry.type === "stages" && <><Clock3 size={15} /><div><strong>{entry.item.from_stage_id ? `${stageNames.get(entry.item.from_stage_id) ?? "Этап"} → ` : "Переведено в "}{stageNames.get(entry.item.to_stage_id) ?? "Этап"}</strong><span className={styles.muted}>{labels[entry.item.to_status] ?? entry.item.to_status} · {people.get(entry.item.changed_by ?? "")?.full_name ?? "Система"}</span></div><time>{fmtDate(entry.date)}</time></>}
+      </div>)}</div>)}</div>
+    </section></div>
+    {completionTask && <div className={styles.modalBackdrop}><form className={styles.modal} onSubmit={completeTask}><div className={styles.modalHead}><h2>Результат задачи</h2><button type="button" onClick={() => setCompletionTask(null)} aria-label="Закрыть"><X size={16} /></button></div><p>{completionTask.title}</p><textarea autoFocus required value={completionResult} onChange={(event) => setCompletionResult(event.target.value)} placeholder="Что сделано" /><div className={styles.modalActions}><button type="button" onClick={() => setCompletionTask(null)}>Отмена</button><button type="submit" disabled={saving || !completionResult.trim()}>{saving ? "Сохраняем…" : "Выполнить задачу"}</button></div></form></div>}
+    {deleteTarget && <div className={styles.modalBackdrop}><form className={styles.modal} onSubmit={deleteEntry}><div className={styles.modalHead}><h2>Удалить запись?</h2><button type="button" onClick={() => setDeleteTarget(null)} aria-label="Закрыть"><X size={16} /></button></div><p>«{deleteTarget.label}» будет перемещено в корзину.</p><div className={styles.modalActions}><button type="button" onClick={() => setDeleteTarget(null)}>Отмена</button><button type="submit" disabled={saving}>{saving ? "Удаляем…" : "Удалить"}</button></div></form></div>}
+    {feedback && <div className={styles.feedback} role="status">{feedback}</div>}
+  </main>;
 }

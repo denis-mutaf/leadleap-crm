@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import type { DealFieldDefinition, DealFieldValue } from "@/lib/deal-fields";
 import { DealRecordClient, type DealRecordData } from "./record-client";
 
 const FEED_LIMIT = 120;
@@ -60,6 +61,13 @@ export default async function DealRecordPage({
     notes,
     calls,
     transitions,
+    fieldDefs,
+    fieldValues,
+    allStages,
+    allProjects,
+    allTags,
+    allOwners,
+    allSources,
   ] = await Promise.all([
     supabase
       .from("contacts")
@@ -154,6 +162,36 @@ export default async function DealRecordPage({
       .eq("deal_id", id)
       .order("changed_at", { ascending: false })
       .limit(FEED_LIMIT),
+    supabase
+      .from("custom_field_defs")
+      .select("id, entity, key, label, field_type, options, position, is_required")
+      .eq("entity", "deal")
+      .eq("is_active", true)
+      .order("position")
+      .order("created_at"),
+    supabase
+      .from("custom_field_values")
+      .select("id, field_id, entity_id, value")
+      .eq("entity_id", id),
+    supabase
+      .from("stages")
+      .select("id, name, kind, position, requires_next_step, requires_qualification_tag")
+      .eq("is_active", true)
+      .order("position"),
+    supabase
+      .from("projects")
+      .select("id, code, name")
+      .eq("is_active", true)
+      .order("position")
+      .order("name"),
+    supabase.from("tags").select("id, name").eq("is_active", true).order("name"),
+    supabase
+      .from("profiles")
+      .select("id, full_name, role")
+      .eq("is_active", true)
+      .in("role", ["manager", "head", "admin"])
+      .order("full_name"),
+    supabase.from("sources").select("id, name").eq("is_active", true).order("name"),
   ]);
   const responses = {
     contact,
@@ -171,6 +209,13 @@ export default async function DealRecordPage({
     notes,
     calls,
     transitions,
+    fieldDefs,
+    fieldValues,
+    allStages,
+    allProjects,
+    allTags,
+    allOwners,
+    allSources,
   };
   for (const [label, response] of Object.entries(responses))
     if (response?.error) throw new Error(`${label}: ${response.error.message}`);
@@ -246,6 +291,13 @@ export default async function DealRecordPage({
       calls: calls.count ?? 0,
       stages: transitions.count ?? 0,
     },
+    fieldDefs: (fieldDefs.data ?? []) as DealFieldDefinition[],
+    fieldValues: (fieldValues.data ?? []) as DealFieldValue[],
+    allStages: allStages.data ?? [],
+    allProjects: allProjects.data ?? [],
+    allTags: allTags.data ?? [],
+    allOwners: allOwners.data ?? [],
+    allSources: allSources.data ?? [],
   };
   return (
     <div className="record-page">
