@@ -1,7 +1,19 @@
-import { AlertCircle, Database, Info } from "lucide-react";
+import { Database, Info } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { BuilderDashboard } from "./builder-dashboard";
+import { loadBuilderDashboard } from "./builder-data";
+
+type Period = "month" | "quarter" | "year";
+type ReportsSearchParams = Promise<{
+  period?: string | string[];
+}>;
+
+function parsePeriod(value: string | string[] | undefined): Period {
+  const period = Array.isArray(value) ? value[0] : value;
+  return period === "quarter" || period === "year" ? period : "month";
+}
 
 type DictionaryRow = {
   id: string;
@@ -70,31 +82,18 @@ function snapshotDate() {
   }).format(new Date());
 }
 
-export default async function ReportsPage() {
+export default async function ReportsPage({
+  searchParams,
+}: {
+  searchParams?: ReportsSearchParams;
+}) {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
   if (profile.role === "manager") redirect("/deals");
   if (profile.role === "builder") {
-    return (
-      <div className="reports-page">
-        <header className="reports-header">
-          <div>
-            <p className="reports-eyebrow">Сводка отдела</p>
-            <h1>Отчёты</h1>
-          </div>
-        </header>
-        <section className="reports-access">
-          <AlertCircle size={20} />
-          <div>
-            <strong>Отчёты недоступны для этой роли</strong>
-            <p>
-              Застройщик не получает сырые данные сделок и агрегаты по ним через
-              этот экран.
-            </p>
-          </div>
-        </section>
-      </div>
-    );
+    const params = searchParams ? await searchParams : undefined;
+    const data = await loadBuilderDashboard(parsePeriod(params?.period));
+    return <BuilderDashboard data={data} />;
   }
 
   const supabase = await createClient();
