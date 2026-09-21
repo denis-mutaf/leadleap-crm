@@ -287,7 +287,7 @@ export default async function TasksPage({
             </div>
             {group.tasks.map((task) => (
               <div className="task-row" key={task.id}>
-                <TaskCompletion taskId={task.id} />
+                <TaskCompletion taskId={task.id} actorId={profile.id} />
                 <span className="task-type" title={task.typeName}>
                   {task.typeName.slice(0, 1)}
                 </span>
