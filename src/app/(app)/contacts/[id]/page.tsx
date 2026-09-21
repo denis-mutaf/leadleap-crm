@@ -103,6 +103,7 @@ export default async function ContactPage({
     ...(calls.data ?? []).map((item) => ({ id: `call-${item.id}`, at: item.started_at, kind: "call" as const, body: item.status, dealId: item.deal_id, direction: item.direction, duration: item.duration_sec })),
   ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, LIMIT);
   const groupedFeed = groupByDay(feed);
+  const displayName = decodeHtmlEntities(contactResult.data.full_name);
   const allPhones = [...new Set([...phones.map((row) => row.phone), ...importedPhones.map((row) => row.raw_phone)])];
 
   return (
@@ -110,18 +111,18 @@ export default async function ContactPage({
       <header className={styles.recordHeader}>
         <Link href="/contacts" className={styles.recordBack}><ArrowLeft size={15} /> Контакты</Link>
         <span className={styles.recordSeparator}>/</span>
-        <span className={styles.truncate}>{contactResult.data.full_name}</span>
+        <span className={styles.truncate}>{displayName}</span>
         <span className={styles.headerSpacer} />
         <Link href="/contacts" className={styles.iconButton} aria-label="Закрыть карточку">×</Link>
       </header>
       <div className={styles.recordToolbar}>
-        <span className={`${styles.contactAvatar} ${styles.avatarLarge}`}>{initials(contactResult.data.full_name)}</span>
-        <strong>{contactResult.data.full_name}</strong>
+        <span className={`${styles.contactAvatar} ${styles.avatarLarge}`}>{initials(displayName)}</span>
+        <strong>{displayName}</strong>
         <span className={styles.recordType}>Контакт</span>
         <span className={styles.headerSpacer} />
         {phones[0] && <a className={styles.toolbarButton} href={`tel:${phones[0].phone}`}><Phone size={14} /> Позвонить</a>}
         {emails[0] && <a className={styles.toolbarButton} href={`mailto:${emails[0].email}`}><Mail size={14} /> Написать</a>}
-        <ContactMergeButton current={{ id: contactResult.data.id, fullName: contactResult.data.full_name, phones: allPhones, emails: emails.map((row) => row.email), dealCount: dealIds.length, createdAt: contactResult.data.created_at, source: firstSource }} />
+        <ContactMergeButton current={{ id: contactResult.data.id, fullName: displayName, phones: allPhones, emails: emails.map((row) => row.email), dealCount: dealIds.length, createdAt: contactResult.data.created_at, source: firstSource }} />
         <ContactDeleteButton contactId={contactResult.data.id} />
       </div>
       <div className={styles.recordBody}>
@@ -175,12 +176,13 @@ export default async function ContactPage({
   );
 }
 
-function initials(name: string): string { return name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase(); }
-function formatDate(value: string): string { return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short" }).format(new Date(value)); }
+function initials(name: string): string { return decodeHtmlEntities(name).split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase(); }
+function formatDate(value: string): string { const date = new Date(value); return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", ...(date.getFullYear() === new Date().getFullYear() ? {} : { year: "numeric" }) }).format(date); }
 function formatDateTime(value: string): string { return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", year: "numeric" }).format(new Date(value)); }
 function formatTime(value: string): string { return new Intl.DateTimeFormat("ru-RU", { hour: "2-digit", minute: "2-digit" }).format(new Date(value)); }
 function fieldValue(field: AmoField | undefined): string | null { if (!field) return null; return (field.values ?? []).map((item) => typeof item.value === "string" || typeof item.value === "number" ? String(item.value) : item.enum ?? item.enum_code ?? "").filter(Boolean).join(", ") || null; }
 function customValueText(value: unknown): string | null { if (value === null || value === undefined || value === "") return null; if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value); if (Array.isArray(value)) return value.map(String).join(", "); return JSON.stringify(value); }
+function decodeHtmlEntities(value: string): string { return value.replace(/&lt;|&gt;|&amp;|&quot;|&#39;/g, (entity) => ({ "&lt;": "<", "&gt;": ">", "&amp;": "&", "&quot;": '"', "&#39;": "'" })[entity] ?? entity); }
 function findField(fields: AmoField[], pattern: RegExp): AmoField | undefined { return fields.find((field) => pattern.test(`${field.field_name ?? ""} ${field.field_code ?? ""}`)); }
 function groupByDay<T extends { at: string }>(items: T[]): Array<[string, T[]]> {
   const groups = new Map<string, T[]>();
