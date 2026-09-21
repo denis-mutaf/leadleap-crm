@@ -130,7 +130,7 @@ export default function TrashClient({
           <p className={styles.eyebrow}>Удалённые записи</p>
           <h1>Корзина</h1>
           <p className={styles.subtitle}>
-            Восстановление доступно в течение ограниченного срока хранения.
+            Восстановить запись можно в течение 30 дней.
           </p>
         </div>
       </header>

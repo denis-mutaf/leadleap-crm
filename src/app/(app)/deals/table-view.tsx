@@ -1,7 +1,14 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, X } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronLeft,
+  ChevronRight,
+  MoreHorizontal,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 export type TableDeal = {
@@ -36,6 +43,7 @@ type Props = {
   tags: Option[];
   lostReasons: Option[];
   canExport: boolean;
+  canDelete: boolean;
 };
 function href(p: Record<string, string | number | undefined>) {
   const s = new URLSearchParams();
@@ -60,6 +68,9 @@ function cell(v: string) {
   const x = /^[\s\u0000-\u001f]*[=+\-@]/.test(v) ? `'${v}` : v;
   return `"${x.replaceAll('"', '""')}"`;
 }
+function isValidCount(value: number | null): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0;
+}
 export function DealsTableView(p: Props) {
   const router = useRouter();
   const [sel, setSel] = useState<Set<string>>(new Set()),
@@ -74,6 +85,21 @@ export function DealsTableView(p: Props) {
     value: string;
   } | null>(null);
   const [lostReason, setLostReason] = useState("");
+  const [deleteRow, setDeleteRow] = useState<TableDeal | null>(null);
+  const [rowMenuId, setRowMenuId] = useState<string | null>(null);
+  const [deletePending, setDeletePending] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteCounts, setDeleteCounts] = useState<{
+    notes: number;
+    tasks: number;
+    calls: number;
+  } | null>(null);
+  const [deleteCountsLoading, setDeleteCountsLoading] = useState(false);
+  const [deleteCountsError, setDeleteCountsError] = useState(false);
+  const deleteLock = useRef(false);
+  const deleteCountsSequence = useRef(0);
+  const deleteModal = useRef<HTMLDivElement>(null);
+  const deleteTrigger = useRef<HTMLButtonElement>(null);
   const ids = p.rows.map((r) => r.id),
     count = sel.size,
     all = ids.length > 0 && ids.every((id) => sel.has(id));
@@ -91,14 +117,20 @@ export function DealsTableView(p: Props) {
   }, [count, all]);
   useEffect(() => {
     const f = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !pending) {
+      if (e.key === "Escape" && !pending && !deletePending) {
         setAction(null);
         setSel(new Set());
+        setDeleteRow(null);
+        setDeleteError(null);
+        setRowMenuId(null);
+        deleteCountsSequence.current += 1;
+        setDeleteCountsLoading(false);
+        deleteTrigger.current?.focus();
       }
     };
     addEventListener("keydown", f);
     return () => removeEventListener("keydown", f);
-  }, [pending]);
+  }, [pending, deletePending]);
   const toggle = (id: string) =>
     setSel((s) => {
       if (pendingRef.current) return s;
@@ -127,7 +159,10 @@ export function DealsTableView(p: Props) {
             if (target?.kind === "lost") {
               reason = lostReason || null;
               if (!reason) {
-                failureById.set(row.id, `${row.contact}: причина отказа не указана`);
+                failureById.set(
+                  row.id,
+                  `${row.contact}: причина отказа не указана`,
+                );
                 continue;
               }
             }
@@ -186,9 +221,13 @@ export function DealsTableView(p: Props) {
         else successIds.add(row.id);
       }
     } catch (cause) {
-      const message = cause instanceof Error ? cause.message : "Не удалось выполнить массовое действие";
+      const message =
+        cause instanceof Error
+          ? cause.message
+          : "Не удалось выполнить массовое действие";
       for (const row of selectedRows) {
-        if (!successIds.has(row.id)) failureById.set(row.id, `${row.contact}: ${message}`);
+        if (!successIds.has(row.id))
+          failureById.set(row.id, `${row.contact}: ${message}`);
       }
     } finally {
       const failures = [...failureById.values()];
@@ -207,6 +246,121 @@ export function DealsTableView(p: Props) {
       router.refresh();
     }
   }
+  async function deleteDeal() {
+    if (
+      !deleteRow ||
+      deletePending ||
+      deleteLock.current ||
+      deleteCountsLoading ||
+      !deleteCounts
+    )
+      return;
+    deleteLock.current = true;
+    setDeletePending(true);
+    setDeleteError(null);
+    try {
+      const result = await createClient().rpc("soft_delete_crm_record", {
+        p_entity: "deals",
+        p_id: deleteRow.id,
+      });
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+      setDeleteRow(null);
+      router.refresh();
+    } catch (cause) {
+      setDeleteError(
+        cause instanceof Error ? cause.message : "Не удалось удалить сделку",
+      );
+    } finally {
+      setDeletePending(false);
+      deleteLock.current = false;
+    }
+  }
+  async function openDelete(row: TableDeal) {
+    if (deletePending || deleteLock.current) return;
+    const sequence = ++deleteCountsSequence.current;
+    setDeleteError(null);
+    setDeleteCounts(null);
+    setDeleteCountsError(false);
+    setDeleteCountsLoading(true);
+    setDeleteRow(row);
+    try {
+      const db = createClient();
+      const [notes, tasks, calls] = await Promise.all([
+        db
+          .from("notes")
+          .select("id", { count: "exact", head: true })
+          .eq("deal_id", row.id),
+        db
+          .from("tasks")
+          .select("id", { count: "exact", head: true })
+          .eq("deal_id", row.id),
+        db
+          .from("calls")
+          .select("id", { count: "exact", head: true })
+          .eq("deal_id", row.id),
+      ]);
+      if (notes.error || tasks.error || calls.error)
+        throw new Error("Не удалось получить последствия удаления");
+      const counts = {
+        notes: notes.count,
+        tasks: tasks.count,
+        calls: calls.count,
+      };
+      if (
+        !isValidCount(counts.notes) ||
+        !isValidCount(counts.tasks) ||
+        !isValidCount(counts.calls)
+      ) {
+        throw new Error("Счётчики связанных записей не подтверждены");
+      }
+      if (sequence !== deleteCountsSequence.current) return;
+      setDeleteCounts({
+        notes: counts.notes as number,
+        tasks: counts.tasks as number,
+        calls: counts.calls as number,
+      });
+    } catch {
+      if (sequence === deleteCountsSequence.current) setDeleteCountsError(true);
+    } finally {
+      if (sequence === deleteCountsSequence.current)
+        setDeleteCountsLoading(false);
+    }
+  }
+  useEffect(() => {
+    if (!deleteRow || !deleteModal.current) return;
+    const modal = deleteModal.current;
+    const focusable = modal.querySelectorAll<HTMLElement>(
+      "button:not([disabled])",
+    );
+    focusable[0]?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Tab" || focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    modal.addEventListener("keydown", onKeyDown);
+    return () => modal.removeEventListener("keydown", onKeyDown);
+  }, [deleteRow]);
+  useEffect(() => {
+    const close = (event: MouseEvent) => {
+      if (
+        !(event.target instanceof Element) ||
+        !event.target.closest(".deal-row-menu-wrap")
+      )
+        setRowMenuId(null);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, []);
   function exportCsv() {
     if (!p.canExport || !count) return;
     const text =
@@ -321,6 +475,7 @@ export function DealsTableView(p: Props) {
                   ["Ответственный", null],
                   ["Канал", null],
                   ["Обновлена", "updated"],
+                  ["", null],
                 ].map(([label, field]) => (
                   <th key={label}>
                     {field ? (
@@ -347,10 +502,10 @@ export function DealsTableView(p: Props) {
                   className={sel.has(r.id) ? "is-selected" : undefined}
                 >
                   <td className="deals-table-select">
-                  <input
-                    type="checkbox"
-                    checked={sel.has(r.id)}
-                    disabled={pending}
+                    <input
+                      type="checkbox"
+                      checked={sel.has(r.id)}
+                      disabled={pending}
                       onChange={() => toggle(r.id)}
                       aria-label={`Выбрать сделку ${r.contact}`}
                     />
@@ -387,6 +542,43 @@ export function DealsTableView(p: Props) {
                   <td>{r.owner || "—"}</td>
                   <td>{r.source || "—"}</td>
                   <td className="deals-table-muted">{date(r.updated)}</td>
+                  <td>
+                    {p.canDelete && (
+                      <div className="deal-row-menu-wrap">
+                        <button
+                          type="button"
+                          className="deal-row-menu"
+                          aria-haspopup="menu"
+                          aria-expanded={rowMenuId === r.id}
+                          aria-label={`Открыть меню сделки ${r.contact}`}
+                          onClick={() =>
+                            setRowMenuId(rowMenuId === r.id ? null : r.id)
+                          }
+                        >
+                          <MoreHorizontal size={14} />
+                        </button>
+                        {rowMenuId === r.id && (
+                          <div className="deal-row-menu-popover" role="menu">
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={(event) => {
+                                deleteTrigger.current = event.currentTarget
+                                  .closest(".deal-row-menu-wrap")
+                                  ?.querySelector(
+                                    ".deal-row-menu",
+                                  ) as HTMLButtonElement | null;
+                                void openDelete(r);
+                                setRowMenuId(null);
+                              }}
+                            >
+                              Удалить сделку
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -452,6 +644,72 @@ export function DealsTableView(p: Props) {
           >
             <X size={16} />
           </button>
+        </div>
+      )}
+      {deleteRow && (
+        <div className="bulk-confirm-backdrop" role="presentation">
+          <div
+            className="bulk-confirm"
+            ref={deleteModal}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-deal-title"
+          >
+            <h2 id="delete-deal-title">Удалить сделку?</h2>
+            <p>Сделка «{deleteRow.contact}» будет перемещена в корзину.</p>
+            {deleteCountsLoading ? (
+              <p>Считаем связанные записи…</p>
+            ) : deleteCountsError ? (
+              <p>
+                Количество связанных примечаний, задач и звонков сейчас
+                недоступно. После удаления они будут скрыты вместе со сделкой.
+              </p>
+            ) : (
+              deleteCounts && (
+                <ul>
+                  <li>{deleteCounts.notes} примечаний</li>
+                  <li>{deleteCounts.tasks} задач</li>
+                  <li>{deleteCounts.calls} звонков</li>
+                  <li>
+                    История этапов сохранится и вернётся вместе со сделкой при
+                    восстановлении.
+                  </li>
+                </ul>
+              )
+            )}
+            <p>Восстановить сделку можно в течение 30 дней.</p>
+            {deleteError && (
+              <div role="alert" className="bulk-message">
+                {deleteError}
+              </div>
+            )}
+            <div className="bulk-confirm-actions">
+              <button
+                type="button"
+                disabled={deletePending}
+                onClick={() => {
+                  deleteCountsSequence.current += 1;
+                  setDeleteCountsLoading(false);
+                  setDeleteRow(null);
+                  deleteTrigger.current?.focus();
+                }}
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                disabled={
+                  deletePending ||
+                  deleteCountsLoading ||
+                  !deleteCounts ||
+                  deleteCountsError
+                }
+                onClick={() => void deleteDeal()}
+              >
+                Удалить
+              </button>
+            </div>
+          </div>
         </div>
       )}
       {action && (
