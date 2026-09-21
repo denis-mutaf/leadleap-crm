@@ -1,3 +1,4 @@
+import { Settings } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { SettingsNav } from "./settings-nav";
@@ -12,7 +13,7 @@ export default async function SettingsLayout({ children }: { children: React.Rea
   return (
     <div className={styles.shell}>
       <header className={styles.topbar}>
-        <span aria-hidden="true">⚙</span>
+        <Settings size={16} aria-hidden="true" />
         <span>Настройки</span>
       </header>
       <div className={styles.workspace}>

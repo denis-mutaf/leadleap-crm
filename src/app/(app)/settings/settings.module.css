@@ -1,13 +1,13 @@
 .shell { min-height: 100vh; background: var(--background); color: var(--foreground); }
 .topbar { height: var(--h-header); display: flex; align-items: center; gap: 8px; padding: 0 12px; border-bottom: 1px solid var(--border); font-size: 14px; }
-.topbar span:first-child { color: var(--muted-foreground); font-size: 16px; }
+.topbar svg { color: var(--muted-foreground); }
 .workspace { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: calc(100vh - var(--h-header)); }
-.settings-sections { padding: 8px; border-right: 1px solid var(--border); background: var(--background); }
-.settings-section-group > p { margin: 12px 8px 4px; color: var(--muted-foreground); font-size: 13px; line-height: 18px; }
-.settings-section-group:first-child > p { margin-top: 0; }
-.settings-section-group a { display: flex; align-items: center; height: var(--h-control); padding: 0 8px; border-radius: var(--radius); color: var(--foreground); font-size: 14px; text-decoration: none; white-space: nowrap; }
-.settings-section-group a:hover, .settings-section-group a.is-active { background: var(--accent); }
-.settings-section-group a.is-active { font-weight: 500; }
+.sections { padding: 8px; border-right: 1px solid var(--border); background: var(--background); }
+.group > p { margin: 12px 8px 4px; color: var(--muted-foreground); font-size: 13px; line-height: 18px; }
+.group:first-child > p { margin-top: 0; }
+.group a { display: flex; align-items: center; height: var(--h-control); padding: 0 8px; border-radius: var(--radius); color: var(--foreground); font-size: 14px; text-decoration: none; white-space: nowrap; }
+.group a:hover, .group a.isActive { background: var(--accent); }
+.group a.isActive { font-weight: 500; }
 .pane { min-width: 0; min-height: 0; overflow: hidden; }
 .pane :global(.settings-content) { min-height: 100%; box-sizing: border-box; padding: 0 12px 16px; }
 .pane :global(.settings-content) > header { height: var(--h-toolbar); box-sizing: border-box; display: flex; align-items: center; margin: 0 -12px 0; padding: 0 12px; border-bottom: 1px solid var(--border); }
@@ -84,4 +84,4 @@
 .auditRow strong { font-size: 14px; font-weight: 500; }
 .auditRow p { margin: 2px 0 0; color: var(--muted-foreground); font-size: 13px; }
 .auditEmpty { margin: 20px 0; color: var(--muted-foreground); font-size: 13px; }
-@media (max-width: 800px) { .workspace { grid-template-columns: 180px minmax(0, 1fr); } .settings-section-group a { font-size: 13px; } }
+@media (max-width: 800px) { .workspace { grid-template-columns: 180px minmax(0, 1fr); } .group a { font-size: 13px; } }

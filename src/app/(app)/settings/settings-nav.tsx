@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import styles from "./settings.module.css";
 
 const groups = [
   {
@@ -34,14 +35,14 @@ const groups = [
 export function SettingsNav() {
   const pathname = usePathname();
   return (
-    <nav className="settings-sections" aria-label="Разделы настроек">
+    <nav className={styles.sections} aria-label="Разделы настроек">
       {groups.map((group) => (
-        <div className="settings-section-group" key={group.label}>
+        <div className={styles.group} key={group.label}>
           <p>{group.label}</p>
           {group.items.map(([href, label]) => {
             const active = href === "/settings" ? pathname === href : pathname.startsWith(href);
             return (
-              <Link className={active ? "is-active" : undefined} href={href} key={href} aria-current={active ? "page" : undefined}>
+              <Link className={active ? styles.isActive : undefined} href={href} key={href} aria-current={active ? "page" : undefined}>
                 {label}
               </Link>
             );
