@@ -115,11 +115,22 @@ function relative(value: string | null | undefined) {
   return `${Math.max(1, Math.floor(delta / 86_400_000))} дн назад`;
 }
 
+// Текст заметки и время разделены: время не имеет права уехать в многоточие,
+// оно и есть сигнал. Обрезается только сам текст, и только с конца.
 function activityLabel(activity: BoardCard["last_activity"]) {
-  if (!activity?.at) return "Активность пока не зафиксирована";
+  if (!activity?.at) return { text: "Активность пока не зафиксирована", at: "" };
   const kind = activity.kind === "call" ? "Звонок" : activity.kind === "stage" ? "Этап" : "Заметка";
   const detail = activity.kind === "note" && activity.text ? `: ${activity.text}` : "";
-  return `${kind}${detail} · ${relative(activity.at)}`;
+  return { text: `${kind}${detail}`, at: relative(activity.at) };
+}
+
+function LastActivity({ text, at }: { text: string; at: string }) {
+  return (
+    <span className="last-activity" title={at ? `${text} · ${at}` : text}>
+      <span className="last-activity-text">{text}</span>
+      {at && <span className="last-activity-at">{at}</span>}
+    </span>
+  );
 }
 
 function amount(value: number | null, currency: string) {
@@ -199,7 +210,7 @@ function PresentationalCard({
           {noNextStep && <span className="no-step-dot" title="Следующий шаг не назначен" />}
         </span>
         {overdue && <span className="task-state overdue">Просрочено</span>}
-        <span className="last-activity">{activityLabel(deal.last_activity)}</span>
+        <LastActivity {...activityLabel(deal.last_activity)} />
       </div>
     </article>
   );

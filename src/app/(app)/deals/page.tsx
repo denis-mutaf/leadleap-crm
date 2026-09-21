@@ -1,5 +1,4 @@
 import {
-  Bell,
   ChevronDown,
   Funnel,
   ListFilter,
@@ -59,15 +58,6 @@ function validFlag(value: string | undefined): (typeof FLAGS)[number][0] | null 
   return FLAGS.some(([key]) => key === value)
     ? (value as (typeof FLAGS)[number][0])
     : null;
-}
-
-function initials(name: string) {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
 }
 
 function withQuery(
@@ -295,9 +285,6 @@ export default async function DealsPage({
       <header className="page-header">
         <Funnel size={16} />
         <span>Сделки</span>
-        <span className="header-spacer" />
-        <span className="header-notification"><Bell size={15} /><b>38</b></span>
-        <span className="avatar">{initials(profile.full_name)}</span>
       </header>
       <div className="toolbar">
         <button className="view-switch active" type="button"><Funnel size={14} /> Воронка <ChevronDown size={13} /></button>

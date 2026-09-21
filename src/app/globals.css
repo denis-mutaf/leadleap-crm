@@ -2226,7 +2226,9 @@
 .deal-footer { min-width: 0; margin-top: 9px; padding-top: 8px; }
 .owner-mark { display: inline-flex; align-items: center; gap: 4px; flex: none; }
 .no-step-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted-foreground); }
-.last-activity { min-width: 0; margin-left: auto; color: var(--muted-foreground); font-size: 11px; overflow-wrap: anywhere; white-space: normal; text-align: right; }
+.last-activity { display: flex; min-width: 0; margin-left: auto; gap: 6px; align-items: baseline; color: var(--muted-foreground); font-size: 11px; }
+.last-activity-text { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.last-activity-at { flex: none; white-space: nowrap; }
 .task-state.overdue { margin-left: 6px; color: var(--warning); font-size: 11px; white-space: nowrap; }
 .kettle-card { min-height: 116px; margin-bottom: 8px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); cursor: grab; touch-action: none; }
 .kettle-card strong { display: block; margin-top: 7px; font-size: 14px; font-weight: 500; overflow-wrap: anywhere; white-space: normal; }
