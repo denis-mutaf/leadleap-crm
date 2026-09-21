@@ -10,12 +10,42 @@ type NavEntry = AppNavItem & {
 };
 
 const NAV: NavEntry[] = [
-  { href: "/deals", label: "Сделки", icon: "deals", roles: ["manager", "head", "admin"] },
-  { href: "/tasks", label: "Задачи", icon: "tasks", roles: ["manager", "head", "admin"] },
-  { href: "/inbox", label: "Инбокс", icon: "inbox", roles: ["manager", "head", "admin"] },
-  { href: "/contacts", label: "Контакты", icon: "contacts", roles: ["manager", "head", "admin"] },
-  { href: "/reports", label: "Отчёты", icon: "reports", roles: ["head", "admin", "builder"] },
-  { href: "/settings", label: "Настройки", icon: "settings", roles: ["head", "admin"] },
+  {
+    href: "/deals",
+    label: "Сделки",
+    icon: "deals",
+    roles: ["manager", "head", "admin"],
+  },
+  {
+    href: "/tasks",
+    label: "Задачи",
+    icon: "tasks",
+    roles: ["manager", "head", "admin"],
+  },
+  {
+    href: "/inbox",
+    label: "Инбокс",
+    icon: "inbox",
+    roles: ["manager", "head", "admin"],
+  },
+  {
+    href: "/contacts",
+    label: "Контакты",
+    icon: "contacts",
+    roles: ["manager", "head", "admin"],
+  },
+  {
+    href: "/reports",
+    label: "Отчёты",
+    icon: "reports",
+    roles: ["head", "admin", "builder"],
+  },
+  {
+    href: "/settings",
+    label: "Настройки",
+    icon: "settings",
+    roles: ["head", "admin"],
+  },
 ];
 
 export default async function AppLayout({
@@ -26,7 +56,13 @@ export default async function AppLayout({
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
 
-  const visibleNav = NAV.filter((item) => item.roles.includes(profile.role));
+  const visibleNav = NAV.filter((item) =>
+    item.roles.includes(profile.role),
+  ).map((item) =>
+    profile.role === "builder" && item.href === "/reports"
+      ? { ...item, label: "Дашборд" }
+      : item,
+  );
 
   return (
     <div className="app-shell">
@@ -35,7 +71,9 @@ export default async function AppLayout({
         {profile.role !== "builder" && <GlobalSearch />}
         <AppNav items={visibleNav} />
         <div className="nav-foot">
-          <span className="avatar">{profile.full_name.slice(0, 2).toUpperCase()}</span>
+          <span className="avatar">
+            {profile.full_name.slice(0, 2).toUpperCase()}
+          </span>
           <span className="nav-person">
             <strong>{profile.full_name}</strong>
             <small>{USER_ROLE_LABELS[profile.role]}</small>
