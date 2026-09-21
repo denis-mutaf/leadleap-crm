@@ -70,6 +70,12 @@
   font-size: 13px;
 }
 
+.channel span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
 .channel small {
   color: var(--muted-foreground);
 }

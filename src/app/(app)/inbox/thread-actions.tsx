@@ -44,7 +44,7 @@ export function ThreadActions({
       {/* Кнопка называет то, чем диалог станет после нажатия: непрочитанный
           помечаем прочитанным, прочитанный возвращаем в непрочитанные. */}
       <button type="button" disabled={busy} onClick={() => patch({ read: unread })}>
-        {unread ? "Прочитано" : "Оставить непрочитанным"}
+        {unread ? "Прочитано" : "В непрочитанные"}
       </button>
       <button
         type="button"

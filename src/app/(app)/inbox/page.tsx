@@ -8,6 +8,7 @@ import type { Profile } from "@/lib/types";
 import { Composer } from "./composer";
 import { ThreadActions } from "./thread-actions";
 import { ThreadOpen } from "./thread-open";
+import { ChannelIcon, channelTitle } from "./channel-icon";
 import styles from "./inbox.module.css";
 
 const PAGE_SIZE = 50;
@@ -103,20 +104,6 @@ function waiting(value: string | null) {
   return `ждёт ${days} дн`;
 }
 
-function channelName(channel: string) {
-  return (
-    {
-      whatsapp: "WhatsApp",
-      viber: "Viber",
-      instagram: "Instagram",
-      facebook: "Facebook",
-      web_form: "Форма сайта",
-      lead_ads: "Реклама",
-      manual: "Вручную",
-    }[channel] ?? channel
-  );
-}
-
 function title(conversation: Conversation, contact: Contact | undefined) {
   return contact?.full_name ?? conversation.display_name ?? "Без имени";
 }
@@ -136,7 +123,7 @@ function unread(conversation: Conversation) {
 
 function replyBlock(conversation: Conversation): string | null {
   if (!SENDABLE.has(conversation.channel))
-    return `Отвечать из CRM можно в Facebook и Instagram. Канал «${channelName(conversation.channel)}» так не работает: ответьте звонком или в самом канале.`;
+    return `Отвечать из CRM можно в Facebook и Instagram. Канал «${channelTitle(conversation.channel)}» так не работает: ответьте звонком или в самом канале.`;
   const last = conversation.last_incoming_at;
   if (!last || Date.now() - new Date(last).getTime() >= REPLY_WINDOW_MS)
     return "Клиент не писал больше 24 часов — Meta закрыла переписку для ответа. Позвоните ему или напишите первым из мессенджера.";
@@ -391,12 +378,12 @@ export default async function InboxPage({ searchParams }: { searchParams: Search
     { key: "mine", label: "Мои", count: data.counts.mine },
   ];
   const channels = [
-    { name: "Facebook", status: "работает", connected: true },
-    { name: "Instagram", status: "работает", connected: true },
-    { name: "WhatsApp", status: "ждёт проверки бизнеса", connected: false },
-    { name: "Форма сайта", status: "работает", connected: true },
-    { name: "Телефония", status: "работает", connected: true },
-    { name: "Viber", status: "не подключён", connected: false },
+    { channel: "facebook", status: "работает", connected: true },
+    { channel: "instagram", status: "работает", connected: true },
+    { channel: "whatsapp", status: "ждёт проверки бизнеса", connected: false },
+    { channel: "web_form", status: "работает", connected: true },
+    { channel: "call", status: "работает", connected: true },
+    { channel: "viber", status: "не подключён", connected: false },
   ];
   const blocked = selected ? replyBlock(selected) : null;
 
@@ -480,18 +467,20 @@ export default async function InboxPage({ searchParams }: { searchParams: Search
                   href={link({ conversation: conversation.id })}
                   key={conversation.id}
                 >
-                  <span className="inbox-avatar">{name.slice(0, 2).toUpperCase()}</span>
+                  <span className="inbox-avatar-wrap">
+                    <span className="inbox-avatar">{name.slice(0, 2).toUpperCase()}</span>
+                    <span className="inbox-channel-badge">
+                      <ChannelIcon channel={conversation.channel} size={11} />
+                    </span>
+                  </span>
                   <span className="inbox-row-main">
                     <span className="inbox-row-top">
                       <strong>{name}</strong>
                       <small>{time(conversation.last_message_at)}</small>
                     </span>
-                    <small>
-                      {channelName(conversation.channel)}
-                      {conversation.assigned_to
-                        ? ` · ${data.staffMap.get(conversation.assigned_to) ?? "сотрудник"}`
-                        : ""}
-                    </small>
+                    {conversation.assigned_to && (
+                      <small>{data.staffMap.get(conversation.assigned_to) ?? "сотрудник"}</small>
+                    )}
                     <span className={styles.preview}>
                       {conversation.last_direction === "out" ? "Вы: " : ""}
                       {conversation.last_body?.trim() || "Вложение без текста"}
@@ -528,13 +517,18 @@ export default async function InboxPage({ searchParams }: { searchParams: Search
           ) : (
             <>
               <header className="inbox-thread-header">
-                <span className="inbox-avatar">
-                  {title(selected, selectedContact).slice(0, 2).toUpperCase()}
+                <span className="inbox-avatar-wrap">
+                  <span className="inbox-avatar">
+                    {title(selected, selectedContact).slice(0, 2).toUpperCase()}
+                  </span>
+                  <span className="inbox-channel-badge">
+                    <ChannelIcon channel={selected.channel} size={11} />
+                  </span>
                 </span>
                 <div>
                   <h2>{title(selected, selectedContact)}</h2>
                   <p>
-                    {channelName(selected.channel)}
+                    {channelTitle(selected.channel)}
                     {data.phone ? ` · ${data.phone}` : ""}
                     {selected.assigned_to
                       ? ` · ${data.staffMap.get(selected.assigned_to) ?? "сотрудник"}`
@@ -593,8 +587,11 @@ export default async function InboxPage({ searchParams }: { searchParams: Search
           {!selected ? (
             <div className={styles.channels}>
               {channels.map((channel) => (
-                <div className={styles.channel} key={channel.name}>
-                  <span>{channel.name}</span>
+                <div className={styles.channel} key={channel.channel}>
+                  <span>
+                    <ChannelIcon channel={channel.channel} size={13} />
+                    {channel.channel === "call" ? "Телефония" : channelTitle(channel.channel)}
+                  </span>
                   <small className={channel.connected ? styles.connected : ""}>{channel.status}</small>
                 </div>
               ))}
@@ -609,7 +606,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Search
               ) : (
                 <div className="inbox-warning">
                   <strong>{selected.display_name ?? "Собеседник из мессенджера"}</strong>
-                  <p>Карточки контакта ещё нет: переписка пришла из {channelName(selected.channel)}.</p>
+                  <p>Карточки контакта ещё нет: переписка пришла из {channelTitle(selected.channel)}.</p>
                 </div>
               )}
               {data.deal ? (

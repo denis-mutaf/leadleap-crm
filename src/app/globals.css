@@ -1706,6 +1706,26 @@
   font-size: 10px;
   font-weight: 600;
 }
+.inbox-avatar-wrap {
+  position: relative;
+  flex: none;
+  display: block;
+}
+/* Значок канала висит на аватаре, а не в строке текста: так он попадает в
+   первый взгляд и не съедает место под именем. */
+.inbox-channel-badge {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 15px;
+  height: 15px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--background);
+  border-radius: 50%;
+  background: var(--background);
+  color: var(--muted-foreground);
+}
 .inbox-row-main {
   min-width: 0;
   display: flex;
@@ -1747,9 +1767,16 @@
   padding: 0 18px;
   border-bottom: 1px solid var(--border);
 }
+.inbox-thread-header > div {
+  flex: 1;
+  min-width: 0;
+}
 .inbox-thread-header h2 {
   margin: 0;
+  overflow: hidden;
   font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .inbox-thread-header p {
   margin: 3px 0 0;
@@ -1904,6 +1931,7 @@
   text-align: center;
 }
 .inbox-thread-actions {
+  flex: none;
   margin-left: auto;
   display: flex;
   align-items: center;
@@ -1911,6 +1939,7 @@
 }
 .inbox-thread-actions button {
   height: var(--h-control);
+  white-space: nowrap;
   padding: 0 10px;
   border: 1px solid var(--input);
   border-radius: var(--radius);
