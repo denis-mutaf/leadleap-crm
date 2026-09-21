@@ -103,7 +103,10 @@ export default async function TasksPage({
   const page =
     Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
   const pageSize = 100;
-  const assignee = params.assignee || profile.id;
+  const defaultAssignee = ["head", "admin"].includes(profile.role)
+    ? "all"
+    : profile.id;
+  const assignee = params.assignee || defaultAssignee;
   const typeId = params.type || "";
   const query = params.q?.trim() || "";
   const fromDate = /^\d{4}-\d{2}-\d{2}$/.test(params.from ?? "")
@@ -286,7 +289,7 @@ export default async function TasksPage({
       <header className="tasks-header">
         <h1>☷&nbsp; Задачи</h1>
         <span className="header-spacer" />
-        <span className="tasks-total">
+        <span className={`tasks-total ${styles.total}`}>
           Показано {rows.length} из {totalCount}
         </span>
       </header>
@@ -359,9 +362,23 @@ export default async function TasksPage({
         ))}
         {!groups.length && (
           <EmptyState
-            title={query || fromDate || toDate ? "По этим фильтрам задач нет" : "Задач пока нет"}
+            title={
+              assignee !== "all"
+                ? "У вас нет задач на этот период"
+                : query || fromDate || toDate || typeId
+                  ? "По этим фильтрам задач нет"
+                  : "Задач пока нет"
+            }
             description="Здесь появятся задачи для следующего шага по контакту или сделке."
-            action={(query || fromDate || toDate || typeId || assignee !== profile.id) ? <Link href="/tasks">Сбросить фильтры</Link> : undefined}
+            action={
+              assignee !== "all" ? (
+                <Link href="/tasks?assignee=all">
+                  Показать задачи всей команды
+                </Link>
+              ) : query || fromDate || toDate || typeId ? (
+                <Link href="/tasks">Сбросить фильтры</Link>
+              ) : undefined
+            }
           />
         )}
         {totalPages > 1 && (

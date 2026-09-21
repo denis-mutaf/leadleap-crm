@@ -19,6 +19,11 @@
   font-size: 13px;
 }
 
+.total {
+  margin-right: 52px;
+  white-space: nowrap;
+}
+
 .filterField,
 .periodField {
   height: var(--h-control-sm);
@@ -34,7 +39,8 @@
 
 .filterField select,
 .periodField input {
-  max-width: 120px;
+  min-width: 150px;
+  max-width: 180px;
   height: var(--h-control-sm);
   border: 0;
   outline: 0;
