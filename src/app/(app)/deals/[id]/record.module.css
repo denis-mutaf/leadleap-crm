@@ -44,6 +44,7 @@
 .feedRow:hover { background: var(--accent); }
 .feedRow > svg { margin-top: 2px; color: var(--muted-foreground); }
 .feedRow p { margin: 0; white-space: pre-wrap; }
+.feedRow strong { display: block; }
 .feedRow time { color: var(--muted-foreground); font-size: 12px; white-space: nowrap; }
 .feedRow audio { display: block; width: min(100%, 420px); height: 32px; margin-top: 7px; }
 .deleteAction { display: inline-flex; align-items: center; gap: 4px; margin-top: 5px; padding: 2px 4px; border: 0; border-radius: var(--radius); background: transparent; color: var(--muted-foreground); font: inherit; font-size: 12px; cursor: pointer; }
@@ -66,14 +67,9 @@
 .feedback { position: fixed; right: 18px; bottom: 18px; z-index: 30; max-width: 360px; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow-lift, 0 8px 16px -4px rgba(0,0,0,.04), 0 2px 4px -1px rgba(0,0,0,.02)); font-size: 13px; }
 
 :global(.record-page) .main { min-height: 0; }
-:global(.record-page) :global(.field-row) { display: flex; align-items: center; min-height: var(--h-control, 28px); gap: 8px; padding: 1px 0; font-size: 13px; }
-:global(.record-page) :global(.field-row) > span:first-child { flex: 0 0 132px; color: var(--secondary-text, var(--muted-foreground)); }
-:global(.record-page) :global(.field-value) { min-width: 0; flex: 1; overflow-wrap: anywhere; padding: 3px 4px; border: 0; border-radius: var(--radius); background: transparent; color: var(--foreground); text-align: left; font: inherit; cursor: pointer; }
-:global(.record-page) :global(.field-value:hover), :global(.record-page) :global(.field-value:focus-visible) { background: var(--accent); }
-:global(.record-page) :global(.field-value.is-empty) { color: var(--muted-foreground); }
-:global(.record-page) :global(.field-input), :global(.record-page) :global(.field-select), :global(.record-page) :global(.field-textarea) { min-width: 0; flex: 1; border: 1px solid var(--input); border-radius: var(--radius); background: var(--background); color: var(--foreground); font: inherit; }
-:global(.record-page) :global(.field-input), :global(.record-page) :global(.field-select) { height: var(--h-control, 28px); padding: 0 6px; }
-:global(.record-page) :global(.field-textarea) { min-height: 52px; padding: 6px; }
+/* Поля карточки (.field-row/.field-value/.field-input) описаны один раз в
+   globals.css: здесь они расходились с контактами шириной подписи и ломали
+   правило чистых селекторов CSS-модулей. */
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes modalIn { from { opacity: 0; transform: translateY(6px) scale(.98); } to { opacity: 1; transform: none; } }

@@ -156,7 +156,6 @@ export function ContactPhones({
           <Plus size={14} /> Добавить телефон
         </button>
       )}
-      {!phones.length && !adding && <span className={styles.emptyValue}>—</span>}
     </div>
   );
 }
@@ -224,7 +223,6 @@ export function ContactEmails({
       ) : (
         <button type="button" className={styles.addButton} onClick={() => setAdding(true)}><Plus size={14} /> Добавить почту</button>
       )}
-      {!emails.length && !adding && <span className={styles.emptyValue}>—</span>}
     </div>
   );
 }
@@ -369,7 +367,6 @@ export function ContactTags({
     <div className={styles.tagEditor}>
       <div className={styles.tagList}>
         {tags.map((tag) => <span className={styles.tag} key={tag.id}>{tag.name}<button type="button" onClick={() => void removeTag(tag.id)} disabled={busy} aria-label={`Удалить метку ${tag.name}`}><X size={12} /></button></span>)}
-        {!tags.length && <span className={styles.emptyValue}>—</span>}
       </div>
       <button type="button" className={styles.addButton} onClick={() => setOpen((value) => !value)}><Plus size={14} /> Добавить метку</button>
       {open && <div className={styles.tagPicker} role="listbox">{available.length ? available.map((tag) => <button type="button" key={tag.id} onClick={() => void addTag(tag.id)} disabled={busy}>{tag.name}</button>) : <span>Все метки уже добавлены</span>}</div>}

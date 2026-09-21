@@ -200,6 +200,9 @@
   border-bottom: 1px solid var(--border);
 }
 .tasks-header h1 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 16px;
   font-weight: 600;
 }
@@ -1606,6 +1609,9 @@
   justify-content: space-between;
 }
 .inbox-header h1 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
   font-size: 20px;
   font-weight: 600;
@@ -2074,13 +2080,15 @@
 /* ---- инлайн-поле: подпись всегда видна, пустое значение кликабельно ---- */
 .field-row {
   display: grid;
-  grid-template-columns: 140px minmax(0, 1fr);
+  grid-template-columns: 152px minmax(0, 1fr);
   align-items: start;
   gap: 8px;
   min-height: var(--h-control);
   padding: 3px 0;
 }
-.field-row > span {
+/* Приглушена только подпись слева. Правило без :first-child красило серым и
+   значение: имя контакта, телефон, статус читались как заглушки. */
+.field-row > span:first-child {
   color: var(--secondary-text, var(--muted-foreground));
   font-size: 13px;
   line-height: 20px;

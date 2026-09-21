@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { monthlyAmount, shortAmount } from "@/lib/amo-amount";
 import { createClient } from "@/lib/supabase/client";
 
 export type BoardTag = { id?: string; name: string; color?: string | null };
@@ -142,25 +143,6 @@ function amount(value: number | null, currency: string) {
   return `${currency || "€"} ${new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(value)}`;
 }
 
-// Суммы лежат в Amo текстом выбранной опции на румынском: «până la €1000 / lună»,
-// «peste €20.000», «Achit integral», «altă variantă (scrieți aici): 500». Печатать
-// это на карточке дословно нельзя — выходит «până la €1000 / lună / мес», две
-// строки и два языка. Опция разбирается и собирается заново в одну короткую.
-function shortAmount(value: string | null) {
-  if (!value?.trim()) return null;
-  // Множественный выбор Amo склеен через «;»; на карточке хватает первого.
-  let text = value.split(";")[0].trim();
-  text = text.replace(/alt[ăa]\s+variant[ăa]\s*\([^)]*\)\s*:?/i, "").trim();
-  text = text.replace(/\s*\/\s*lun[ăa]/gi, "");
-  if (/^(achit[ăa]?\s+integral|integral)$/i.test(text)) return "всё сразу";
-  text = text.replace(/^p[âa]n[ăa]\s+la\s+/i, "до ");
-  text = text.replace(/^peste\s+/i, "от ");
-  text = text.replace(/\s*[–—-]\s*/g, "–").replace(/–€/g, "–");
-  text = text.replace(/^([\d.,\s]+)€$/, "€$1");
-  if (!/[€%]/.test(text) && /^[\d.,\s]+$/.test(text)) text = `€${text}`;
-  return text.trim() || null;
-}
-
 function channelIcon(source: string | null) {
   if (!source) return <Globe size={14} aria-hidden="true" />;
   if (/звон|call|phone/i.test(source)) return <Phone size={14} aria-hidden="true" />;
@@ -170,13 +152,10 @@ function channelIcon(source: string | null) {
 function cardMoney(deal: BoardCard) {
   const price = amount(deal.budget, deal.budget_currency);
   if (price) return price;
-  const monthly = shortAmount(deal.monthly_payment_text);
+  const monthly = monthlyAmount(deal.monthly_payment_text);
   const down = shortAmount(deal.down_payment_text);
   if (!monthly && !down) return null;
-  return [
-    monthly && (/\d/.test(monthly) ? `${monthly}/мес` : monthly),
-    down && `взнос ${down}`,
-  ].filter(Boolean).join(" · ");
+  return [monthly, down && `взнос ${down}`].filter(Boolean).join(" · ");
 }
 
 function isOverdue(deal: BoardCard) {

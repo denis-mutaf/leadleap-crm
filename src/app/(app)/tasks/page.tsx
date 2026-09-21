@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Search, X } from "lucide-react";
+import { CheckSquare, Search, X } from "lucide-react";
 import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { EmptyState } from "@/components/crm/empty-state";
@@ -304,7 +304,7 @@ export default async function TasksPage({
   return (
     <div className="tasks-page">
       <header className="tasks-header">
-        <h1>☷&nbsp; Задачи</h1>
+        <h1><CheckSquare size={16} aria-hidden="true" /> Задачи</h1>
         <span className="header-spacer" />
         <span className={`tasks-total ${styles.total}`}>
           Показано {rows.length} из {totalCount}

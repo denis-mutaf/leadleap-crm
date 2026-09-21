@@ -50,7 +50,7 @@ export default async function ContactPage({
   ]);
   if (customDefsResult.error || customValuesResult.error) throw new Error(`Поля контакта: ${(customDefsResult.error ?? customValuesResult.error)?.message}`);
 
-  const [phoneRows, importedRows, emailRows, channelRows, tagLinks, directDeals, linkedDeals, notes, calls, conversations] = await Promise.all([
+  const [phoneRows, importedRows, emailRows, channelRows, tagLinks, directDeals, linkedDeals, conversations] = await Promise.all([
     db.from("contact_phones").select("id, phone, is_primary").eq("contact_id", id).order("is_primary", { ascending: false }).order("created_at").limit(LIMIT),
     db.from("imported_contact_phones").select("raw_phone, ordinal, label").eq("contact_id", id).order("ordinal").limit(LIMIT),
     db.from("contact_emails").select("email, ordinal, label").eq("contact_id", id).order("ordinal").limit(LIMIT),
@@ -58,11 +58,9 @@ export default async function ContactPage({
     db.from("contact_tags").select("tag_id").eq("contact_id", id).limit(LIMIT),
     db.from("deals").select("id").eq("contact_id", id).order("created_at", { ascending: false }).limit(LIMIT),
     db.from("deal_contacts").select("deal_id").eq("contact_id", id).limit(LIMIT),
-    db.from("notes").select("id, body, created_at, deal_id").eq("contact_id", id).order("created_at", { ascending: false }).limit(LIMIT),
-    db.from("calls").select("id, direction, status, started_at, duration_sec, deal_id").eq("contact_id", id).order("started_at", { ascending: false }).limit(LIMIT),
     db.from("conversations").select("id, channel").eq("contact_id", id).limit(LIMIT),
   ]);
-  for (const result of [phoneRows, importedRows, emailRows, channelRows, tagLinks, directDeals, linkedDeals, notes, calls, conversations]) {
+  for (const result of [phoneRows, importedRows, emailRows, channelRows, tagLinks, directDeals, linkedDeals, conversations]) {
     if (result.error) throw new Error(`Данные контакта: ${result.error.message}`);
   }
 
@@ -71,6 +69,18 @@ export default async function ContactPage({
     ...(linkedDeals.data ?? []).map((row) => row.deal_id),
   ])].slice(0, LIMIT);
   const tagIds = (tagLinks.data ?? []).map((row) => row.tag_id);
+  // Менеджер пишет заметку на сделке, а не на контакте: в Amo она всё равно
+  // видна в карточке клиента. Лента собирает и то, что привязано к контакту
+  // напрямую, и то, что записано на любой из его сделок.
+  const ownFilter = `contact_id.eq.${id}`;
+  const feedFilter = dealIds.length
+    ? `${ownFilter},deal_id.in.(${dealIds.join(",")})`
+    : ownFilter;
+  const [notes, calls] = await Promise.all([
+    db.from("notes").select("id, body, created_at, deal_id").or(feedFilter).is("deleted_at", null).order("created_at", { ascending: false }).limit(LIMIT),
+    db.from("calls").select("id, direction, status, started_at, duration_sec, deal_id").or(feedFilter).order("started_at", { ascending: false }).limit(LIMIT),
+  ]);
+  if (notes.error || calls.error) throw new Error(`Лента контакта: ${(notes.error ?? calls.error)?.message}`);
   const [dealRows, tags, allTags] = await Promise.all([
     dealIds.length ? db.from("deals").select("id, title, object_text, status, budget, budget_currency, stage_id, owner_id, created_at").in("id", dealIds).order("created_at", { ascending: false }) : Promise.resolve({ data: [], error: null }),
     tagIds.length ? db.from("tags").select("id, name").in("id", tagIds) : Promise.resolve({ data: [], error: null }),
@@ -90,7 +100,13 @@ export default async function ContactPage({
   const customDefinitions = (customDefsResult.data ?? []) as Array<{ id: string; key: string; label: string; field_type: "text" | "number" | "date" | "select" | "checkbox"; options: unknown }>;
   const customValues = new Map((customValuesResult.data ?? []).map((row) => [row.field_id, row]));
   const phones = phoneRows.data ?? [];
-  const importedPhones = importedRows.data ?? [];
+  // Amo отдаёт тот же номер ещё раз своим форматом («+373 6079-1676»).
+  // Показывать его второй строкой незачем — сравниваем по цифрам.
+  const digits = (value: string) => value.replace(/\D/g, "");
+  const knownDigits = new Set((phoneRows.data ?? []).map((row) => digits(row.phone)));
+  const importedPhones = (importedRows.data ?? []).filter(
+    (row) => !knownDigits.has(digits(row.raw_phone)),
+  );
   const emails = emailRows.data ?? [];
   const customSource = findField(fields, /source|источник|канал/i);
   const normalizedSource = customDefinitions.find((definition) => /source|источник|канал/i.test(`${definition.key} ${definition.label}`));
@@ -133,7 +149,7 @@ export default async function ContactPage({
             <div className={styles.collectionField}><span>Телефоны</span><ContactPhones contactId={id} phones={phones} /></div>
             {importedPhones.map((phone) => <ReadField key={`${phone.ordinal}-${phone.raw_phone}`} label={phone.label || `Импортированный телефон ${phone.ordinal + 1}`} value={phone.raw_phone} />)}
             <div className={styles.collectionField}><span>Почта</span><ContactEmails contactId={id} emails={emails} /></div>
-            <ReadField label="Каналы" value={channelRows.data?.length ? channelRows.data.map((row) => row.handle || row.channel).join(", ") : "WhatsApp не подключён"} />
+            <ReadField label="Каналы" value={channelRows.data?.length ? channelRows.data.map((row) => row.handle || row.channel).join(", ") : null} />
             {!channelRows.data?.length && <EmptyLine>Переписка появится, когда подключим WhatsApp.</EmptyLine>}
           </section>
           <section>
