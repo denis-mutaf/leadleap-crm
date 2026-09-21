@@ -9,12 +9,16 @@ function parsePeriod(value: string | null): Period {
 
 function csvCell(value: string | number | null) {
   const text = value == null ? "" : String(value);
-  const safeText = /^[=+\-@]/.test(text) ? `'${text}` : text;
+  const safeText = /^[\t \r\n]*[=+\-@]/.test(text) ? `'${text}` : text;
   return `"${safeText.replaceAll('"', '""')}"`;
 }
 
 function csvRow(values: Array<string | number | null>) {
   return values.map(csvCell).join(",");
+}
+
+function amountValue(amount: { sum: number; knownCount: number }) {
+  return amount.knownCount > 0 ? amount.sum : null;
 }
 
 export async function GET(request: Request) {
@@ -37,41 +41,86 @@ export async function GET(request: Request) {
       [
         "Раздел",
         "Название",
-        "Количество",
-        "Сумма EUR",
-        "Известно сумм",
-        "Всего записей",
+        "Обращений",
+        "Встреч",
+        "Резерваций",
+        "Сумма резерваций EUR",
+        "Известно сумм резерваций",
+        "Всего резерваций",
+        "Договоров",
+        "Сумма договоров EUR",
+        "Известно сумм договоров",
+        "Всего договоров",
+        "Сделок на открытых этапах",
+        "Открытых сделок всего",
+        "Дней до резервации",
       ],
       [
         "Итоги",
         "Резервации",
+        null,
+        null,
         data.metrics.reservations,
-        data.metrics.reservationAmount.sum,
+        amountValue(data.metrics.reservationAmount),
         data.metrics.reservationAmount.knownCount,
         data.metrics.reservationAmount.totalCount,
+        null,
+        null,
+        null,
+        null,
+        null,
+        data.openTotal,
+        data.metrics.daysToReservation,
       ],
       [
         "Итоги",
         "Договоры",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
         data.metrics.contracts,
-        data.metrics.contractAmount.sum,
+        amountValue(data.metrics.contractAmount),
         data.metrics.contractAmount.knownCount,
         data.metrics.contractAmount.totalCount,
+        null,
+        null,
+        null,
       ],
       ...data.projects.map((project) => [
         "Площадка",
         project.name,
+        project.inquiries,
+        project.meetings,
         project.reservations,
-        project.reservationAmount.sum,
+        amountValue(project.reservationAmount),
         project.reservationAmount.knownCount,
         project.reservationAmount.totalCount,
+        project.contracts,
+        amountValue(project.contractAmount),
+        project.contractAmount.knownCount,
+        project.contractAmount.totalCount,
+        null,
+        null,
+        null,
       ]),
       ...data.stageBars.map((stage) => [
         "Этап",
         stage.name,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
         stage.count,
-        null,
-        null,
+        data.openTotal,
         null,
       ]),
     ];
