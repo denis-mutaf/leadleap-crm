@@ -359,6 +359,7 @@ export function DealsTableView(p: Props) {
                     <Link
                       className="deal-table-contact"
                       href={`/deals/${r.id}`}
+                      title={r.contact}
                     >
                       {r.contact}
                     </Link>

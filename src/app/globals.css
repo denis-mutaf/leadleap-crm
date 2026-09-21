@@ -692,16 +692,17 @@
 .deals-page .deals-table tbody tr { transition: background-color 120ms ease; }
 .deals-page .deals-table tbody tr:hover,
 .deals-page .deals-table tbody tr:focus-within { background: var(--accent); }
-.deals-page .deals-table th:nth-child(1), .deals-page .deals-table td:nth-child(1) { width: 170px; }
-.deals-page .deals-table th:nth-child(2), .deals-page .deals-table td:nth-child(2) { width: 160px; }
-.deals-page .deals-table th:nth-child(3), .deals-page .deals-table td:nth-child(3) { width: 110px; }
-.deals-page .deals-table th:nth-child(4), .deals-page .deals-table td:nth-child(4) { width: 180px; }
-.deals-page .deals-table th:nth-child(5), .deals-page .deals-table td:nth-child(5) { width: 140px; }
-.deals-page .deals-table th:nth-child(6), .deals-page .deals-table td:nth-child(6) { width: 180px; }
-.deals-page .deals-table th:nth-child(7), .deals-page .deals-table td:nth-child(7) { width: 140px; }
-.deals-page .deals-table th:nth-child(8), .deals-page .deals-table td:nth-child(8) { width: 90px; }
-.deals-page .deals-table th:nth-child(9), .deals-page .deals-table td:nth-child(9) { width: 110px; }
-.deals-page .deal-table-contact { color: var(--foreground); text-decoration: none; font-weight: 500; }
+.deals-page .deals-table th:nth-child(1), .deals-page .deals-table td:nth-child(1) { width: 36px; }
+.deals-page .deals-table th:nth-child(2), .deals-page .deals-table td:nth-child(2) { width: 170px; }
+.deals-page .deals-table th:nth-child(3), .deals-page .deals-table td:nth-child(3) { width: 160px; }
+.deals-page .deals-table th:nth-child(4), .deals-page .deals-table td:nth-child(4) { width: 110px; }
+.deals-page .deals-table th:nth-child(5), .deals-page .deals-table td:nth-child(5) { width: 180px; }
+.deals-page .deals-table th:nth-child(6), .deals-page .deals-table td:nth-child(6) { width: 140px; }
+.deals-page .deals-table th:nth-child(7), .deals-page .deals-table td:nth-child(7) { width: 180px; }
+.deals-page .deals-table th:nth-child(8), .deals-page .deals-table td:nth-child(8) { width: 140px; }
+.deals-page .deals-table th:nth-child(9), .deals-page .deals-table td:nth-child(9) { width: 90px; }
+.deals-page .deals-table th:nth-child(10), .deals-page .deals-table td:nth-child(10) { width: 110px; }
+.deals-page .deal-table-contact { display: block; overflow: hidden; color: var(--foreground); text-decoration: none; font-weight: 500; text-overflow: ellipsis; }
 .deals-page .deal-table-contact:hover { text-decoration: underline; }
 .deals-page .deals-table-stage-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--primary); margin-right: 7px; }
 .deals-page .deals-table-stage-dot.won { background: #2e9d63; }
