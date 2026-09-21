@@ -1,0 +1,246 @@
+"use client";
+import { useEffect, useRef, useState } from "react";
+import { AlertCircle, ArchiveRestore } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import styles from "./trash.module.css";
+export type TrashRow = {
+  entity: "deals" | "contacts" | "notes" | "tasks";
+  id: string;
+  label: string;
+  deleted_at: string;
+  deleted_by: string;
+  deleted_by_name: string | null;
+};
+const filters = [
+  { key: "all", label: "Всё" },
+  { key: "deals", label: "Сделки" },
+  { key: "contacts", label: "Контакты" },
+  { key: "notes", label: "Примечания" },
+  { key: "tasks", label: "Задачи" },
+];
+const labels: Record<TrashRow["entity"], string> = {
+  deals: "Сделка",
+  contacts: "Контакт",
+  notes: "Примечание",
+  tasks: "Задача",
+};
+const daysLeft = (date: string, asOf: string) =>
+  Math.max(
+    0,
+    30 -
+      Math.floor(
+        (new Date(asOf).getTime() - new Date(date).getTime()) / 86400000,
+      ),
+  );
+export default function TrashClient({
+  rows,
+  total,
+  page,
+  limit,
+  entity,
+  canRestore,
+  asOf,
+}: {
+  rows: TrashRow[];
+  total: number;
+  page: number;
+  limit: number;
+  entity: string;
+  canRestore: boolean;
+  asOf: string;
+}) {
+  const router = useRouter();
+  const [items, setItems] = useState(rows);
+  const [pending, setPending] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<TrashRow | null>(null);
+  const [error, setError] = useState("");
+  const pendingRef = useRef(false);
+  const dialogRef = useRef<HTMLElement>(null);
+  const previousFocus = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (!confirm) return;
+    previousFocus.current = document.activeElement as HTMLElement;
+    dialogRef.current?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !pendingRef.current) setConfirm(null);
+      if (event.key === "Tab" && dialogRef.current) {
+        const buttons =
+          dialogRef.current.querySelectorAll<HTMLElement>("button");
+        if (
+          buttons.length &&
+          event.shiftKey &&
+          document.activeElement === buttons[0]
+        ) {
+          event.preventDefault();
+          buttons[buttons.length - 1].focus();
+        } else if (
+          buttons.length &&
+          (document.activeElement === dialogRef.current ||
+            document.activeElement === buttons[buttons.length - 1])
+        ) {
+          event.preventDefault();
+          buttons[0].focus();
+        }
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      previousFocus.current?.focus();
+    };
+  }, [confirm]);
+  async function restore(row: TrashRow) {
+    if (pendingRef.current) return;
+    pendingRef.current = true;
+    setPending(row.id);
+    setError("");
+    try {
+      const response = await fetch("/api/trash/restore", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ entity: row.entity, id: row.id }),
+      });
+      const data = await response.json();
+      if (!response.ok)
+        throw new Error(data.error || "Не удалось восстановить запись");
+      setItems((current) => current.filter((item) => item.id !== row.id));
+      setConfirm(null);
+      router.refresh();
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Не удалось восстановить запись",
+      );
+    } finally {
+      pendingRef.current = false;
+      setPending(null);
+    }
+  }
+  const pages = Math.max(1, Math.ceil(total / limit));
+  return (
+    <div className={styles.page}>
+      <div className={styles.back}>
+        <Link href="/settings">← Настройки</Link>
+        <span>Корзина</span>
+      </div>
+      <header className={styles.header}>
+        <div>
+          <p className={styles.eyebrow}>Удалённые записи</p>
+          <h1>Корзина</h1>
+          <p className={styles.subtitle}>
+            Восстановление доступно в течение ограниченного срока хранения.
+          </p>
+        </div>
+      </header>
+      <div className={styles.toolbar}>
+        <nav className={styles.filters} aria-label="Фильтр корзины">
+          {filters.map((filter) => (
+            <Link
+              key={filter.key}
+              className={entity === filter.key ? styles.selected : ""}
+              href={`/trash?entity=${filter.key}`}
+            >
+              {filter.label}
+            </Link>
+          ))}
+        </nav>
+        <span className={styles.count}>{total} записей</span>
+      </div>
+      {error && (
+        <p className={styles.error} role="alert">
+          <AlertCircle size={15} /> {error}
+        </p>
+      )}
+      <div className={styles.tableWrap}>
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th>Что</th>
+              <th>Тип</th>
+              <th>Удалил</th>
+              <th>Когда</th>
+              <th>Осталось</th>
+              <th>Действие</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((row) => {
+              const days = daysLeft(row.deleted_at, asOf);
+              return (
+                <tr key={`${row.entity}-${row.id}`}>
+                  <td>{row.label}</td>
+                  <td>{labels[row.entity]}</td>
+                  <td>{row.deleted_by_name || row.deleted_by}</td>
+                  <td>
+                    {new Intl.DateTimeFormat("ru-RU", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                      timeZone: "Europe/Chisinau",
+                    }).format(new Date(row.deleted_at))}
+                  </td>
+                  <td className={days < 3 ? styles.urgent : ""}>{days} дн</td>
+                  <td>
+                    {canRestore && (
+                      <button
+                        className={styles.restore}
+                        disabled={pending === row.id || days === 0}
+                        onClick={() => setConfirm(row)}
+                      >
+                        <ArchiveRestore size={14} /> Вернуть
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {pages > 1 && (
+        <nav className={styles.pagination} aria-label="Страницы">
+          {page > 1 && (
+            <Link href={`/trash?entity=${entity}&page=${page - 1}`}>Назад</Link>
+          )}
+          <span>
+            Страница {page} из {pages}
+          </span>
+          {page < pages && (
+            <Link href={`/trash?entity=${entity}&page=${page + 1}`}>
+              Дальше
+            </Link>
+          )}
+        </nav>
+      )}
+      {confirm && (
+        <div className={styles.backdrop}>
+          <section
+            className={styles.dialog}
+            ref={dialogRef}
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="restore-title"
+          >
+            <h2 id="restore-title">Вернуть запись?</h2>
+            <p>
+              Запись «{confirm.label}» будет восстановлена в{" "}
+              {labels[confirm.entity].toLowerCase()}.
+            </p>
+            <div>
+              <button onClick={() => setConfirm(null)}>Отмена</button>
+              <button
+                className={styles.primary}
+                disabled={pending !== null}
+                onClick={() => restore(confirm)}
+              >
+                Вернуть
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+    </div>
+  );
+}
