@@ -274,3 +274,220 @@
     }
   }
 }
+
+.mergeButton {
+  margin-left: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  padding: 7px 12px;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+.mergeScrim {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  background: rgb(15 23 42 / 38%);
+  padding: 20px;
+}
+.mergeModal {
+  width: min(720px, 100%);
+  max-height: min(720px, 92vh);
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--background);
+  color: var(--foreground);
+  box-shadow: 0 20px 60px rgb(15 23 42 / 20%);
+}
+.mergeHeader,
+.mergeFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.mergeHeader h2 {
+  margin: 0;
+  font-size: 15px;
+}
+.mergeHeader button {
+  border: 0;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.mergeSearchArea,
+.mergeIntro,
+.mergeHint,
+.nameChoice {
+  margin: 0;
+  padding: 16px 20px;
+  font-size: 13px;
+}
+.mergeSearchArea p {
+  margin: 0 0 12px;
+  color: var(--muted-foreground);
+}
+.mergeSearch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--input);
+  border-radius: 6px;
+  padding: 9px 10px;
+}
+.mergeSearch input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+.mergeResults {
+  display: grid;
+  gap: 4px;
+  margin-top: 10px;
+}
+.mergeResults button {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  padding: 10px;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+.mergeResults button:hover {
+  border-color: var(--border);
+  background: var(--muted);
+}
+.mergeResults span,
+.mergeCard span,
+.mergeCard small {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.mergeColumns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0 20px;
+}
+.mergeCard {
+  display: grid;
+  gap: 7px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  cursor: pointer;
+}
+.mergeCard.selected {
+  border-color: var(--primary);
+  background: var(--muted);
+}
+.mergeCard input,
+.nameChoice input {
+  accent-color: var(--primary);
+}
+.nameChoice {
+  display: grid;
+  gap: 8px;
+  border: 0;
+  color: inherit;
+}
+.nameChoice legend {
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+.mergeHint {
+  color: var(--muted-foreground);
+}
+.mergeConfirmation {
+  display: grid;
+  gap: 4px;
+  margin: 0 20px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--muted);
+  padding: 10px 12px;
+  font-size: 13px;
+}
+.mergeConfirmation span {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.mergeFooter {
+  justify-content: flex-end;
+  border-top: 1px solid var(--border);
+  border-bottom: 0;
+}
+.mergeFooter button {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  padding: 8px 14px;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+.mergeFooter button:last-child {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: white;
+}
+.mergeFooter button:disabled,
+.mergeHeader button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+.mergeError {
+  margin: 0 20px 12px;
+  color: var(--destructive, #b42318) !important;
+}
+.spin {
+  animation: mergeSpin 0.8s linear infinite;
+}
+@keyframes mergeSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+  }
+}
+@media (max-width: 600px) {
+  .mergeScrim {
+    align-items: start;
+    padding: 10px;
+  }
+  .mergeColumns {
+    grid-template-columns: 1fr;
+  }
+  .mergeModal {
+    max-height: none;
+    margin: 4px 0;
+  }
+  .mergeFooter {
+    flex-wrap: wrap;
+  }
+  .mergeFooter button {
+    flex: 1 1 150px;
+  }
+}

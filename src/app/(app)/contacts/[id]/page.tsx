@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import ContactMergeButton from "../contact-merge-button";
 import "../contacts.module.css";
 
 const LIMIT = 50;
@@ -73,7 +74,7 @@ export default async function ContactPage({
     db.from("contact_tags").select("tag_id").eq("contact_id", id).limit(LIMIT),
     db
       .from("deals")
-      .select("id")
+      .select("id", { count: "exact" })
       .eq("contact_id", id)
       .order("created_at", { ascending: false })
       .range(0, LIMIT - 1),
@@ -269,6 +270,15 @@ export default async function ContactPage({
         </span>
         <h1>{contact.data.full_name}</h1>
         <span className="quiet-chip">Контакт</span>
+        <ContactMergeButton
+          current={{
+            id: contact.data.id,
+            fullName: contact.data.full_name,
+            phones: allPhones,
+            emails: (emailRows.data ?? []).map((row) => row.email),
+            dealCount: directDeals.count ?? 0,
+          }}
+        />
       </div>
       <div className="contact-layout">
         <aside className="contact-sidebar">
