@@ -67,7 +67,7 @@ export default async function DealsTablePage({
   let dataQuery = supabase
     .from("deals")
     .select(
-      "id, contact_id, owner_id, stage_id, status, title, object_text, created_at, updated_at, contact:contacts(full_name), deal_tags(tag:tags(name)), tasks(title, due_at, done_at), notes(body, created_at), calls(direction, started_at), stage_transitions(changed_at)",
+      "id, contact_id, owner_id, stage_id, status, title, object_text, created_at, updated_at, contact:contacts!deals_contact_id_fkey(full_name), deal_tags(tag:tags(name)), tasks(title, due_at, done_at), notes(body, created_at), calls(direction, started_at), stage_transitions(changed_at)",
       { count: "exact" },
     );
   dataQuery = dataQuery.is("deleted_at", null);
@@ -90,6 +90,7 @@ export default async function DealsTablePage({
           .range(offset, lastRow)
       : { data: [], error: null, count: 0 };
   if (rows.error) {
+    console.error("[deals/table]", rows.error);
     const retryParams = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
       const item = Array.isArray(value) ? value[0] : value;
