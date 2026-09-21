@@ -81,6 +81,7 @@
   --destructive: #e5484d;
   --success: #30a46c;
   --warning: #d97706; /* замер: «Tomorrow», «In 2 days» в ленте */
+  --warning-soft: #fdf1e0; /* подложка плашки «ждёт» в инбоксе */
 
   --border: #eeeff1; /* замер: линия сетки таблицы, 1px */
   --input: #edeef0; /* замер: рамка вторичной кнопки */
@@ -1647,13 +1648,25 @@
   font-size: 13px;
   font-weight: 500;
 }
+/* Высота сетки жёсткая, а не минимальная: иначе лента сообщений растягивает
+   страницу на четыре экрана и поле ответа уезжает за нижний край — его просто
+   не находят. Прокручиваются списки внутри себя. */
 .inbox-grid {
   display: grid;
   grid-template-columns: minmax(260px, 320px) minmax(360px, 1fr) 300px;
-  min-height: calc(100vh - 98px);
+  grid-template-rows: minmax(0, 1fr);
+  height: calc(100vh - 98px);
+  min-height: 480px;
+  overflow: hidden;
 }
 .inbox-list {
+  min-height: 0;
+  overflow-y: auto;
   border-right: 1px solid var(--border);
+}
+.inbox-context {
+  min-height: 0;
+  overflow-y: auto;
 }
 .inbox-context {
   padding: 20px;
@@ -1724,6 +1737,7 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
 }
 .inbox-thread-header {
   min-height: 64px;
@@ -1742,8 +1756,9 @@
 }
 .inbox-messages {
   flex: 1;
+  min-height: 0;
   padding: 20px;
-  overflow: auto;
+  overflow-y: auto;
 }
 .inbox-message {
   max-width: 560px;
@@ -1757,10 +1772,12 @@
   font-size: 13px;
   line-height: 1.45;
 }
+/* Свой ответ отличается от чужого вопроса цветом, а не только отступом:
+   при беглом просмотре ленты отступ теряется. */
 .inbox-message.out {
   margin-left: auto;
-  border-color: transparent;
-  background: var(--muted);
+  border-color: #dde6fa;
+  background: #eff4fe;
 }
 .inbox-count,
 .inbox-muted {
@@ -1833,6 +1850,146 @@
   color: var(--muted-foreground);
   font-size: 12px;
 }
+/* Инбокс: ожидание ответа, ответ из CRM */
+.inbox-row {
+  position: relative;
+}
+/* Неотвеченное не должно требовать вчитывания: полоса слева видна боковым
+   зрением, её хватает, чтобы понять, где мы молчим. */
+.inbox-row.waiting::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  background: var(--warning);
+}
+.inbox-row.unread .inbox-row-main strong {
+  font-weight: 600;
+}
+.inbox-row-top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.inbox-row-top strong {
+  flex: 1;
+  min-width: 0;
+}
+.inbox-row-top small {
+  flex: none;
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.inbox-wait {
+  flex: none;
+  align-self: flex-start;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--warning-soft);
+  color: var(--warning);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.inbox-waiting-total {
+  color: var(--warning);
+  font-size: 12px;
+}
+.inbox-day {
+  margin: 18px 0 10px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  text-align: center;
+}
+.inbox-thread-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.inbox-thread-actions button {
+  height: var(--h-control);
+  padding: 0 10px;
+  border: 1px solid var(--input);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.inbox-thread-actions button:hover:not(:disabled) {
+  background: var(--accent);
+}
+.inbox-thread-actions button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.inbox-thread-actions-error {
+  color: var(--destructive);
+  font-size: 12px;
+}
+.inbox-composer {
+  padding: 12px 18px 16px;
+  border-top: 1px solid var(--border);
+}
+.inbox-composer-box {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--input);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+.inbox-composer-box textarea {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+  resize: none;
+}
+.inbox-composer-box button {
+  height: var(--h-control);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.inbox-composer-box button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.inbox-composer-error {
+  margin: 0 0 8px;
+  color: var(--destructive);
+  font-size: 12px;
+}
+/* Причина, по которой ответить нельзя, стоит на месте поля ввода: иначе
+   менеджер ищет исчезнувшую кнопку. */
+.inbox-composer-blocked {
+  margin: 0;
+  padding: 12px 18px 16px;
+  border-top: 1px solid var(--border);
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.5;
+}
 @media (max-width: 900px) {
   .inbox-grid {
     grid-template-columns: 260px minmax(0, 1fr);
@@ -1844,6 +2001,8 @@
 @media (max-width: 620px) {
   .inbox-grid {
     display: block;
+    height: auto;
+    overflow: visible;
   }
   .inbox-list {
     border-right: 0;
@@ -2297,4 +2456,16 @@
   height: 2px;
   border-radius: var(--radius);
   background: var(--primary);
+}
+
+.nav-item-badge {
+  margin-left: auto;
+  min-width: 18px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--warning-soft);
+  color: var(--warning);
+  font-size: 11px;
+  font-weight: 500;
+  text-align: center;
 }

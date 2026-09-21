@@ -18,6 +18,7 @@ export type AppNavItem = {
   href: string;
   label: string;
   icon: AppNavIcon;
+  badge?: number;
 };
 
 export type AppNavIcon =
@@ -47,9 +48,11 @@ function isActivePath(pathname: string, href: string): boolean {
 function NavLinkContent({
   Icon,
   label,
+  badge,
 }: {
   Icon: typeof LayoutDashboard;
   label: string;
+  badge?: number;
 }) {
   const { pending } = useLinkStatus();
 
@@ -66,6 +69,13 @@ function NavLinkContent({
     <>
       <Icon size={16} />
       {label}
+      {/* Число неотвеченных видно из любого раздела: иначе про инбокс
+          вспоминают, только когда клиент звонит сам. */}
+      {badge ? (
+        <span className="nav-item-badge" aria-label={`${badge} без ответа`}>
+          {badge > 99 ? "99+" : badge}
+        </span>
+      ) : null}
       {pending && <span className="nav-item-pending" aria-hidden="true" />}
     </>
   );
@@ -76,7 +86,7 @@ export function AppNav({ items }: { items: AppNavItem[] }) {
 
   return (
     <nav aria-label="Основная навигация">
-      {items.map(({ href, label, icon }) => {
+      {items.map(({ href, label, icon, badge }) => {
         const Icon = ICONS[icon];
         const active = isActivePath(pathname, href);
         return (
@@ -87,7 +97,7 @@ export function AppNav({ items }: { items: AppNavItem[] }) {
             aria-current={active ? "page" : undefined}
             style={{ position: "relative" }}
           >
-            <NavLinkContent Icon={Icon} label={label} />
+            <NavLinkContent Icon={Icon} label={label} badge={badge} />
           </Link>
         );
       })}

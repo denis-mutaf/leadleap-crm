@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 import { USER_ROLE_LABELS } from "@/lib/types";
 import { SignOutButton } from "./sign-out-button";
 import { AppNav, type AppNavItem } from "./app-nav";
@@ -67,12 +68,26 @@ export default async function AppLayout({
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
 
+  // Диалоги, где последним написал клиент. Счёт идёт под RLS, поэтому
+  // менеджер видит только то, что ему и так доступно.
+  let unanswered = 0;
+  if (profile.role !== "builder") {
+    const supabase = await createClient();
+    const { count } = await supabase
+      .from("conversations")
+      .select("id", { count: "exact", head: true })
+      .eq("last_direction", "in");
+    unanswered = count ?? 0;
+  }
+
   const visibleNav = NAV.filter((item) =>
     item.roles.includes(profile.role),
   ).map((item) =>
     profile.role === "builder" && item.href === "/reports"
       ? { ...item, label: "Дашборд" }
-      : item,
+      : item.href === "/inbox"
+        ? { ...item, badge: unanswered }
+        : item,
   );
 
   return (
