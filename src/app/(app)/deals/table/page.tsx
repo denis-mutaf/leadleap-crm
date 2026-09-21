@@ -259,10 +259,6 @@ export default async function DealsTablePage({
         <span className="header-spacer" />
         <span className="summary">Сделки · 50 на страницу</span>
       </div>
-      <div className="filterbar">
-        <span className="static-filter">Сортировка и фильтры</span>
-        <span className="header-spacer" />
-      </div>
       <DealsTableView
         rows={tableRows}
         total={total}
