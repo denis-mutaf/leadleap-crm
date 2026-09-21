@@ -3,6 +3,7 @@ import { getCurrentProfile } from "@/lib/auth";
 import { USER_ROLE_LABELS } from "@/lib/types";
 import { SignOutButton } from "./sign-out-button";
 import { AppNav, type AppNavItem } from "./app-nav";
+import { GlobalSearch } from "./global-search";
 
 type NavEntry = AppNavItem & {
   roles: string[];
@@ -31,6 +32,7 @@ export default async function AppLayout({
     <div className="app-shell">
       <aside className="nav">
         <div className="nav-brand">ISRAGRUP</div>
+        {profile.role !== "builder" && <GlobalSearch />}
         <AppNav items={visibleNav} />
         <div className="nav-foot">
           <span className="avatar">{profile.full_name.slice(0, 2).toUpperCase()}</span>
