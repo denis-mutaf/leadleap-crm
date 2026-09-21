@@ -30,6 +30,8 @@ type ReportSnapshot = {
   stage_counts: Record<string, number>;
   source_counts: Record<string, number>;
   reason_counts: Record<string, number>;
+  channel_counts: Record<string, number>;
+  channel_unknown: number;
   source_without_value: number;
   reason_without_value: number;
 };
@@ -53,6 +55,7 @@ function isReportSnapshot(value: unknown): value is ReportSnapshot {
       "open",
       "won",
       "lost",
+      "channel_unknown",
       "source_without_value",
       "reason_without_value",
     ].every(
@@ -63,7 +66,8 @@ function isReportSnapshot(value: unknown): value is ReportSnapshot {
     ) &&
     isNumberRecord(record.stage_counts) &&
     isNumberRecord(record.source_counts) &&
-    isNumberRecord(record.reason_counts)
+    isNumberRecord(record.reason_counts) &&
+    isNumberRecord(record.channel_counts)
   );
 }
 
@@ -155,6 +159,8 @@ export default async function ReportsPage({
     stage_counts,
     source_counts,
     reason_counts,
+    channel_counts,
+    channel_unknown,
     source_without_value,
     reason_without_value,
   } = snapshot;
@@ -178,18 +184,37 @@ export default async function ReportsPage({
   const stageResidual = open - stageTotal;
   const reasonResidual = lost - reasonTotal - reason_without_value;
   const maxStageCount = Math.max(1, ...stageCounts.map((stage) => stage.count));
-  const sourceRows: CountRow[] = [
-    ...sourceCounts,
-    ...(source_without_value
-      ? [
-          {
-            id: "no-source",
-            name: "Без источника",
-            count: source_without_value,
-          },
-        ]
+  // Справочник источников в Amo не заполнялся: source_id = null у всех сделок.
+  // Пока в нём нет ни одного значения, показывать «Без источника — 100%» бессмысленно —
+  // отчёт строится по меткам канала, которыми отдел размечает сделки на самом деле.
+  const dictionarySources = sourceCounts.filter((row) => row.count > 0);
+  const channelRows: CountRow[] = [
+    ...Object.entries(channel_counts).map(([name, count]) => ({
+      id: name,
+      name,
+      count,
+    })),
+    ...(channel_unknown
+      ? [{ id: "no-channel", name: "Канал не размечен", count: channel_unknown }]
       : []),
-  ].filter((row) => row.count > 0);
+  ]
+    .filter((row) => row.count > 0)
+    .sort((a, b) => b.count - a.count);
+  const usingChannels = dictionarySources.length === 0;
+  const sourceRows: CountRow[] = usingChannels
+    ? channelRows
+    : [
+        ...dictionarySources,
+        ...(source_without_value
+          ? [
+              {
+                id: "no-source",
+                name: "Без источника",
+                count: source_without_value,
+              },
+            ]
+          : []),
+      ].filter((row) => row.count > 0);
   const reasonRows: CountRow[] = [
     ...reasonCounts,
     ...(reason_without_value
@@ -201,7 +226,11 @@ export default async function ReportsPage({
           },
         ]
       : []),
-  ].filter((row) => row.count > 0);
+  ]
+    .filter((row) => row.count > 0)
+    // Порядок справочника — это порядок в воронке настроек, в отчёте он ничего
+    // не значит: «Район не подходит» (386) стояло под «Не отвечает» (227).
+    .sort((a, b) => b.count - a.count);
   if (reasonResidual !== 0) {
     reasonRows.push({
       id: "unmatched-reason",
@@ -279,7 +308,9 @@ export default async function ReportsPage({
         <section className="report-section">
           <h2>Источники</h2>
           <p className="section-subtitle">
-            Все сделки, включая исторические значения справочника
+            {usingChannels
+              ? "По меткам канала: справочник источников в Amo не заполнялся"
+              : "Все сделки, включая исторические значения справочника"}
           </p>
           <div className="simple-list">
             {sourceRows.length ? (
