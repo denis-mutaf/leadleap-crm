@@ -1,0 +1,47 @@
+.frow {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr) 96px;
+  align-items: center;
+  gap: 12px;
+  min-height: 30px;
+}
+
+.fname {
+  min-width: 0;
+  font-size: 13px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+
+.trackWrap {
+  position: relative;
+  min-width: 0;
+}
+
+.num {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--foreground);
+}
+
+.conv {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--secondary-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-align: right;
+}
+
+@media (max-width: 760px) {
+  .frow {
+    grid-template-columns: 140px minmax(0, 1fr) 64px;
+    gap: 8px;
+  }
+}

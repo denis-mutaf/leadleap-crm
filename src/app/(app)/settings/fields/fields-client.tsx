@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Globe, Info, MoreHorizontal, Plus, X } from "lucide-react";
+import { Globe, GripVertical, Info, MoreHorizontal, Plus, X } from "lucide-react";
 import {
   DndContext,
   KeyboardSensor,
@@ -79,7 +79,6 @@ function SortableRow({
         transform: CSS.Transform.toString(sortable.transform),
         transition: sortable.transition,
       }}
-      className={percent < 1 ? styles.dim : undefined}
     >
       <td className={styles.fieldName}>
         <button
@@ -89,7 +88,7 @@ function SortableRow({
           disabled={!canEdit}
           aria-label={`Переместить ${row.label}`}
         >
-          ⠿
+          <GripVertical size={14} />
         </button>
         {row.label}
       </td>
@@ -111,12 +110,12 @@ function SortableRow({
         <span className={styles.switch}>{row.is_required ? "Да" : "Нет"}</span>
       </td>
       <td>
-        <span>
+        <span className={styles.fillLabel}>
           {percent.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} %{" "}
           {noun}
         </span>
-        <span className={styles.bar}>
-          <i style={{ width: `${Math.min(percent, 100)}%` }} />
+        <span className={styles.bar} aria-hidden="true">
+          <i style={{ width: `${Math.min(percent, 100)}%`, minWidth: percent > 0 ? 4 : 0 }} />
         </span>
       </td>
       <td className={styles.menuCell}>
