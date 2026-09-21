@@ -1422,6 +1422,29 @@
     @apply font-sans;
   }
 }
+
+/* Task completion dialog */
+.task-completion-dialog {
+  width: min(440px, calc(100vw - 32px));
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 20px 60px rgb(36 37 41 / 18%);
+  color: var(--foreground);
+}
+.task-completion-dialog::backdrop { background: rgb(36 37 41 / 28%); }
+.task-completion-dialog form { padding: 16px; }
+.task-completion-dialog header,
+.task-completion-dialog footer { display: flex; align-items: center; gap: 8px; }
+.task-completion-dialog header { justify-content: space-between; margin-bottom: 18px; }
+.task-completion-dialog header button { display: grid; place-items: center; border: 0; background: transparent; color: var(--muted-foreground); cursor: pointer; }
+.task-completion-dialog label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 500; }
+.task-completion-dialog textarea { width: 100%; min-height: 108px; resize: vertical; padding: 9px; border: 1px solid var(--input); border-radius: 6px; font: inherit; font-size: 13px; outline-color: var(--ring); }
+.task-completion-dialog footer { justify-content: flex-end; margin-top: 16px; }
+.task-completion-dialog footer button { min-height: 28px; padding: 0 10px; border: 1px solid var(--input); border-radius: 6px; background: var(--secondary); cursor: pointer; }
+.task-completion-dialog footer .task-primary-button { border-color: var(--primary-border); background: var(--primary); color: var(--primary-foreground); }
+.task-completion-dialog button:disabled { cursor: not-allowed; opacity: .6; }
+.task-completion-error { margin: 8px 0 0; color: var(--destructive); font-size: 12px; }
 .inbox-page {
   min-height: 100vh;
   background: var(--background);

@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { Circle } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { TaskCompletion } from "./task-completion";
 
 type TaskRow = {
   id: string;
@@ -260,12 +260,6 @@ export default async function TasksPage({
           Показано {rows.length} из {totalCount}
         </span>
       </header>
-      <div className="tasks-toolbar">
-        <div className="view-switch">
-          <span className="view-switch-active">Список</span>
-          <span className="view-switch-deferred">Календарь — позже</span>
-        </div>
-      </div>
       <div className="tasks-filterbar">
         <span className="filter-chip">Ответственный: {profile.full_name}</span>
         <span className="header-spacer" />
@@ -293,9 +287,7 @@ export default async function TasksPage({
             </div>
             {group.tasks.map((task) => (
               <div className="task-row" key={task.id}>
-                <span className="task-check">
-                  <Circle size={15} />
-                </span>
+                <TaskCompletion taskId={task.id} actorId={profile.id} />
                 <span className="task-type" title={task.typeName}>
                   {task.typeName.slice(0, 1)}
                 </span>
