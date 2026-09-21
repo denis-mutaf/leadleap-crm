@@ -2,6 +2,22 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Globe, Info, MoreHorizontal, Plus, X } from "lucide-react";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import Link from "next/link";
 import styles from "./fields.module.css";
 
@@ -33,6 +49,103 @@ const blank = {
   is_required: false,
 };
 
+/* eslint-disable react-hooks/refs -- dnd-kit exposes sortable refs/listeners for render wiring. */
+function SortableRow({
+  row,
+  canEdit,
+  menu,
+  setMenu,
+  onEdit,
+  onHide,
+  onDelete,
+  total,
+  noun,
+}: {
+  row: FieldRow;
+  canEdit: boolean;
+  menu: string | null;
+  setMenu: (id: string | null) => void;
+  onEdit: (row: FieldRow) => void;
+  onHide: () => void;
+  onDelete: () => void;
+  total: number;
+  noun: string;
+}) {
+  const sortable = useSortable({ id: row.id, disabled: !canEdit });
+  const percent = total ? (row.filled / total) * 100 : 0;
+  return (
+    <tr
+      ref={sortable.setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(sortable.transform),
+        transition: sortable.transition,
+      }}
+      className={percent < 1 ? styles.dim : undefined}
+    >
+      <td className={styles.fieldName}>
+        <button
+          className={styles.dragHandle}
+          {...sortable.attributes}
+          {...sortable.listeners}
+          disabled={!canEdit}
+          aria-label={`Переместить ${row.label}`}
+        >
+          ⠿
+        </button>
+        {row.label}
+      </td>
+      <td>
+        <span className={styles.chip}>
+          {labels[row.field_type] || row.field_type}
+        </span>
+      </td>
+      <td>
+        {row.auto_created ? (
+          <span className={styles.chip}>
+            <Globe size={12} /> Форма сайта
+          </span>
+        ) : (
+          "вручную"
+        )}
+      </td>
+      <td>
+        <span className={styles.switch}>{row.is_required ? "Да" : "Нет"}</span>
+      </td>
+      <td>
+        <span>
+          {percent.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} %{" "}
+          {noun}
+        </span>
+        <span className={styles.bar}>
+          <i style={{ width: `${Math.min(percent, 100)}%` }} />
+        </span>
+      </td>
+      <td className={styles.menuCell}>
+        {canEdit && (
+          <button
+            className={styles.icon}
+            aria-label={`Действия: ${row.label}`}
+            aria-expanded={menu === row.id}
+            onClick={() => setMenu(menu === row.id ? null : row.id)}
+          >
+            <MoreHorizontal size={16} />
+          </button>
+        )}
+        {menu === row.id && canEdit && (
+          <div className={styles.menu} role="menu">
+            <button onClick={() => onEdit(row)}>Изменить</button>
+            <button onClick={onHide}>Скрыть</button>
+            <button className={styles.danger} onClick={onDelete}>
+              Удалить
+            </button>
+          </div>
+        )}
+      </td>
+    </tr>
+  );
+}
+/* eslint-enable react-hooks/refs */
+
 export default function FieldsClient({
   initialRows,
   canEdit,
@@ -52,12 +165,67 @@ export default function FieldsClient({
   const [error, setError] = useState("");
   const busyRef = useRef(false);
   const panelRef = useRef<HTMLFormElement>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
   const total = totals[entity];
-  const active = rows.filter((row) => row.entity === entity && row.is_active);
+  const active = rows
+    .filter((row) => row.entity === entity && row.is_active)
+    .sort((left, right) => left.position - right.position);
   const historical = rows.filter(
     (row) => row.entity === entity && !row.is_active,
   );
   const noun = entity === "contact" ? "контактов" : "сделок";
+  async function reorder(event: DragEndEvent) {
+    if (
+      !event.over ||
+      event.active.id === event.over.id ||
+      busyRef.current ||
+      !canEdit
+    )
+      return;
+    const from = active.findIndex((row) => row.id === event.active.id);
+    const to = active.findIndex((row) => row.id === event.over?.id);
+    if (from < 0 || to < 0) return;
+    const next = [...active];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    const previous = rows;
+    const reordered = next.map((row, index) => ({ ...row, position: index }));
+    setRows([
+      ...reordered,
+      ...rows.filter((row) => row.entity !== entity || !row.is_active),
+    ]);
+    busyRef.current = true;
+    setBusy(true);
+    setError("");
+    try {
+      await api("POST", {
+        action: "reorder",
+        entity,
+        field_ids: reordered.map((row) => row.id),
+      });
+      setRows((items) =>
+        items.map((row) => {
+          const updated = reordered.find((item) => item.id === row.id);
+          return updated || row;
+        }),
+      );
+    } catch (cause) {
+      setRows(previous);
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Не удалось изменить порядок полей",
+      );
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+    }
+  }
   useEffect(() => {
     if (!panel && !confirm) return;
     const onKey = (event: KeyboardEvent) => {
@@ -181,66 +349,6 @@ export default function FieldsClient({
       setBusy(false);
     }
   }
-  function row(row: FieldRow) {
-    const percent = total ? (row.filled / total) * 100 : 0;
-    return (
-      <tr key={row.id} className={percent < 1 ? styles.dim : undefined}>
-        <td>{row.label}</td>
-        <td>
-          <span className={styles.chip}>
-            {labels[row.field_type] || row.field_type}
-          </span>
-        </td>
-        <td>
-          {row.auto_created ? (
-            <span className={styles.chip}>
-              <Globe size={12} /> Форма сайта
-            </span>
-          ) : (
-            "вручную"
-          )}
-        </td>
-        <td>
-          <span className={styles.switch}>
-            {row.is_required ? "Да" : "Нет"}
-          </span>
-        </td>
-        <td>
-          <span>
-            {percent.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} %{" "}
-            {noun}
-          </span>
-          <span className={styles.bar}>
-            <i style={{ width: `${Math.min(percent, 100)}%` }} />
-          </span>
-        </td>
-        <td className={styles.menuCell}>
-          {canEdit && (
-            <button
-              className={styles.icon}
-              aria-label={`Действия: ${row.label}`}
-              aria-expanded={menu === row.id}
-              onClick={() => setMenu(menu === row.id ? null : row.id)}
-            >
-              <MoreHorizontal size={16} />
-            </button>
-          )}
-          {menu === row.id && canEdit && (
-            <div className={styles.menu} role="menu">
-              <button onClick={() => edit(row)}>Изменить</button>
-              <button onClick={() => setConfirm("hide")}>Скрыть</button>
-              <button
-                className={styles.danger}
-                onClick={() => setConfirm("delete")}
-              >
-                Удалить
-              </button>
-            </div>
-          )}
-        </td>
-      </tr>
-    );
-  }
   return (
     <div className={styles.page}>
       <div className={styles.back}>
@@ -279,19 +387,46 @@ export default function FieldsClient({
             Контакт
           </button>
         </div>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>Поле</th>
-              <th>Тип</th>
-              <th>Источник</th>
-              <th>Обязательное</th>
-              <th>Заполнено</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>{active.map(row)}</tbody>
-        </table>
+        <DndContext
+          id="crm-fields-order"
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={reorder}
+        >
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Поле</th>
+                <th>Тип</th>
+                <th>Источник</th>
+                <th>Обязательное</th>
+                <th>Заполнено</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              <SortableContext
+                items={active.map((item) => item.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {active.map((item) => (
+                  <SortableRow
+                    key={item.id}
+                    row={item}
+                    canEdit={canEdit}
+                    menu={menu}
+                    setMenu={setMenu}
+                    onEdit={edit}
+                    onHide={() => setConfirm("hide")}
+                    onDelete={() => setConfirm("delete")}
+                    total={total}
+                    noun={noun}
+                  />
+                ))}
+              </SortableContext>
+            </tbody>
+          </table>
+        </DndContext>
         {historical.length > 0 && (
           <>
             <h2 className={styles.sectionTitle}>Исторические поля</h2>

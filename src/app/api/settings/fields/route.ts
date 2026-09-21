@@ -43,6 +43,24 @@ export async function POST(request: Request) {
   const profile = await admin();
   const input = await read(request);
   if (!profile) return fail("Недостаточно прав", 403);
+  if (input?.action === "reorder") {
+    if (
+      !entities.includes(input.entity as never) ||
+      !Array.isArray(input.field_ids) ||
+      input.field_ids.length === 0 ||
+      input.field_ids.length > 32767 ||
+      !input.field_ids.every(isUuid)
+    )
+      return fail("Некорректный порядок полей");
+    const result = await (
+      await createClient()
+    ).rpc("reorder_crm_custom_fields", {
+      p_entity: input.entity,
+      p_field_ids: input.field_ids,
+    });
+    if (result.error) return fail("Не удалось сохранить порядок полей");
+    return NextResponse.json({ ok: true });
+  }
   if (
     !input ||
     typeof input.label !== "string" ||
