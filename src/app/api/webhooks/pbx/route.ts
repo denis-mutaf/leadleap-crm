@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 
 const INVALID_TOKEN = { error: "Invalid token" };
 const INVALID_PARAMS = { error: "Invalid parameters" };
+const DELETED_CONTACT_LOOKUP = "PBX phone resolves to deleted contact";
 
 function serviceDb() {
   return createClient(
@@ -72,6 +73,18 @@ async function findContactByPhone(
   ]);
   if (candidateIds.size === 0) return null;
 
+  const { data: deletedContacts, error: deletedContactError } = await db
+    .from("contacts")
+    .select("id")
+    .in("id", [...candidateIds])
+    .not("deleted_at", "is", null);
+  if (deletedContactError) {
+    throw new Error(`deleted contact lookup failed: ${deletedContactError.message}`);
+  }
+  if ((deletedContacts ?? []).length > 0) {
+    throw new Error(DELETED_CONTACT_LOOKUP);
+  }
+
   // Resolve merges before deciding whether the number is ambiguous: two old
   // cards that point at one survivor are still one logical contact.
   const resolvedIds = new Set<string>();
@@ -85,9 +98,22 @@ async function findContactByPhone(
         .from("contacts")
         .select("id, merged_into")
         .eq("id", currentId)
+        .is("deleted_at", null)
         .maybeSingle();
       if (error) throw new Error(`contact merge lookup failed: ${error.message}`);
-      if (!current) break;
+      if (!current) {
+        const { data: deletedTarget, error: deletedTargetError } = await db
+          .from("contacts")
+          .select("id")
+          .eq("id", currentId)
+          .not("deleted_at", "is", null)
+          .maybeSingle();
+        if (deletedTargetError) {
+          throw new Error(`deleted merge target lookup failed: ${deletedTargetError.message}`);
+        }
+        if (deletedTarget) throw new Error(DELETED_CONTACT_LOOKUP);
+        break;
+      }
       if (!current.merged_into) {
         resolvedIds.add(current.id as string);
         reachedTerminal = true;
@@ -108,6 +134,7 @@ async function findContactByPhone(
     .from("contacts")
     .select("id, full_name")
     .eq("id", contactId)
+    .is("deleted_at", null)
     .single();
   if (contactError) throw new Error(`contact lookup failed: ${contactError.message}`);
   return { contactId: contact.id as string, fullName: contact.full_name as string };
@@ -119,6 +146,7 @@ async function openDeals(db: Db, contactId: string) {
     .select("id, title, owner_id")
     .eq("contact_id", contactId)
     .eq("status", "open")
+    .is("deleted_at", null)
     .order("created_at", { ascending: true });
   if (error) throw new Error(`open deals lookup failed: ${error.message}`);
   return (data ?? []) as { id: string; title: string | null; owner_id: string | null }[];
@@ -424,6 +452,9 @@ export async function POST(req: NextRequest) {
       .from("inbound_events")
       .update({ error: e instanceof Error ? e.message : String(e) })
       .eq("id", inboundId);
+    if (e instanceof Error && e.message === DELETED_CONTACT_LOOKUP) {
+      return NextResponse.json({ error: "Temporary contact lookup failure" }, { status: 503 });
+    }
     return NextResponse.json(INVALID_PARAMS, { status: 400 });
   }
 }
