@@ -30,6 +30,9 @@ import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateActio
 import { monthlyAmount, shortAmount } from "@/lib/amo-amount";
 import { createClient } from "@/lib/supabase/client";
 
+type OpenEvent = { metaKey: boolean; ctrlKey: boolean; button: number };
+type OpenDeal = (event?: OpenEvent) => void;
+
 export type BoardTag = { id?: string; name: string; color?: string | null };
 export type BoardProject = { id?: string; code?: string | null; name: string };
 export type BoardCard = {
@@ -169,14 +172,18 @@ function PresentationalCard({
 }: {
   deal: BoardCard;
   dragging?: boolean;
-  onOpen?: () => void;
+  onOpen?: OpenDeal;
 }) {
   const overdue = isOverdue(deal);
   const noNextStep = !deal.next_task && deal.status === "open";
   return (
     <article
       className={`deal-card ${overdue ? "deal-card-overdue" : ""} ${dragging ? "deal-card-overlay" : ""}`}
-      onClick={onOpen}
+      onClick={(event) => onOpen?.(event)}
+      // Карточка — не ссылка, а перетаскиваемый блок, поэтому Cmd-клик и клик
+      // колесом браузер сам не обработает. Открыть сделку в соседней вкладке,
+      // не теряя воронку из виду, в CRM нужно каждый день.
+      onAuxClick={(event) => { if (event.button === 1) { event.preventDefault(); onOpen?.(event); } }}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
@@ -216,7 +223,7 @@ function PresentationalCard({
   );
 }
 
-function DraggableCard({ deal, onOpen }: { deal: BoardCard; onOpen: () => void }) {
+function DraggableCard({ deal, onOpen }: { deal: BoardCard; onOpen: OpenDeal }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: deal.id });
   return (
     <div ref={setNodeRef} {...listeners} {...attributes} className={isDragging ? "deal-card-dragging" : ""}>
@@ -225,10 +232,10 @@ function DraggableCard({ deal, onOpen }: { deal: BoardCard; onOpen: () => void }
   );
 }
 
-function KettleCard({ deal, onOpen, onClaim }: { deal: BoardCard; onOpen: () => void; onClaim: () => void }) {
+function KettleCard({ deal, onOpen, onClaim }: { deal: BoardCard; onOpen: OpenDeal; onClaim: () => void }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: deal.id });
   return (
-    <article ref={setNodeRef} {...listeners} {...attributes} className={`kettle-card ${isDragging ? "deal-card-dragging" : ""}`} onClick={onOpen}>
+    <article ref={setNodeRef} {...listeners} {...attributes} className={`kettle-card ${isDragging ? "deal-card-dragging" : ""}`} onClick={(event) => onOpen(event)} onAuxClick={(event) => { if (event.button === 1) { event.preventDefault(); onOpen(event); } }}>
       <div className="kettle-meta">{deal.source_name && channelIcon(deal.source_name)} {deal.source_name && <span>{deal.source_name} · </span>}{time(deal.updated_at)}</div>
       <strong>{deal.contact_name || deal.phone}</strong>
       {(deal.title || deal.object_text) && <p>{deal.title || deal.object_text}</p>}
@@ -245,7 +252,7 @@ function BoardColumn({
   onToggle,
 }: {
   column: BoardColumn;
-  onOpen: (id: string) => void;
+  onOpen: (id: string, event?: OpenEvent) => void;
   onCreate: () => void;
   onClaim: (id: string) => void;
   onToggle?: () => void;
@@ -264,17 +271,17 @@ function BoardColumn({
         {!column.kettle && <div className="column-menu-wrap"><button className="column-more" type="button" aria-label={`Меню колонки ${column.title}`} onClick={() => setMenuOpen((open) => !open)}><MoreHorizontal size={15} /></button>{menuOpen && <div className="column-menu"><button type="button" onClick={() => { setHidden(true); setMenuOpen(false); }}>Скрыть колонку</button></div>}</div>}
       </div>
       {column.sum !== null && column.sum > 0 && <div className="column-sum">€ {new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(column.sum)}</div>}
-      {column.deals.map((deal) => column.kettle ? <KettleCard key={deal.id} deal={deal} onOpen={() => onOpen(deal.id)} onClaim={() => onClaim(deal.id)} /> : <DraggableCard key={deal.id} deal={deal} onOpen={() => onOpen(deal.id)} />)}
+      {column.deals.map((deal) => column.kettle ? <KettleCard key={deal.id} deal={deal} onOpen={(event) => onOpen(deal.id, event)} onClaim={() => onClaim(deal.id)} /> : <DraggableCard key={deal.id} deal={deal} onOpen={(event) => onOpen(deal.id, event)} />)}
       {column.deals.length === 0 && <div className="empty-column">Нет сделок</div>}
       <button className="column-add-button" type="button" onClick={onCreate}><Plus size={14} /> Сделка</button>
     </section>
   );
 }
 
-function LostColumn({ column, expanded, onToggle, onOpen, onCreate }: { column: BoardColumn; expanded: boolean; onToggle: () => void; onOpen: (id: string) => void; onCreate: () => void }) {
+function LostColumn({ column, expanded, onToggle, onOpen, onCreate }: { column: BoardColumn; expanded: boolean; onToggle: () => void; onOpen: (id: string, event?: OpenEvent) => void; onCreate: () => void }) {
   const { setNodeRef, isOver } = useDroppable({ id: "lost" });
   if (!expanded) return <button ref={setNodeRef} className={`closed-column ${isOver ? "drop-target" : ""}`} type="button" onClick={onToggle} aria-label={`Развернуть Отказ: ${column.total}`}><ChevronRight size={14} /><span className="dot dot-grey" /><span className="closed-column-label">Отказ</span><span className="pill">{column.total}</span></button>;
-  return <section ref={setNodeRef} className={`kanban-column lost-expanded ${isOver ? "drop-target" : ""}`}><div className="column-head"><button className="column-collapse" type="button" onClick={onToggle} aria-label="Свернуть Отказ"><ChevronDown size={14} /></button><span className="dot dot-grey" /><strong>{column.title}</strong><span className="pill">{column.total}</span></div>{column.deals.map((deal) => <DraggableCard key={deal.id} deal={deal} onOpen={() => onOpen(deal.id)} />)}{column.deals.length === 0 && <div className="empty-column">Нет отказов</div>}<button className="column-add-button" type="button" onClick={onCreate}><Plus size={14} /> Сделка</button></section>;
+  return <section ref={setNodeRef} className={`kanban-column lost-expanded ${isOver ? "drop-target" : ""}`}><div className="column-head"><button className="column-collapse" type="button" onClick={onToggle} aria-label="Свернуть Отказ"><ChevronDown size={14} /></button><span className="dot dot-grey" /><strong>{column.title}</strong><span className="pill">{column.total}</span></div>{column.deals.map((deal) => <DraggableCard key={deal.id} deal={deal} onOpen={(event) => onOpen(deal.id, event)} />)}{column.deals.length === 0 && <div className="empty-column">Нет отказов</div>}<button className="column-add-button" type="button" onClick={onCreate}><Plus size={14} /> Сделка</button></section>;
 }
 
 function GateDialog({ gate, form, setForm, props, pending, onCancel, onSubmit }: { gate: Gate; form: GateForm; setForm: Dispatch<SetStateAction<GateForm>>; props: Props; pending: boolean; onCancel: () => void; onSubmit: () => void }) {
@@ -308,7 +315,11 @@ export function DealsBoard(props: Props) {
   const collisionDetectionStrategy = (args: Parameters<typeof pointerWithin>[0]) => args.pointerCoordinates ? pointerWithin(args) : rectIntersection(args);
   useEffect(() => { if (!feedback) return; const timer = window.setTimeout(() => setFeedback(null), 2800); return () => window.clearTimeout(timer); }, [feedback]);
   useEffect(() => { const onKey = (event: KeyboardEvent) => { if (event.key === "Escape" && !pending) { setGate(null); setMobileConfirmation(null); } }; window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey); }, [pending]);
-  const openDeal = (id: string) => { if (Date.now() - lastDragAt.current > 300) router.push(`/deals/${id}`); };
+  const openDeal = (id: string, event?: OpenEvent) => {
+    if (Date.now() - lastDragAt.current <= 300) return;
+    if (event && (event.metaKey || event.ctrlKey || event.button === 1)) { window.open(`/deals/${id}`, "_blank", "noopener"); return; }
+    router.push(`/deals/${id}`);
+  };
   const createDeal = () => window.dispatchEvent(new CustomEvent("crm:create-deal-open"));
   const activeDeal = activeId ? maps.get(activeId) : null;
   function onDragStart(event: DragStartEvent) { if (!pending) { lastDragAt.current = Date.now(); setActiveId(String(event.active.id)); setFeedback(null); } }

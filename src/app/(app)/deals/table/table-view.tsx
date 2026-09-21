@@ -293,7 +293,10 @@ export function DealsTableView(p: Props) {
                   key={row.id}
                   className={selected.has(row.id) ? styles.selectedRow : undefined}
                   tabIndex={0}
-                  onClick={() => router.push(`/deals/${row.id}`)}
+                  // Cmd-клик и клик колесом по строке — привычный способ открыть
+                  // сделку рядом, не теряя место в таблице. <tr> ссылкой не бывает.
+                  onClick={(event) => { if (event.metaKey || event.ctrlKey) { window.open(`/deals/${row.id}`, "_blank", "noopener"); return; } router.push(`/deals/${row.id}`); }}
+                  onAuxClick={(event) => { if (event.button === 1) { event.preventDefault(); window.open(`/deals/${row.id}`, "_blank", "noopener"); } }}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
