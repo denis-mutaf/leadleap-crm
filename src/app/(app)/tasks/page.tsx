@@ -155,7 +155,12 @@ export default async function TasksPage({
       ["all"],
     ),
     relationRows(
-      () => supabase.from("profiles").select("id, full_name").order("full_name"),
+      () =>
+        supabase
+          .from("profiles")
+          .select("id, full_name")
+          .eq("is_active", true)
+          .order("full_name"),
       "Фильтры ответственных",
       ["all"],
     ),
