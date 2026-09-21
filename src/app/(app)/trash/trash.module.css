@@ -1,4 +1,6 @@
 .page {
+  box-sizing: border-box;
+  max-width: 100%;
   min-height: 100vh;
   padding: 28px 32px 48px;
   background: var(--background);
@@ -33,6 +35,8 @@
   font-size: 13px;
 }
 .toolbar {
+  min-width: 0;
+  max-width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -41,7 +45,11 @@
 }
 .filters {
   display: flex;
+  flex: 1 1 auto;
   gap: 3px;
+  min-width: 0;
+  max-width: 100%;
+  width: auto;
   overflow-x: auto;
 }
 .filters a {
@@ -62,6 +70,9 @@
   white-space: nowrap;
 }
 .tableWrap {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -180,6 +191,9 @@
   .toolbar {
     align-items: flex-start;
     flex-direction: column;
+  }
+  .filters {
+    width: 100%;
   }
 }
 @media (prefers-reduced-motion: reduce) {
