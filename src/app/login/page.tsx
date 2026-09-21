@@ -39,20 +39,41 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const supabase = createClient();
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
+      const { data: signInData, error: signInError } =
+        await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
 
       if (signInError) {
         setError(humanError(signInError.message));
         return;
       }
 
-      router.push("/deals");
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role, is_active")
+        .eq("id", signInData.user.id)
+        .maybeSingle();
+
+      if (profileError || !profile) {
+        await supabase.auth.signOut();
+        setError("Не удалось проверить учётную запись. Попробуйте ещё раз.");
+        return;
+      }
+
+      if (!profile.is_active) {
+        await supabase.auth.signOut();
+        setError("Учётная запись отключена. Обратитесь к руководителю.");
+        return;
+      }
+
+      router.push(profile.role === "builder" ? "/reports" : "/deals");
       router.refresh();
     } catch {
-      setError("Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.");
+      setError(
+        "Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.",
+      );
     } finally {
       setLoading(false);
     }
