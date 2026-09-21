@@ -2,6 +2,7 @@ import { Funnel } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
+import { buildStageHueMap } from "@/lib/stage-colors";
 import { createClient } from "@/lib/supabase/server";
 import { DealsTableView, type TableDeal } from "./table-view";
 
@@ -128,7 +129,7 @@ export default async function DealsTablePage({
       .order("full_name"),
     supabase
       .from("stages")
-      .select("id, name, kind")
+      .select("id, name, kind, position")
       .eq("is_active", true)
       .order("position"),
     supabase
@@ -159,7 +160,7 @@ export default async function DealsTablePage({
   const historicalStages = missingStageIds.length
     ? await supabase
         .from("stages")
-        .select("id, name, kind")
+        .select("id, name, kind, position")
         .in("id", missingStageIds)
     : { data: [], error: null };
   for (const response of [
@@ -183,6 +184,13 @@ export default async function DealsTablePage({
       row.id,
       row,
     ]),
+  );
+  const stageHueMap = buildStageHueMap(
+    [...(stages.data ?? []), ...(historicalStages.data ?? [])].map((row) => ({
+      id: row.id,
+      kind: row.kind as "open" | "won" | "lost",
+      position: row.position ?? Number.MAX_SAFE_INTEGER,
+    })),
   );
   const tableRows: TableDeal[] = deals.map((deal) => {
     const stageRow = stageMap.get(deal.stage_id);
@@ -209,6 +217,7 @@ export default async function DealsTablePage({
       contact: contact?.full_name ?? "Без имени",
       stage: stageRow?.name ?? "Без этапа",
       stageKind: stageRow?.kind ?? "open",
+      stageHue: stageHueMap.get(deal.stage_id) ?? "grey",
       tags: (deal.deal_tags ?? [])
         .map((row) => {
           const tag = row.tag as unknown as
