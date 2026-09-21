@@ -6,6 +6,7 @@ import { AppNav, type AppNavItem } from "./app-nav";
 import { GlobalSearch } from "./global-search";
 import { NotificationsPanel } from "./notifications-panel";
 import { IncomingCallOverlay } from "./incoming-call-overlay";
+import { Toaster } from "@/components/ui/sonner";
 
 type NavEntry = AppNavItem & {
   roles: string[];
@@ -94,6 +95,7 @@ export default async function AppLayout({
         <IncomingCallOverlay role={profile.role} actorId={profile.id} />
         {children}
       </main>
+      <Toaster position="bottom-right" />
     </div>
   );
 }

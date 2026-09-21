@@ -1946,3 +1946,214 @@
   .deals-page .bulk-popover,
   .deals-page .bulk-confirm { animation: none; }
 }
+
+/* =====================================================================
+   Кит продукта: движение, скелетоны, пустые состояния, инлайн-поля.
+   Один источник для всех экранов. Правила — docs/ux-contract.md.
+   ===================================================================== */
+:root {
+  --motion-fast: 120ms;
+  --motion: 180ms;
+  --motion-slow: 260ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* ---- скелетон: форма страницы, а не крутилка ---- */
+@keyframes crm-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+.sk {
+  border-radius: var(--radius);
+  background: linear-gradient(
+    90deg,
+    var(--muted) 0%,
+    var(--accent) 50%,
+    var(--muted) 100%
+  );
+  background-size: 200% 100%;
+  animation: crm-shimmer 1.2s linear infinite;
+}
+.sk-text { height: 10px; }
+.sk-line { height: 14px; }
+.sk-chip { height: var(--h-control-sm); width: 72px; border-radius: 999px; }
+.sk-avatar { height: 20px; width: 20px; border-radius: 999px; }
+.sk-page { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.sk-header {
+  height: var(--h-header);
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 var(--px-cell);
+  border-bottom: 1px solid var(--border);
+}
+.sk-toolbar {
+  height: var(--h-toolbar);
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 var(--px-cell);
+  border-bottom: 1px solid var(--border);
+}
+.sk-row {
+  height: var(--h-row);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 var(--px-cell);
+  border-bottom: 1px solid var(--border);
+}
+.sk-board { display: flex; gap: 8px; padding: 12px; overflow: hidden; }
+.sk-col {
+  width: 268px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sk-card {
+  height: 116px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ---- пустое состояние: объяснение и действие, не белый прямоугольник ---- */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--muted-foreground);
+}
+.empty-state .empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-bottom: 2px;
+  border-radius: var(--radius);
+  background: var(--muted);
+  color: var(--muted-foreground);
+}
+.empty-state strong {
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 500;
+}
+.empty-state p { margin: 0; font-size: 13px; line-height: 18px; max-width: 360px; }
+.empty-state .empty-action { margin-top: 8px; }
+.empty-inline {
+  padding: 16px var(--px-cell);
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+.empty-column {
+  border: 1px dashed var(--input);
+  border-radius: var(--radius);
+  padding: 14px 10px;
+  text-align: center;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+
+/* ---- инлайн-поле: подпись всегда видна, пустое значение кликабельно ---- */
+.field-row {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  min-height: var(--h-control);
+  padding: 3px 0;
+}
+.field-row > span {
+  color: var(--secondary-text, var(--muted-foreground));
+  font-size: 13px;
+  line-height: 20px;
+}
+.field-value {
+  display: flex;
+  align-items: center;
+  min-height: 22px;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  padding: 0 6px;
+  margin-left: -6px;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 14px;
+  line-height: 20px;
+  text-align: left;
+  cursor: text;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    border-color var(--motion-fast) var(--ease);
+}
+.field-value:hover { background: var(--accent); }
+.field-value.is-empty { color: var(--muted-foreground); }
+.field-value:disabled { cursor: default; }
+.field-value:disabled:hover { background: transparent; }
+.field-input,
+.field-select {
+  width: 100%;
+  height: var(--h-control);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  background: var(--background);
+  padding: 0 6px;
+  margin-left: -6px;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+}
+.field-textarea {
+  width: 100%;
+  min-height: 60px;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  background: var(--background);
+  padding: 5px 6px;
+  margin-left: -6px;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 14px;
+  resize: vertical;
+  outline: none;
+}
+.field-saving { opacity: 0.6; pointer-events: none; }
+
+/* ---- движение общих поверхностей ---- */
+@keyframes crm-veil-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes crm-dialog-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes crm-panel-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+.motion-veil { animation: crm-veil-in var(--motion-fast) var(--ease); }
+.motion-dialog { animation: crm-dialog-in var(--motion) var(--ease); }
+.motion-panel { animation: crm-panel-in var(--motion-slow) var(--ease); }
+
+@media (prefers-reduced-motion: reduce) {
+  .sk,
+  .motion-veil,
+  .motion-dialog,
+  .motion-panel {
+    animation: none;
+  }
+  .field-value { transition: none; }
+}
