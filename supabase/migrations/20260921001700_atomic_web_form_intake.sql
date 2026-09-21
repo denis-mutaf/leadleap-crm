@@ -36,7 +36,7 @@ declare
   phone_tail text := right(regexp_replace(coalesce(p_phone, ''), '\D', '', 'g'), 8);
   matched_ids uuid[];
   target_contact_id uuid;
-  deal_id uuid;
+  target_deal_id uuid;
   stage_id uuid;
   source_id uuid;
   field_id uuid;
@@ -56,11 +56,11 @@ begin
   end if;
 
   if event_row.processed_at is not null then
-    select d.id into deal_id from public.deals d where d.intake_event_id = p_event_id;
-    if deal_id is null then
-      select n.deal_id into deal_id from public.notes n where n.intake_event_id = p_event_id;
+    select d.id into target_deal_id from public.deals d where d.intake_event_id = p_event_id;
+    if target_deal_id is null then
+      select n.deal_id into target_deal_id from public.notes n where n.intake_event_id = p_event_id;
     end if;
-    return jsonb_build_object('deal_id', deal_id, 'duplicate', true);
+    return jsonb_build_object('deal_id', target_deal_id, 'duplicate', true);
   end if;
 
   if normalized is null or length(phone_digits) < 8 or length(phone_digits) > 15 then
@@ -94,7 +94,7 @@ begin
     values (target_contact_id, normalized, true);
   end if;
 
-  select d.id into deal_id
+  select d.id into target_deal_id
   from public.deals d
   where d.status not in ('won', 'lost')
     and (d.contact_id = target_contact_id or exists (
@@ -105,7 +105,7 @@ begin
   limit 1
   for update;
 
-  if deal_id is null then
+  if target_deal_id is null then
     select id into stage_id from public.stages
     where is_active and kind = 'open' order by position limit 1;
     if stage_id is null then raise exception 'No active open stage'; end if;
@@ -121,22 +121,22 @@ begin
       case when nullif(btrim(p_name), '') is not null then 'Форма сайта: ' || btrim(p_name) else 'Форма сайта' end,
       coalesce(p_utm, '{}'::jsonb), p_meta_campaign_id,
       now(), p_event_id
-    ) returning id into deal_id;
+    ) returning id into target_deal_id;
   else
     insert into public.notes (deal_id, body, intake_event_id)
-    values (deal_id, coalesce(nullif(p_comment, ''), 'Обращение с формы сайта (повторное обращение)'), p_event_id);
+    values (target_deal_id, coalesce(nullif(p_comment, ''), 'Обращение с формы сайта (повторное обращение)'), p_event_id);
   end if;
 
   insert into public.deal_contacts (deal_id, contact_id, is_primary)
   select d.id, target_contact_id, d.contact_id = target_contact_id
   from public.deals d
-  where d.id = deal_id
+  where d.id = target_deal_id
   on conflict (deal_id, contact_id) do nothing;
 
-  if deal_id is not null and p_comment is not null and btrim(p_comment) <> ''
+  if target_deal_id is not null and p_comment is not null and btrim(p_comment) <> ''
      and not exists (select 1 from public.notes where intake_event_id = p_event_id) then
     insert into public.notes (deal_id, body, intake_event_id)
-    values (deal_id, p_comment, p_event_id);
+    values (target_deal_id, p_comment, p_event_id);
   end if;
 
   for field_key, field_value in select key, value from jsonb_each(coalesce(p_unknown, '{}'::jsonb)) loop
@@ -152,14 +152,14 @@ begin
       end if;
     end if;
     insert into public.custom_field_values (field_id, entity_id, value)
-    values (field_id, deal_id, field_value)
+    values (field_id, target_deal_id, field_value)
     on conflict (field_id, entity_id) do update set value = excluded.value;
   end loop;
 
   update public.inbound_events
   set processed_at = now(), error = null
   where id = p_event_id;
-  return jsonb_build_object('deal_id', deal_id, 'duplicate', false);
+  return jsonb_build_object('deal_id', target_deal_id, 'duplicate', false);
 end;
 $$;
 
