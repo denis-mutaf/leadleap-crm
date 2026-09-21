@@ -1,6 +1,7 @@
 # Контракт корзины: фактический охват и безопасные границы
 
-Статус: foundation реализован в migration 027, но не применялся. RPC корзины и UI
+Статус: foundation реализован в migration 027, а typed soft-delete/restore RPC и
+active-contact link guards — в migration 028; миграции не применялись. UI и purge
 по-прежнему не реализованы.
 
 Важно: RLS гарантирует active-only доступ только для клиентов, которые проходят
@@ -126,5 +127,8 @@ restore stage/status, expired restore, audit и отсутствие физич�
 - SQL migration 027 создана как foundation: колонки, индексы, active-only RLS и
   запрет authenticated physical DELETE/direct update delete-columns.
 - RPC и purge function не созданы.
+- Migration 028 добавляет только `soft_delete_crm_record` и `restore_crm_record`;
+  purge function намеренно не создана. Migration 028 также блокирует новые или
+  восстановленные active-связи с trashed contacts на `deals` и `deal_contacts`.
 - SQL syntax check в `BEGIN/ROLLBACK`, live writes, `supabase db push`, apply
   миграций и UI не выполнялись.
