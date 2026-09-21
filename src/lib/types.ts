@@ -24,6 +24,7 @@ export interface Stage {
   position: number;
   kind: StageKind;
   requires_qualification: boolean;
+  requires_qualification_tag: boolean;
   requires_next_step: boolean;
   is_active: boolean;
   created_at: string;
