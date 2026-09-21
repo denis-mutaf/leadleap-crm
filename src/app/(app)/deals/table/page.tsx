@@ -43,34 +43,64 @@ export default async function DealsTablePage({
   const stage = isUuid(stageParam) ? stageParam : "";
   const supabase = await createClient();
 
-  let countQuery = supabase
-    .from("deals")
-    .select("id", { count: "exact", head: true });
+  const buildCountQuery = () => {
+    let countQuery = supabase
+      .from("deals")
+      .select("id", { count: "exact", head: true });
+    if (owner) countQuery = countQuery.eq("owner_id", owner);
+    if (stage) countQuery = countQuery.eq("stage_id", stage);
+    if (query) {
+      const filter = `%${query}%`;
+      countQuery = countQuery.or(
+        `object_text.ilike.${filter},title.ilike.${filter}`,
+      );
+    }
+    return countQuery;
+  };
+  const isTransientCountError = (
+    response: { status?: number },
+    error: { code?: string },
+  ) => {
+    const status = response.status;
+    return (
+      status === 0 ||
+      status === 408 ||
+      status === 429 ||
+      (status !== undefined && status >= 500) ||
+      error.code?.startsWith("08") === true
+    );
+  };
+  let countResponse = await buildCountQuery();
+  if (
+    countResponse.error &&
+    isTransientCountError(countResponse, countResponse.error)
+  ) {
+    countResponse = await buildCountQuery();
+  }
+  if (countResponse.error) {
+    const { code, message } = countResponse.error;
+    const status = countResponse.status;
+    throw new Error(
+      `Сделки: exact count failed (status=${status ?? "unknown"}, code=${code ?? "unknown"}, message=${message || "empty"})`,
+    );
+  }
   let dataQuery = supabase
     .from("deals")
     .select(
       "id, contact_id, owner_id, stage_id, status, object_text, source_id, budget, budget_currency, updated_at",
     );
   if (owner) {
-    countQuery = countQuery.eq("owner_id", owner);
     dataQuery = dataQuery.eq("owner_id", owner);
   }
   if (stage) {
-    countQuery = countQuery.eq("stage_id", stage);
     dataQuery = dataQuery.eq("stage_id", stage);
   }
   if (query) {
-    const filter = `%${clean(query)}%`;
-    countQuery = countQuery.or(
-      `object_text.ilike.${filter},title.ilike.${filter}`,
-    );
+    const filter = `%${query}%`;
     dataQuery = dataQuery.or(
       `object_text.ilike.${filter},title.ilike.${filter}`,
     );
   }
-  const countResponse = await countQuery;
-  if (countResponse.error)
-    throw new Error(`Сделки: ${countResponse.error.message}`);
   const total = countResponse.count ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(page, pageCount - 1);
