@@ -1,16 +1,27 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Search } from "lucide-react";
+import { ArrowDownUp, Search, Users } from "lucide-react";
+import { EmptyState } from "@/components/crm/empty-state";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth";
-import "./contacts.module.css";
+import styles from "./contacts.module.css";
 
 const PAGE_SIZE = 50;
+type Sort = "name" | "created" | "activity";
+type ContactRow = {
+  id: string;
+  full_name: string;
+  created_at: string;
+  phone: string | null;
+  deal_count: number | string;
+  last_activity_at: string | null;
+  total_count: number | string;
+};
 
 export default async function ContactsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; page?: string; sort?: string }>;
 }) {
   const profile = await getCurrentProfile();
   if (!profile) return null;
@@ -18,147 +29,117 @@ export default async function ContactsPage({
 
   const params = await searchParams;
   const q = (params.q ?? "").trim().slice(0, 80);
-  const requestedPage = Math.max(
-    0,
-    Number.parseInt(params.page ?? "0", 10) || 0,
-  );
+  const requestedPage = Math.max(0, Number.parseInt(params.page ?? "0", 10) || 0);
+  const sort: Sort = params.sort === "created" || params.sort === "activity" ? params.sort : "name";
   const supabase = await createClient();
 
-  let countQuery = supabase
-    .from("contacts")
-    .select("id", { count: "exact", head: true })
-    .is("merged_into", null);
-  if (q) countQuery = countQuery.ilike("full_name", `%${escapeLike(q)}%`);
-  const { count, error: countError } = await countQuery;
-  if (countError)
-    throw new Error(`Количество контактов: ${countError.message}`);
-
-  const total = count ?? 0;
+  const response = await supabase.rpc("list_contacts_page", {
+    p_query: q || null,
+    p_sort: sort,
+    p_page: requestedPage,
+    p_page_size: PAGE_SIZE,
+  });
+  if (response.error) throw new Error(`Контакты: ${response.error.message}`);
+  const firstRows = (response.data ?? []) as unknown as ContactRow[];
+  const total = Number(firstRows[0]?.total_count ?? 0);
   const lastPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1);
   const page = Math.min(requestedPage, lastPage);
-  let rowsQuery = supabase
-    .from("contacts")
-    .select("id, full_name, created_at")
-    .is("merged_into", null)
-    .order("full_name")
-    .order("id")
-    .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
-  if (q) rowsQuery = rowsQuery.ilike("full_name", `%${escapeLike(q)}%`);
-  const { data: contacts, error: contactsError } = await rowsQuery;
-  if (contactsError) throw new Error(`Контакты: ${contactsError.message}`);
-
-  const ids = (contacts ?? []).map((contact) => contact.id);
-  const phoneMap = new Map<string, string>();
-  if (ids.length) {
-    const phones = await supabase
-      .from("contact_phones")
-      .select("contact_id, phone, is_primary")
-      .in("contact_id", ids)
-      .order("is_primary", { ascending: false });
-    if (phones.error)
-      throw new Error(`Телефоны контактов: ${phones.error.message}`);
-    for (const phone of phones.data ?? []) {
-      if (!phoneMap.has(phone.contact_id))
-        phoneMap.set(phone.contact_id, phone.phone);
-    }
-    const missingIds = ids.filter((id) => !phoneMap.has(id));
-    if (missingIds.length) {
-      const imported = await supabase
-        .from("imported_contact_phones")
-        .select("contact_id, raw_phone, ordinal")
-        .in("contact_id", missingIds)
-        .order("ordinal");
-      if (imported.error)
-        throw new Error(`Импортированные телефоны: ${imported.error.message}`);
-      for (const phone of imported.data ?? []) {
-        if (!phoneMap.has(phone.contact_id))
-          phoneMap.set(phone.contact_id, phone.raw_phone);
-      }
-    }
+  let rows = firstRows;
+  if (page !== requestedPage) {
+    const corrected = await supabase.rpc("list_contacts_page", {
+      p_query: q || null,
+      p_sort: sort,
+      p_page: page,
+      p_page_size: PAGE_SIZE,
+    });
+    if (corrected.error) throw new Error(`Контакты: ${corrected.error.message}`);
+    rows = (corrected.data ?? []) as unknown as ContactRow[];
   }
 
-  const pageHref = (nextPage: number) =>
-    `/contacts?${new URLSearchParams({ ...(q ? { q } : {}), page: String(nextPage) })}`;
+  const pageHref = (nextPage: number) => {
+    const query = new URLSearchParams();
+    if (q) query.set("q", q);
+    if (sort !== "name") query.set("sort", sort);
+    query.set("page", String(nextPage));
+    return `/contacts?${query.toString()}`;
+  };
 
   return (
-    <section className="contacts-page">
-      <header className="contacts-toolbar">
-        <div>
-          <p className="eyebrow">Клиенты</p>
-          <h1>
-            Контакты <span className="count-badge">{total}</span>
-          </h1>
+    <section className={styles.contactsPage}>
+      <header className={styles.pageHeader}>
+        <div className={styles.breadcrumbs}>
+          <span>Контакты</span>
+          <span className={styles.muted}>Клиенты и история обращений</span>
         </div>
-        <form className="contacts-search" role="search">
-          <Search size={15} />
-          <input
-            name="q"
-            defaultValue={q}
-            placeholder="Поиск по имени"
-            aria-label="Поиск по имени"
-          />
+        <span className={styles.headerCount}>{total}</span>
+      </header>
+      <div className={styles.listToolbar}>
+        <form className={styles.searchForm} role="search">
+          <Search size={15} aria-hidden="true" />
+          <input name="q" defaultValue={q} placeholder="Поиск по имени или телефону" aria-label="Поиск по имени или телефону" />
+          <input type="hidden" name="sort" value={sort} />
           <button type="submit">Найти</button>
         </form>
-      </header>
-      <div className="contacts-table" role="table">
-        <div className="contacts-row contacts-head" role="row">
+        <label className={styles.sortControl}>
+          <ArrowDownUp size={14} aria-hidden="true" />
+          <span>Сортировка</span>
+          <select name="sort" defaultValue={sort} form="contacts-sort-form" aria-label="Сортировка контактов">
+            <option value="name">По имени</option>
+            <option value="created">По дате добавления</option>
+            <option value="activity">По последней активности</option>
+          </select>
+        </label>
+        <form id="contacts-sort-form" className={styles.sortSubmit}>
+          <input type="hidden" name="q" value={q} />
+          <button type="submit">Применить</button>
+        </form>
+      </div>
+      <div className={styles.contactsTable} role="table" aria-label="Контакты">
+        <div className={`${styles.contactsRow} ${styles.contactsHead}`} role="row">
           <span>Имя</span>
           <span>Телефон</span>
+          <span>Сделок</span>
+          <span>Последняя активность</span>
           <span>Добавлен</span>
           <span />
         </div>
-        {(contacts ?? []).map((contact) => (
-          <Link
-            className="contacts-row"
-            role="row"
-            key={contact.id}
-            href={`/contacts/${contact.id}`}
-          >
-            <span className="contact-name">
-              <span className="contact-avatar">
-                {contact.full_name.slice(0, 2).toUpperCase()}
-              </span>
-              {contact.full_name}
+        {rows.map((contact) => (
+          <Link className={styles.contactsRow} role="row" key={contact.id} href={`/contacts/${contact.id}`}>
+            <span className={styles.contactName}>
+              <span className={styles.contactAvatar}>{initials(contact.full_name)}</span>
+              <span className={styles.truncate}>{contact.full_name}</span>
             </span>
-            <span>{phoneMap.get(contact.id) ?? "—"}</span>
-            <span>
-              {new Date(contact.created_at).toLocaleDateString("ru-RU", {
-                day: "numeric",
-                month: "short",
-              })}
-            </span>
-            <span className="row-arrow">→</span>
+            <span className={styles.secondaryCell}>{contact.phone ?? "—"}</span>
+            <span className={styles.dealCount}>{Number(contact.deal_count) || 0}</span>
+            <span className={styles.secondaryCell}>{formatDate(contact.last_activity_at, "Нет активности")}</span>
+            <span className={styles.secondaryCell}>{formatDate(contact.created_at)}</span>
+            <span className={styles.rowArrow} aria-hidden="true">→</span>
           </Link>
         ))}
-        {!contacts?.length && (
-          <div className="contacts-empty">Контакты не найдены</div>
+        {!rows.length && (
+          <EmptyState
+            icon={<Users size={18} />}
+            title={q ? "Ничего не найдено" : "Контактов пока нет"}
+            description={q ? `По запросу «${q}» нет контактов. Попробуйте имя или номер телефона.` : "Импортированные клиенты появятся здесь."}
+          />
         )}
       </div>
-      <nav className="contacts-pagination" aria-label="Страницы контактов">
-        <span>
-          {total
-            ? `${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, total)} из ${total}`
-            : "0 контактов"}
-        </span>
-        <span>
-          <Link
-            className={page === 0 ? "disabled" : ""}
-            href={page ? pageHref(page - 1) : pageHref(0)}
-          >
-            Назад
-          </Link>
-          <Link
-            className={page >= lastPage ? "disabled" : ""}
-            href={page < lastPage ? pageHref(page + 1) : pageHref(page)}
-          >
-            Дальше
-          </Link>
+      <nav className={styles.pagination} aria-label="Страницы контактов">
+        <span>{total ? `${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, total)} из ${total}` : "0 контактов"}</span>
+        <span className={styles.paginationLinks}>
+          <Link className={page === 0 ? styles.disabled : ""} href={page ? pageHref(page - 1) : pageHref(0)}>Назад</Link>
+          <Link className={page >= lastPage ? styles.disabled : ""} href={page < lastPage ? pageHref(page + 1) : pageHref(page)}>Дальше</Link>
         </span>
       </nav>
     </section>
   );
 }
 
-function escapeLike(value: string) {
-  return value.replace(/[\\%_,]/g, " ");
+function initials(name: string): string {
+  return name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+}
+
+function formatDate(value: string | null | undefined, empty = "—"): string {
+  if (!value) return empty;
+  return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short" }).format(new Date(value));
 }

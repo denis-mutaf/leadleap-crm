@@ -8,14 +8,16 @@ import styles from "./contacts.module.css";
 type Candidate = {
   id: string;
   fullName: string;
+  createdAt: string;
   phones: string[];
   emails: string[];
   dealCount: number;
+  source: string | null;
 };
 type Props = { current: Candidate };
 const esc = (v: string) => v.replace(/[\\%_]/g, "\\$&");
 
-async function loadCandidate(id: string, fullName: string): Promise<Candidate> {
+async function loadCandidate(id: string, fullName: string, createdAt: string, customFields: unknown): Promise<Candidate> {
   const db = createClient();
   const [phones, imported, emails, deals] = await Promise.all([
     db.from("contact_phones").select("phone").eq("contact_id", id).limit(100),
@@ -35,6 +37,7 @@ async function loadCandidate(id: string, fullName: string): Promise<Candidate> {
   return {
     id,
     fullName,
+    createdAt,
     phones: [
       ...new Set([
         ...(phones.data ?? []).map((r) => r.phone),
@@ -43,6 +46,7 @@ async function loadCandidate(id: string, fullName: string): Promise<Candidate> {
     ],
     emails: [...new Set((emails.data ?? []).map((r) => r.email))],
     dealCount: deals.count ?? 0,
+    source: findSource(customFields),
   };
 }
 
@@ -77,7 +81,7 @@ export default function ContactMergeButton({ current }: Props) {
         try {
           const response = await createClient()
             .from("contacts")
-            .select("id, full_name")
+              .select("id, full_name, created_at, amo_custom_fields")
             .ilike("full_name", `%${esc(term)}%`)
             .neq("id", current.id)
             .is("merged_into", null)
@@ -86,7 +90,7 @@ export default function ContactMergeButton({ current }: Props) {
           if (id !== requestRef.current) return;
           if (response.error) throw new Error(response.error.message);
           const rows = await Promise.all(
-            (response.data ?? []).map((r) => loadCandidate(r.id, r.full_name)),
+            (response.data ?? []).map((r) => loadCandidate(r.id, r.full_name, r.created_at, r.amo_custom_fields)),
           );
           if (id === requestRef.current) setResults(rows);
         } catch (e) {
@@ -246,10 +250,7 @@ export default function ContactMergeButton({ current }: Props) {
               </div>
             ) : (
               <>
-                <p className={styles.mergeIntro}>
-                  Оба набора номеров, сделки и история сохранятся. Действие
-                  необратимо.
-                </p>
+                <p className={styles.mergeIntro}>Сделки, звонки и переписка обеих карточек сохранятся. Выберите, какие данные останутся в объединённом контакте.</p>
                 <div className={styles.mergeColumns}>
                   {[current, other].map((c) => (
                     <label
@@ -265,26 +266,22 @@ export default function ContactMergeButton({ current }: Props) {
                           setNameSource(c.id);
                         }}
                       />
-                      <strong>{c.fullName}</strong>
-                      <span>{c.dealCount} прямых сделок</span>
-                      <small>Телефоны: {c.phones.join(", ") || "нет"}</small>
-                      <small>Email: {c.emails.join(", ") || "нет"}</small>
+                      <span className={styles.candidateHeader}>
+                        <span className={styles.contactAvatar}>{initials(c.fullName)}</span>
+                        <span><strong>{c.fullName}</strong><small>создан {formatDate(c.createdAt)} · {c.dealCount} {plural(c.dealCount, "сделка", "сделки", "сделок")}</small></span>
+                        {survivorId === c.id && <span className={styles.primaryCandidate}>Основной</span>}
+                      </span>
                     </label>
                   ))}
                 </div>
-                <fieldset className={styles.nameChoice}>
-                  <legend>Имя сохранённого контакта</legend>
-                  {[current, other].map((c) => (
-                    <label key={c.id}>
-                      <input
-                        type="radio"
-                        checked={nameSource === c.id}
-                        onChange={() => setNameSource(c.id)}
-                      />{" "}
-                      {c.fullName}
-                    </label>
-                  ))}
-                </fieldset>
+                <div className={styles.mergeRows}>
+                  <MergeRow label="Имя" left={current.fullName} right={other.fullName} selected={nameSource} leftId={current.id} rightId={other.id} onSelect={setNameSource} />
+                  <MergeRow label="Телефон" left={current.phones[0] || "—"} right={other.phones[0] || "—"} />
+                  <MergeRow label="Доп. телефон" left={current.phones[1] || "—"} right={other.phones[1] || "—"} />
+                  <MergeRow label="Почта" left={current.emails[0] || "—"} right={other.emails[0] || "—"} />
+                  <MergeRow label="Источник" left={current.source || "—"} right={other.source || "—"} />
+                </div>
+                <div className={styles.mergeTransfer}><span>Сделки, звонки, сообщения, заметки и теги переносятся целиком</span><small>{current.dealCount + other.dealCount} сделок · {current.phones.length + other.phones.length} телефонов · {current.emails.length + other.emails.length} почт</small></div>
                 <div className={styles.mergeConfirmation}>
                   <strong>Будет сохранён: {survivor?.fullName}</strong>
                   <span>
@@ -292,10 +289,7 @@ export default function ContactMergeButton({ current }: Props) {
                     отменить.
                   </span>
                 </div>
-                <p className={styles.mergeHint}>
-                  Сделки, звонки, сообщения, заметки, задачи, теги и прочая
-                  история перенесутся целиком.
-                </p>
+                <p className={styles.mergeHint}>Действие необратимо: после объединения останется одна карточка.</p>
                 {error && <p className={styles.mergeError}>{error}</p>}
                 <footer className={styles.mergeFooter}>
                   <button type="button" onClick={close} disabled={submitting}>
@@ -306,7 +300,7 @@ export default function ContactMergeButton({ current }: Props) {
                     onClick={() => void submit()}
                     disabled={submitting}
                   >
-                    {submitting ? "Объединение…" : "Подтвердить и объединить"}
+                    {submitting ? "Объединение…" : <>Объединить <span className={styles.kbd}>⏎</span></>}
                   </button>
                 </footer>
               </>
@@ -316,4 +310,75 @@ export default function ContactMergeButton({ current }: Props) {
       )}
     </>
   );
+}
+
+function MergeRow({
+  label,
+  left,
+  right,
+  selected,
+  leftId,
+  rightId,
+  onSelect,
+}: {
+  label: string;
+  left: string;
+  right: string;
+  selected?: string;
+  leftId?: string;
+  rightId?: string;
+  onSelect?: (id: string) => void;
+}) {
+  const same = left === right && left !== "—";
+  return (
+    <div className={styles.mergeRow}>
+      <span className={styles.mergeLabel}>{label}</span>
+      <label className={`${styles.mergeValue} ${same ? styles.sameValue : ""}`}>
+        {!same && onSelect && leftId && <input type="radio" name={`merge-${label}`} checked={selected === leftId} onChange={() => onSelect(leftId)} />}
+        <span>{left}</span>{same && <small>совпадает</small>}
+      </label>
+      <label className={`${styles.mergeValue} ${same ? styles.sameValue : ""}`}>
+        {!same && onSelect && rightId && <input type="radio" name={`merge-${label}`} checked={selected === rightId} onChange={() => onSelect(rightId)} />}
+        <span>{right}</span>{same && <small>совпадает</small>}
+      </label>
+    </div>
+  );
+}
+
+function initials(name: string): string {
+  return name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+}
+
+function formatDate(value: string): string {
+  return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short" }).format(new Date(value));
+}
+
+function plural(value: number, one: string, few: string, many: string): string {
+  const n = Math.abs(value) % 100;
+  if (n >= 11 && n <= 19) return many;
+  switch (n % 10) {
+    case 1: return one;
+    case 2:
+    case 3:
+    case 4: return few;
+    default: return many;
+  }
+}
+
+function findSource(value: unknown): string | null {
+  if (!Array.isArray(value)) return null;
+  const field = value.find((item) => {
+    if (!item || typeof item !== "object") return false;
+    const row = item as Record<string, unknown>;
+    return /source|источник|канал/i.test(`${row.field_name ?? ""} ${row.field_code ?? ""}`);
+  });
+  if (!field || typeof field !== "object") return null;
+  const values = (field as Record<string, unknown>).values;
+  if (!Array.isArray(values)) return null;
+  const result = values.map((item) => {
+    if (!item || typeof item !== "object") return "";
+    const row = item as Record<string, unknown>;
+    return typeof row.value === "string" || typeof row.value === "number" ? String(row.value) : String(row.enum ?? row.enum_code ?? "");
+  }).filter(Boolean).join(", ");
+  return result || null;
 }
