@@ -291,7 +291,10 @@ export function DealsTableView(p: Props) {
         db
           .from("notes")
           .select("id", { count: "exact", head: true })
-          .eq("deal_id", row.id),
+          .eq("deal_id", row.id)
+          // Карточка сделки эти заметки не показывает: счёт должен сойтись
+          // с тем, что человек увидит, открыв сделку.
+          .or("amo_note_type.is.null,amo_note_type.not.in.(call_in,call_out)"),
         db
           .from("tasks")
           .select("id", { count: "exact", head: true })

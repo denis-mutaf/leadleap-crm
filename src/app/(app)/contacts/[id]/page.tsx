@@ -78,7 +78,7 @@ export default async function ContactPage({
     ? `${ownFilter},deal_id.in.(${dealIds.join(",")})`
     : ownFilter;
   const [notes, calls] = await Promise.all([
-    db.from("notes").select("id, body, created_at, deal_id").or(feedFilter).is("deleted_at", null).order("created_at", { ascending: false }).limit(LIMIT),
+    db.from("notes").select("id, body, created_at, deal_id").or(feedFilter).is("deleted_at", null).or("amo_note_type.is.null,amo_note_type.not.in.(call_in,call_out)").order("created_at", { ascending: false }).limit(LIMIT),
     db.from("calls").select("id, direction, status, started_at, duration_sec, deal_id").or(feedFilter).order("started_at", { ascending: false }).limit(LIMIT),
   ]);
   if (notes.error || calls.error) throw new Error(`Лента контакта: ${(notes.error ?? calls.error)?.message}`);
@@ -151,7 +151,6 @@ export default async function ContactPage({
             {importedPhones.map((phone) => <ReadField key={`${phone.ordinal}-${phone.raw_phone}`} label={phone.label || `Импортированный телефон ${phone.ordinal + 1}`} value={phone.raw_phone} />)}
             <div className={styles.collectionField}><span>Почта</span><ContactEmails contactId={id} emails={emails} /></div>
             <ReadField label="Каналы" value={channelRows.data?.length ? channelRows.data.map((row) => row.handle || row.channel).join(", ") : null} />
-            {!channelRows.data?.length && <EmptyLine>Переписка появится, когда подключим WhatsApp.</EmptyLine>}
           </section>
           <section>
             <p className={styles.groupHead}>Источник</p>
@@ -163,10 +162,12 @@ export default async function ContactPage({
             <p className={styles.groupHead}><Tag size={14} /> Метки</p>
             <ContactTags contactId={id} tags={(tags.data ?? []) as Array<{ id: string; name: string }>} allTags={(allTags.data ?? []) as Array<{ id: string; name: string }>} />
           </section>
-          <section>
+          {/* Пустой раздел «Данные Amo» с единственной строкой «Поля Amo —»
+              занимал место и ничего не сообщал: у контакта их просто нет. */}
+          {customDefinitions.length > 0 && <section>
             <p className={styles.groupHead}>Данные Amo</p>
-            {customDefinitions.length ? customDefinitions.map((definition) => <EditableCustomField key={definition.id} contactId={id} definition={definition} current={customValues.get(definition.id)} />) : <ReadField label="Поля Amo" value={null} />}
-          </section>
+            {customDefinitions.map((definition) => <EditableCustomField key={definition.id} contactId={id} definition={definition} current={customValues.get(definition.id)} />)}
+          </section>}
         </aside>
         <main className={styles.recordRight}>
           <div className={styles.dealsHeader}><span>Сделки</span><span className={styles.countBadge}>{dealRows.data?.length ?? 0}</span></div>
@@ -183,7 +184,7 @@ export default async function ContactPage({
           </div>
           <div className={styles.feedHeader}><span>Лента</span><span className={styles.feedHint}>{feed.length ? countWord(feed.length, "запись", "записи", "записей") : "Примечания и звонки"}</span></div>
           <div className={styles.feed}>
-            {groupedFeed.map(([day, items]) => <div className={styles.feedGroup} key={day}><p className={styles.feedDate}>{day}</p>{items.map((item) => <div className={styles.feedRow} key={item.id}>{item.kind === "call" ? <Phone size={15} /> : <StickyNote size={15} />}<span>{item.kind === "call" ? `${item.direction === "in" ? "Входящий" : "Исходящий"} звонок${item.duration ? ` · ${Math.round(item.duration / 60)} мин` : ""}` : "Примечание"}<small>{item.body || "Без текста"} · {formatTime(item.at)}</small></span></div>)}</div>)}
+            {groupedFeed.map(([day, items]) => <div className={styles.feedGroup} key={day}><p className={styles.feedDate}>{day}</p>{items.map((item) => <div className={styles.feedRow} key={item.id}>{item.kind === "call" ? <Phone size={15} /> : <StickyNote size={15} />}<span>{item.kind === "call" ? `${item.direction === "in" ? "Входящий" : "Исходящий"} звонок${item.duration ? ` · ${Math.round(item.duration / 60)} мин` : ""}` : item.body || "Примечание без текста"}<small>{item.kind === "call" ? `${item.body || "без записи"} · ${formatTime(item.at)}` : formatTime(item.at)}</small></span></div>)}</div>)}
             {!feed.length && <EmptyLine>Записей пока нет — заметки и звонки этого контакта появятся здесь.</EmptyLine>}
           </div>
           {!conversations.data?.length && <div className={styles.channelNotice}><MessageCircle size={15} /> Переписка появится, когда подключим WhatsApp.</div>}
