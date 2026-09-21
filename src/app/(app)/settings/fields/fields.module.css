@@ -87,6 +87,28 @@
   border-bottom: 1px solid var(--border);
   padding: 4px 12px;
 }
+.fieldName {
+  min-width: 250px;
+}
+.dragHandle {
+  display: inline-flex;
+  width: 28px;
+  margin-right: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: grab;
+  font: inherit;
+  font-size: 16px;
+  touch-action: none;
+}
+.dragHandle:disabled {
+  visibility: hidden;
+  cursor: default;
+}
+.dragHandle:active {
+  cursor: grabbing;
+}
 .table th:last-child,
 .table td:last-child {
   width: 40px;
