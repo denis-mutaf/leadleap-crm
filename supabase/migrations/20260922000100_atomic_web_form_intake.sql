@@ -32,6 +32,7 @@ as $$
 declare
   event_row public.inbound_events%rowtype;
   normalized text := public.normalize_phone(p_phone);
+  phone_digits text := regexp_replace(coalesce(p_phone, ''), '\D', '', 'g');
   phone_tail text := right(regexp_replace(coalesce(p_phone, ''), '\D', '', 'g'), 8);
   matched_ids uuid[];
   target_contact_id uuid;
@@ -62,8 +63,8 @@ begin
     return jsonb_build_object('deal_id', deal_id, 'duplicate', true);
   end if;
 
-  if normalized is null then
-    raise exception 'Телефон не распознан' using errcode = '22023';
+  if normalized is null or length(phone_digits) < 8 or length(phone_digits) > 15 then
+    raise exception 'Некорректный номер телефона' using errcode = '22023';
   end if;
 
   select array_agg(distinct coalesce(c.merged_into, c.id)) into matched_ids
@@ -127,8 +128,10 @@ begin
   end if;
 
   insert into public.deal_contacts (deal_id, contact_id, is_primary)
-  values (deal_id, target_contact_id, true)
-  on conflict (deal_id, contact_id) do update set is_primary = excluded.is_primary;
+  select d.id, target_contact_id, d.contact_id = target_contact_id
+  from public.deals d
+  where d.id = deal_id
+  on conflict (deal_id, contact_id) do nothing;
 
   if deal_id is not null and p_comment is not null and btrim(p_comment) <> ''
      and not exists (select 1 from public.notes where intake_event_id = p_event_id) then
