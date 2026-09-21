@@ -134,6 +134,7 @@ export default async function DealsTablePage({
         .from("profiles")
         .select("id, full_name")
         .eq("is_active", true)
+        .in("role", ["manager", "head", "admin"])
         .order("full_name"),
       supabase
         .from("stages")
@@ -157,6 +158,20 @@ export default async function DealsTablePage({
             .order("due_at")
         : Promise.resolve({ data: [], error: null }),
     ]);
+  const [tags, lostReasons] = await Promise.all([
+    supabase
+      .from("tags")
+      .select("id, name")
+      .eq("is_active", true)
+      .order("name")
+      .limit(500),
+    supabase
+      .from("lost_reasons")
+      .select("id, name")
+      .eq("is_active", true)
+      .order("position")
+      .limit(200),
+  ]);
   const missingOwnerIds = ownerIdsOnPage.filter(
     (id) => !(owners.data ?? []).some((row) => row.id === id),
   );
@@ -184,6 +199,8 @@ export default async function DealsTablePage({
     projects,
     links,
     tasks,
+    tags,
+    lostReasons,
     historicalOwners,
     historicalStages,
   ])
@@ -235,6 +252,8 @@ export default async function DealsTablePage({
       currency: deal.budget_currency,
       task: taskByDeal.get(deal.id) ?? "",
       owner: deal.owner_id ? (ownerMap.get(deal.owner_id) ?? "—") : "",
+      ownerId: deal.owner_id,
+      stageId: deal.stage_id,
       source: deal.source_id ? (sourceMap.get(deal.source_id) ?? "—") : "",
       updated: deal.updated_at,
     };
@@ -269,8 +288,11 @@ export default async function DealsTablePage({
         query={query}
         owner={owner}
         stage={stage}
-        owners={(owners.data ?? []).concat(historicalOwners.data ?? [])}
+        owners={owners.data ?? []}
         stages={stages.data ?? []}
+        tags={tags.data ?? []}
+        lostReasons={lostReasons.data ?? []}
+        canExport={profile.role === "head" || profile.role === "admin"}
       />
     </div>
   );

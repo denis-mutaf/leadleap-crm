@@ -1,6 +1,9 @@
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight } from "lucide-react";
+"use client";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, X } from "lucide-react";
 import Link from "next/link";
-
+import { createClient } from "@/lib/supabase/client";
 export type TableDeal = {
   id: string;
   contact: string;
@@ -14,7 +17,10 @@ export type TableDeal = {
   owner: string;
   source: string;
   updated: string;
+  ownerId?: string | null;
+  stageId?: string;
 };
+type Option = { id: string; name: string };
 type Props = {
   rows: TableDeal[];
   total: number;
@@ -26,81 +32,266 @@ type Props = {
   owner: string;
   stage: string;
   owners: { id: string; full_name: string }[];
-  stages: { id: string; name: string }[];
+  stages: { id: string; name: string; kind: string }[];
+  tags: Option[];
+  lostReasons: Option[];
+  canExport: boolean;
 };
-
-function href(params: Record<string, string | number | undefined>) {
-  const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(params))
-    if (value !== undefined && value !== "") search.set(key, String(value));
-  return `/deals/table?${search}`;
+function href(p: Record<string, string | number | undefined>) {
+  const s = new URLSearchParams();
+  for (const [k, v] of Object.entries(p))
+    if (v !== undefined && v !== "") s.set(k, String(v));
+  return `/deals/table?${s}`;
 }
-function money(value: number | null, currency: string) {
-  return value === null
+function money(v: number | null, c: string) {
+  return v === null
     ? "—"
-    : `${currency === "EUR" ? "€" : currency} ${new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(value)}`;
+    : `${c === "EUR" ? "€" : c} ${new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(v)}`;
 }
-function date(value: string) {
+function date(v: string) {
   return new Intl.DateTimeFormat("ru-RU", {
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(new Date(value));
+  }).format(new Date(v));
 }
-
-export function DealsTableView(props: Props) {
-  const pages = Math.max(1, Math.ceil(props.total / props.pageSize));
-  const sortLink = (field: "updated" | "budget") =>
-    href({
-      q: props.query,
-      owner: props.owner,
-      stage: props.stage,
-      sort: field,
-      dir: props.sort === field && props.direction === "asc" ? "desc" : "asc",
+function cell(v: string) {
+  const x = /^[\s\u0000-\u001f]*[=+\-@]/.test(v) ? `'${v}` : v;
+  return `"${x.replaceAll('"', '""')}"`;
+}
+export function DealsTableView(p: Props) {
+  const router = useRouter();
+  const [sel, setSel] = useState<Set<string>>(new Set()),
+    [action, setAction] = useState<"stage" | "owner" | "tag" | null>(null),
+    [pending, setPending] = useState(false),
+    [message, setMessage] = useState<string | null>(null),
+    [failed, setFailed] = useState<string[]>([]),
+    header = useRef<HTMLInputElement>(null),
+    pendingRef = useRef(false);
+  const [choice, setChoice] = useState<{
+    kind: "stage" | "owner" | "tag";
+    value: string;
+  } | null>(null);
+  const [lostReason, setLostReason] = useState("");
+  const ids = p.rows.map((r) => r.id),
+    count = sel.size,
+    all = ids.length > 0 && ids.every((id) => sel.has(id));
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSel(new Set());
+      setAction(null);
+      setMessage(null);
+      setFailed([]);
+    }, 0);
+    return () => clearTimeout(t);
+  }, [p.page, p.query, p.owner, p.stage, p.sort, p.direction]);
+  useEffect(() => {
+    if (header.current) header.current.indeterminate = count > 0 && !all;
+  }, [count, all]);
+  useEffect(() => {
+    const f = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !pending) {
+        setAction(null);
+        setSel(new Set());
+      }
+    };
+    addEventListener("keydown", f);
+    return () => removeEventListener("keydown", f);
+  }, [pending]);
+  const toggle = (id: string) =>
+    setSel((s) => {
+      if (pendingRef.current) return s;
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
     });
-  const commonParams = {
-    q: props.query,
-    owner: props.owner,
-    stage: props.stage,
-    sort: props.sort,
-    dir: props.direction,
-  };
+  async function run(kind: "stage" | "owner" | "tag", value: string) {
+    if (!count || pendingRef.current) return;
+    const selectedRows = p.rows.filter((row) => sel.has(row.id));
+    const totalSelected = selectedRows.length;
+    pendingRef.current = true;
+    setPending(true);
+    setMessage(null);
+    const successIds = new Set<string>();
+    const failureById = new Map<string, string>();
+    try {
+      const db = createClient();
+      for (const row of selectedRows) {
+        let error: string | undefined;
+        try {
+          if (kind === "stage") {
+            const target = p.stages.find((x) => x.id === value);
+            let reason: null | string = null;
+            if (target?.kind === "lost") {
+              reason = lostReason || null;
+              if (!reason) {
+                failureById.set(row.id, `${row.contact}: причина отказа не указана`);
+                continue;
+              }
+            }
+            const r = await db.rpc("transition_crm_deal", {
+              p_deal_id: row.id,
+              p_stage_id: value,
+              p_owner_id: row.ownerId ?? null,
+              p_lost_reason_id: reason,
+              p_lost_comment: null,
+              p_qualification: null,
+              p_task_title: null,
+              p_task_due_at: null,
+              p_task_type_id: null,
+              p_task_assignee_id: null,
+            });
+            const data = r.data as unknown;
+            const confirmed =
+              typeof data === "object" &&
+              data !== null &&
+              "id" in data &&
+              "stage_id" in data &&
+              data.id === row.id &&
+              data.stage_id === value;
+            error =
+              r.error?.message ??
+              (!confirmed
+                ? "Переход не подтверждён или gate отклонил операцию"
+                : undefined);
+          } else if (kind === "owner") {
+            const r = await db
+              .from("deals")
+              .update({ owner_id: value })
+              .eq("id", row.id)
+              .select("id")
+              .maybeSingle();
+            error =
+              r.error?.message ??
+              (!r.data ? "RLS не подтвердил обновление" : undefined);
+          } else {
+            const r = await db
+              .from("deal_tags")
+              .upsert(
+                { deal_id: row.id, tag_id: value },
+                { onConflict: "deal_id,tag_id" },
+              )
+              .select("deal_id")
+              .maybeSingle();
+            error =
+              r.error?.message ??
+              (!r.data ? "RLS/trigger не подтвердили метку" : undefined);
+          }
+        } catch (cause) {
+          error = cause instanceof Error ? cause.message : "Сетевая ошибка";
+        }
+        if (error) failureById.set(row.id, `${row.contact}: ${error}`);
+        else successIds.add(row.id);
+      }
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : "Не удалось выполнить массовое действие";
+      for (const row of selectedRows) {
+        if (!successIds.has(row.id)) failureById.set(row.id, `${row.contact}: ${message}`);
+      }
+    } finally {
+      const failures = [...failureById.values()];
+      pendingRef.current = false;
+      setPending(false);
+      setFailed(failures);
+      setMessage(
+        failures.length
+          ? `Завершено с ошибками: успешно ${successIds.size} из ${totalSelected}`
+          : `Готово: ${successIds.size} сделок обновлено`,
+      );
+      setSel(new Set(failureById.keys()));
+      setAction(null);
+      setChoice(null);
+      setLostReason("");
+      router.refresh();
+    }
+  }
+  function exportCsv() {
+    if (!p.canExport || !count) return;
+    const text =
+        "\ufeff" +
+        [
+          "ID",
+          "Контакт",
+          "Этап",
+          "Объект",
+          "Сумма",
+          "Ответственный",
+          "Канал",
+          "Обновлена",
+        ].join(",") +
+        "\n" +
+        p.rows
+          .filter((r) => sel.has(r.id))
+          .map((r) =>
+            [
+              r.id,
+              r.contact,
+              r.stage,
+              r.object,
+              money(r.budget, r.currency),
+              r.owner,
+              r.source,
+              date(r.updated),
+            ]
+              .map(cell)
+              .join(","),
+          )
+          .join("\n"),
+      a = document.createElement("a");
+    a.href = URL.createObjectURL(
+      new Blob([text], { type: "text/csv;charset=utf-8" }),
+    );
+    a.download = "deals.csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+  const pages = Math.max(1, Math.ceil(p.total / p.pageSize)),
+    common = {
+      q: p.query,
+      owner: p.owner,
+      stage: p.stage,
+      sort: p.sort,
+      dir: p.direction,
+    },
+    sortLink = (f: "updated" | "budget") =>
+      href({
+        ...common,
+        sort: f,
+        dir: p.sort === f && p.direction === "asc" ? "desc" : "asc",
+      });
   return (
     <div className="deals-table-wrap">
       <form className="table-filters" method="get">
         <input
           name="q"
-          defaultValue={props.query}
+          defaultValue={p.query}
           placeholder="Название или объект"
           aria-label="Поиск названия или объекта"
         />
-        <select
-          name="owner"
-          defaultValue={props.owner}
-          aria-label="Ответственный"
-        >
+        <select name="owner" defaultValue={p.owner} aria-label="Ответственный">
           <option value="">Все ответственные</option>
-          {props.owners.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.full_name}
+          {p.owners.map((x) => (
+            <option key={x.id} value={x.id}>
+              {x.full_name}
             </option>
           ))}
         </select>
-        <select name="stage" defaultValue={props.stage} aria-label="Этап">
+        <select name="stage" defaultValue={p.stage} aria-label="Этап">
           <option value="">Все этапы</option>
-          {props.stages.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name}
+          {p.stages.map((x) => (
+            <option key={x.id} value={x.id}>
+              {x.name}
             </option>
           ))}
         </select>
         <button type="submit">Применить</button>
-        {(props.query || props.owner || props.stage) && (
+        {(p.query || p.owner || p.stage) && (
           <Link href="/deals/table">Сбросить</Link>
         )}
       </form>
-      {props.rows.length === 0 ? (
+      {p.rows.length === 0 ? (
         <div className="deals-table-empty">
           <strong>Сделки не найдены</strong>
           <span>Измените фильтры или поисковый запрос.</span>
@@ -110,87 +301,91 @@ export function DealsTableView(props: Props) {
           <table className="deals-table">
             <thead>
               <tr>
-                <th>
-                  <span>Контакт</span>
+                <th className="deals-table-select">
+                  <input
+                    ref={header}
+                    type="checkbox"
+                    checked={all}
+                    disabled={pending}
+                    onChange={() => setSel(all ? new Set() : new Set(ids))}
+                    aria-label="Выбрать все видимые сделки"
+                  />
                 </th>
-                <th>
-                  <span>Этап</span>
-                </th>
-                <th>
-                  <span>Проект</span>
-                </th>
-                <th>
-                  <span>Объект</span>
-                </th>
-                <th className="deals-table-money">
-                  <Link href={sortLink("budget")}>
-                    Деньги{" "}
-                    {props.sort === "budget" &&
-                      (props.direction === "asc" ? (
-                        <ArrowUp size={12} />
-                      ) : (
-                        <ArrowDown size={12} />
-                      ))}
-                  </Link>
-                </th>
-                <th>
-                  <span>Следующий шаг</span>
-                </th>
-                <th>
-                  <span>Ответственный</span>
-                </th>
-                <th>
-                  <span>Канал</span>
-                </th>
-                <th>
-                  <Link href={sortLink("updated")}>
-                    Обновлена{" "}
-                    {props.sort === "updated" &&
-                      (props.direction === "asc" ? (
-                        <ArrowUp size={12} />
-                      ) : (
-                        <ArrowDown size={12} />
-                      ))}
-                  </Link>
-                </th>
+                {[
+                  ["Контакт", null],
+                  ["Этап", null],
+                  ["Проект", null],
+                  ["Объект", null],
+                  ["Деньги", "budget"],
+                  ["Следующий шаг", null],
+                  ["Ответственный", null],
+                  ["Канал", null],
+                  ["Обновлена", "updated"],
+                ].map(([label, field]) => (
+                  <th key={label}>
+                    {field ? (
+                      <Link href={sortLink(field as "updated" | "budget")}>
+                        {label}{" "}
+                        {p.sort === field &&
+                          (p.direction === "asc" ? (
+                            <ArrowUp size={12} />
+                          ) : (
+                            <ArrowDown size={12} />
+                          ))}
+                      </Link>
+                    ) : (
+                      <span>{label}</span>
+                    )}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
-              {props.rows.map((row) => (
-                <tr key={row.id}>
+              {p.rows.map((r) => (
+                <tr
+                  key={r.id}
+                  className={sel.has(r.id) ? "is-selected" : undefined}
+                >
+                  <td className="deals-table-select">
+                  <input
+                    type="checkbox"
+                    checked={sel.has(r.id)}
+                    disabled={pending}
+                      onChange={() => toggle(r.id)}
+                      aria-label={`Выбрать сделку ${r.contact}`}
+                    />
+                  </td>
                   <td>
                     <Link
                       className="deal-table-contact"
-                      href={`/deals/${row.id}`}
+                      href={`/deals/${r.id}`}
                     >
-                      {row.contact}
+                      {r.contact}
                     </Link>
                   </td>
                   <td>
-                    <span
-                      className={`deals-table-stage-dot ${row.stageKind}`}
-                    />
-                    {row.stage}
+                    <span className={`deals-table-stage-dot ${r.stageKind}`} />
+                    {r.stage}
                   </td>
                   <td>
                     <div className="deals-table-projects">
-                      {row.projects.length
-                        ? row.projects.map((project) => (
-                            <span className="deals-table-chip" key={project}>
-                              {project}
+                      {r.projects.length
+                        ? r.projects.map((x) => (
+                            <span className="deals-table-chip" key={x}>
+                              {x}
                             </span>
                           ))
                         : "—"}
                     </div>
                   </td>
-                  <td className="deals-table-truncate">{row.object || "—"}</td>
+                  <td className="deals-table-truncate">{r.object || "—"}</td>
                   <td className="deals-table-money">
-                    {money(row.budget, row.currency)}
+                    {money(r.budget, r.currency)}
                   </td>
-                  <td>{row.task || "Нет следующего шага"}</td>
-                  <td>{row.owner || "—"}</td>
-                  <td>{row.source || "—"}</td>
-                  <td className="deals-table-muted">{date(row.updated)}</td>
+                  <td>{r.task || "Нет следующего шага"}</td>
+                  <td>{r.owner || "—"}</td>
+                  <td>{r.source || "—"}</td>
+                  <td className="deals-table-muted">{date(r.updated)}</td>
                 </tr>
               ))}
             </tbody>
@@ -199,23 +394,163 @@ export function DealsTableView(props: Props) {
       )}
       <nav className="table-pagination" aria-label="Пагинация">
         <span>
-          Страница {props.page + 1} из {pages} · найдено {props.total}
+          Страница {p.page + 1} из {pages} · найдено {p.total}
         </span>
         <span>
-          {props.page > 0 && (
-            <Link href={href({ ...commonParams, page: props.page - 1 })}>
+          {p.page > 0 && (
+            <Link href={href({ ...common, page: p.page - 1 })}>
               <ChevronLeft size={16} />
               Назад
             </Link>
           )}
-          {props.page + 1 < pages && (
-            <Link href={href({ ...commonParams, page: props.page + 1 })}>
+          {p.page + 1 < pages && (
+            <Link href={href({ ...common, page: p.page + 1 })}>
               Вперёд
               <ChevronRight size={16} />
             </Link>
           )}
         </span>
       </nav>
+      {message && (
+        <div role="status" className="bulk-message">
+          {message}
+          {failed.length > 0 && (
+            <ul>
+              {failed.map((x) => (
+                <li key={x}>{x}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+      {count > 0 && (
+        <div
+          className="bulk-actions"
+          role="toolbar"
+          aria-label="Массовые действия"
+        >
+          <strong>Выбрано {count}</strong>
+          <button disabled={pending} onClick={() => setAction("stage")}>
+            Этап
+          </button>
+          <button disabled={pending} onClick={() => setAction("owner")}>
+            Ответственный
+          </button>
+          <button disabled={pending} onClick={() => setAction("tag")}>
+            Метка
+          </button>
+          {p.canExport && (
+            <button disabled={pending} onClick={exportCsv}>
+              Выгрузить
+            </button>
+          )}
+          <button
+            aria-label="Снять выделение"
+            disabled={pending}
+            onClick={() => setSel(new Set())}
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+      {action && (
+        <div
+          className="bulk-popover"
+          role="dialog"
+          aria-label="Выбор массового действия"
+        >
+          <button
+            className="bulk-close"
+            onClick={() => setAction(null)}
+            aria-label="Закрыть"
+          >
+            ×
+          </button>
+          <select
+            autoFocus
+            defaultValue=""
+            onChange={(e) => {
+              if (e.target.value)
+                setChoice({ kind: action, value: e.target.value });
+            }}
+          >
+            <option value="">Выберите…</option>
+            {(action === "stage"
+              ? p.stages
+              : action === "owner"
+                ? p.owners.map((x) => ({ id: x.id, name: x.full_name }))
+                : p.tags
+            ).map((x) => (
+              <option key={x.id} value={x.id}>
+                {x.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      {choice && (
+        <div className="bulk-confirm-backdrop" role="presentation">
+          <div
+            className="bulk-confirm"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="bulk-confirm-title"
+          >
+            <h2 id="bulk-confirm-title">Подтвердить массовое действие</h2>
+            <p>
+              {choice.kind === "stage"
+                ? "Сменить этап"
+                : choice.kind === "owner"
+                  ? "Назначить ответственного"
+                  : "Добавить метку"}{" "}
+              для {count} выбранных сделок?
+            </p>
+            {choice.kind === "stage" &&
+              p.stages.find((stage) => stage.id === choice.value)?.kind ===
+                "lost" && (
+                <label>
+                  Причина отказа
+                  <select
+                    value={lostReason}
+                    onChange={(event) => setLostReason(event.target.value)}
+                    autoFocus
+                  >
+                    <option value="">Выберите причину…</option>
+                    {p.lostReasons.map((reason) => (
+                      <option key={reason.id} value={reason.id}>
+                        {reason.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+            <div className="bulk-confirm-actions">
+              <button
+                type="button"
+                onClick={() => {
+                  setChoice(null);
+                  setLostReason("");
+                }}
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                disabled={
+                  pending ||
+                  (choice.kind === "stage" &&
+                    p.stages.find((stage) => stage.id === choice.value)
+                      ?.kind === "lost" &&
+                    !lostReason)
+                }
+                onClick={() => void run(choice.kind, choice.value)}
+              >
+                Подтвердить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
