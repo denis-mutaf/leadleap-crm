@@ -71,17 +71,34 @@ export default async function DealsTablePage({
     );
   };
   let countResponse = await buildCountQuery();
-  if (
-    countResponse.error &&
-    isTransientCountError(countResponse, countResponse.error)
-  ) {
+  for (let attempt = 1; countResponse.error && attempt < 3; attempt += 1) {
+    if (!isTransientCountError(countResponse, countResponse.error)) break;
+    await new Promise((resolve) =>
+      setTimeout(resolve, attempt === 1 ? 100 : 250),
+    );
     countResponse = await buildCountQuery();
   }
   if (countResponse.error) {
-    const { code, message } = countResponse.error;
-    const status = countResponse.status;
-    throw new Error(
-      `Сделки: exact count failed (status=${status ?? "unknown"}, code=${code ?? "unknown"}, message=${message || "empty"})`,
+    const retryParams = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      const item = Array.isArray(value) ? value[0] : value;
+      if (item) retryParams.set(key, item);
+    }
+    return (
+      <div className="deals-page">
+        <header className="page-header">
+          <Funnel size={16} />
+          <span>Сделки</span>
+        </header>
+        <div className="deals-table-empty" role="alert">
+          <strong>Список сделок временно недоступен</strong>
+          <span>
+            Не удалось получить точное количество сделок. Данные не заменены
+            пустым списком.
+          </span>
+          <Link href={`/deals/table?${retryParams}`}>Повторить</Link>
+        </div>
+      </div>
     );
   }
   let dataQuery = supabase
