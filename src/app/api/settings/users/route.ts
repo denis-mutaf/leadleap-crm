@@ -84,7 +84,7 @@ export async function PATCH(request: Request) {
     .single();
   if (error || !updated)
     return NextResponse.json(
-      { error: error?.message ?? "Изменение не подтверждено" },
+      { error: "Изменение не подтверждено" },
       { status: 500 },
     );
   return NextResponse.json({ user: updated });
@@ -107,7 +107,7 @@ export async function POST(request: Request) {
   });
   if (error || !data.user)
     return NextResponse.json(
-      { error: error?.message ?? "Приглашение не отправлено" },
+      { error: "Приглашение не отправлено" },
       { status: 502 },
     );
   return NextResponse.json({ invited: true }, { status: 201 });
