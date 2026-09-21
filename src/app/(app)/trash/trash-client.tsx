@@ -4,6 +4,7 @@ import { AlertCircle, ArchiveRestore } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import styles from "./trash.module.css";
+import { countWord } from "@/lib/plural";
 export type TrashRow = {
   entity: "deals" | "contacts" | "notes" | "tasks";
   id: string;
@@ -142,7 +143,7 @@ export default function TrashClient({
             </Link>
           ))}
         </nav>
-        <div className={styles.toolbarActions}><span className={styles.count}>{total} записей</span><button className={styles.clearButton} onClick={() => setClearOpen(true)}>Очистить корзину</button></div>
+        <div className={styles.toolbarActions}><span className={styles.count}>{countWord(total, "запись", "записи", "записей")}</span><button className={styles.clearButton} onClick={() => setClearOpen(true)} disabled={total === 0}>Очистить корзину</button></div>
       </div>
       {error && (
         <p className={styles.error} role="alert">
@@ -191,6 +192,14 @@ export default function TrashClient({
                 </tr>
               );
             })}
+            {items.length === 0 && (
+              <tr className={styles.emptyRow}>
+                <td colSpan={6}>
+                  Корзина пуста. Удалённые сделки, контакты, примечания и задачи
+                  лежат здесь тридцать дней — их можно вернуть.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

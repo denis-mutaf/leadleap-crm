@@ -51,7 +51,10 @@
 .subhead h1 { margin: 0; font-size: 14px; font-weight: 600; }
 .subhead p { margin: 0; color: var(--muted-foreground); font-size: 13px; line-height: 18px; }
 .placeholderBody { max-width: 680px; padding: 40px 24px; }
-.futureList { margin: 20px 0 0; padding: 12px 16px 12px 32px; border: 1px solid var(--border); border-radius: var(--radius); color: var(--muted-foreground); font-size: 13px; line-height: 26px; }
+.futureList { margin: 20px 0 0; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius); }
+.futureList p { margin: 0 0 8px; color: var(--secondary-text); font-size: 12px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; }
+.futureList ul { margin: 0; padding: 0 0 0 18px; color: var(--muted-foreground); font-size: 13px; line-height: 24px; }
+.futureList li { list-style: disc; }
 .note { margin-top: 12px; padding: 10px 12px; display: flex; gap: 8px; align-items: flex-start; border-radius: var(--radius); background: var(--muted); color: var(--muted-foreground); font-size: 13px; line-height: 18px; }
 .note p { margin: 0; }
 .addRow { width: 100%; height: var(--h-control); margin-top: 12px; border: 1px dashed var(--input); border-radius: var(--radius); background: transparent; color: var(--foreground); font: inherit; cursor: pointer; }

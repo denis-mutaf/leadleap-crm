@@ -2,7 +2,22 @@ import type { ReactNode } from "react";
 import { EmptyState } from "@/components/crm/empty-state";
 import styles from "./settings.module.css";
 
-export function SettingsPlaceholder({ title, description, icon }: { title: string; description: string; icon: ReactNode }) {
+// Три раздела показывали одну и ту же заглушку про мессенджеры, включая
+// «Рабочие часы», которые к мессенджерам отношения не имеют. Каждый раздел
+// говорит своё: чего именно тут ещё нет и от чего это зависит.
+export function SettingsPlaceholder({
+  title,
+  description,
+  icon,
+  waitingFor,
+  items,
+}: {
+  title: string;
+  description: string;
+  icon: ReactNode;
+  waitingFor: string;
+  items: string[];
+}) {
   return (
     <section className={styles.placeholder}>
       <header className={styles.subhead}>
@@ -12,16 +27,13 @@ export function SettingsPlaceholder({ title, description, icon }: { title: strin
         </div>
       </header>
       <div className={styles.placeholderBody}>
-        <EmptyState
-          icon={icon}
-          title="Появится, когда подключим телефонию и мессенджеры"
-          description="Раздел пока не подключён к внешним каналам. Здесь появятся настройки, когда интеграции будут готовы."
-        />
-        <ul className={styles.futureList}>
-          <li>Подключение и отключение источников обращений</li>
-          <li>Правила распределения входящих обращений</li>
-          <li>Рабочие сценарии и уведомления по событиям</li>
-        </ul>
+        <EmptyState icon={icon} title={waitingFor} description="Раздел ещё не собран. Здесь появятся настройки, когда дойдёт очередь." />
+        <div className={styles.futureList}>
+          <p>Что здесь появится</p>
+          <ul>
+            {items.map((item) => <li key={item}>{item}</li>)}
+          </ul>
+        </div>
       </div>
     </section>
   );

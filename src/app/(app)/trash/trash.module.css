@@ -255,10 +255,13 @@
 .filters a { height: var(--h-control); box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 8px; }
 .toolbarActions { display: flex; align-items: center; gap: 16px; }
 .clearButton { border: 0; background: transparent; color: var(--muted-foreground); font: inherit; font-size: 13px; cursor: pointer; }
-.clearButton:hover { color: var(--foreground); }
+.clearButton:hover:not(:disabled) { color: var(--foreground); }
+.clearButton:disabled { opacity: 0.45; cursor: default; }
 .tableWrap { border: 0; border-radius: 0; }
 .table th { height: var(--h-row-header); }
 .table td { height: var(--h-row); padding: 0 var(--px-cell); }
 .restore { height: var(--h-control-sm); padding: 0 8px; }
 .consequences { margin: 12px 0; padding-left: 24px; color: var(--muted-foreground); font-size: 13px; line-height: 26px; }
 .clearNotice { padding: 10px 12px; border-radius: var(--radius); background: var(--muted); }
+
+.emptyRow td { height: 120px; color: var(--muted-foreground); text-align: center; vertical-align: middle; }

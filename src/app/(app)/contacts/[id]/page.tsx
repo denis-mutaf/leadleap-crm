@@ -16,6 +16,7 @@ import ContactDeleteButton from "../contact-delete-button";
 import ContactMergeButton from "../contact-merge-button";
 import { ContactEmails, ContactPhones, ContactTags, EditableCustomField } from "../contact-editors";
 import styles from "../contacts.module.css";
+import { countWord } from "@/lib/plural";
 
 const LIMIT = 50;
 type AmoField = {
@@ -180,7 +181,7 @@ export default async function ContactPage({
             ))}
             {!dealRows.data?.length && <EmptyState title="Сделок пока нет" description="Создайте сделку, чтобы вести переговоры и этапы клиента." action={<Link className={styles.primaryButton} href="/deals">Новая сделка</Link>} />}
           </div>
-          <div className={styles.feedHeader}><span>Лента</span><span className={styles.feedHint}>{feed.length ? `${feed.length} записей` : "Примечания и звонки"}</span></div>
+          <div className={styles.feedHeader}><span>Лента</span><span className={styles.feedHint}>{feed.length ? countWord(feed.length, "запись", "записи", "записей") : "Примечания и звонки"}</span></div>
           <div className={styles.feed}>
             {groupedFeed.map(([day, items]) => <div className={styles.feedGroup} key={day}><p className={styles.feedDate}>{day}</p>{items.map((item) => <div className={styles.feedRow} key={item.id}>{item.kind === "call" ? <Phone size={15} /> : <StickyNote size={15} />}<span>{item.kind === "call" ? `${item.direction === "in" ? "Входящий" : "Исходящий"} звонок${item.duration ? ` · ${Math.round(item.duration / 60)} мин` : ""}` : "Примечание"}<small>{item.body || "Без текста"} · {formatTime(item.at)}</small></span></div>)}</div>)}
             {!feed.length && <EmptyLine>Записей пока нет — заметки и звонки этого контакта появятся здесь.</EmptyLine>}
