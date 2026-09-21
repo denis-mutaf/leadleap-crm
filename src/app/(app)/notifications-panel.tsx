@@ -12,6 +12,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import styles from "./notifications-panel.module.css";
@@ -80,6 +81,7 @@ export function NotificationsPanel({ role }: { role: string }) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const requestRef = useRef(0);
   const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();
   const refreshCount = useCallback(async () => {
     if (role === "builder") return;
     const result = await supabase
@@ -198,6 +200,7 @@ export function NotificationsPanel({ role }: { role: string }) {
       );
     }
     setPending(null);
+    return !result.error;
   };
   const markAll = async () => {
     setPending("all");
@@ -280,6 +283,7 @@ export function NotificationsPanel({ role }: { role: string }) {
           <div className={styles.tabs} role="tablist">
             <button
               role="tab"
+              aria-selected={filter === "all"}
               aria-current={filter === "all" ? "page" : undefined}
               className={`${styles.tab} ${filter === "all" ? styles.tabActive : ""}`}
               onClick={() => {
@@ -292,6 +296,7 @@ export function NotificationsPanel({ role }: { role: string }) {
             </button>
             <button
               role="tab"
+              aria-selected={filter === "unread"}
               aria-current={filter === "unread" ? "page" : undefined}
               className={`${styles.tab} ${filter === "unread" ? styles.tabActive : ""}`}
               onClick={() => {
@@ -339,8 +344,22 @@ export function NotificationsPanel({ role }: { role: string }) {
                           }
                           key={item.id}
                           className={styles.linkRow}
-                          onClick={() => {
-                            if (!item.read_at) void markRead(item.id);
+                          onClick={(event) => {
+                            if (!item.read_at) {
+                              event.preventDefault();
+                              void markRead(item.id).then((success) => {
+                                if (success) {
+                                  setOpen(false);
+                                  router.push(
+                                    item.deal_id
+                                      ? `/deals/${item.deal_id}`
+                                      : `/contacts/${item.contact_id}`,
+                                  );
+                                }
+                              });
+                            } else {
+                              setOpen(false);
+                            }
                           }}
                         >
                           {row(item, action)}
