@@ -146,10 +146,32 @@ async function findContactByPhone(
       throw new Error(`Contact merge cycle detected at ${currentId}`);
     }
   }
+  // Один номер может висеть на двух карточках (в импорте таких пар две).
+  // Ронять звонок из-за этого нельзя: выбираем детерминированно — сначала
+  // того, у кого есть открытая сделка, при равенстве — заведённого раньше.
+  let contactId = [...resolvedIds][0];
   if (resolvedIds.size > 1) {
-    throw new Error(`Ambiguous phone match: ${resolvedIds.size} contacts`);
+    const ranked: { id: string; openDeals: number; createdAt: string }[] = [];
+    for (const id of resolvedIds) {
+      const { data: row, error } = await db
+        .from("contacts")
+        .select("id, created_at")
+        .eq("id", id)
+        .single();
+      if (error) throw new Error(`contact rank lookup failed: ${error.message}`);
+      const deals = await openDeals(db, id);
+      ranked.push({
+        id,
+        openDeals: deals.length,
+        createdAt: (row.created_at as string) ?? "",
+      });
+    }
+    ranked.sort(
+      (a, b) =>
+        b.openDeals - a.openDeals || a.createdAt.localeCompare(b.createdAt),
+    );
+    contactId = ranked[0].id;
   }
-  const contactId = [...resolvedIds][0];
   if (!contactId) return null;
   const { data: contact, error: contactError } = await db
     .from("contacts")
