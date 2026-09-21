@@ -82,7 +82,10 @@ export default async function AppLayout({
           <SignOutButton />
         </div>
       </aside>
-      <main className="main-shell"><NotificationsPanel role={profile.role} />{children}</main>
+      <main className="main-shell">
+        <NotificationsPanel role={profile.role} />
+        {children}
+      </main>
     </div>
   );
 }
