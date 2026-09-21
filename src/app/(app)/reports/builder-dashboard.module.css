@@ -281,6 +281,17 @@
   .metric {
     padding: 8px;
   }
+  .metricLabel {
+    align-items: flex-start;
+    min-height: 36px;
+    overflow: visible;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .metricLabel .mutedIcon {
+    flex: 0 0 auto;
+    margin-top: 2px;
+  }
   .metricValue {
     font-size: 16px;
   }
