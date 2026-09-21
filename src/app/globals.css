@@ -114,6 +114,48 @@
   --h-control: 28px; /* кнопка, селект, поле ввода */
   --h-control-sm: 26px; /* чип-фильтр */
   --px-cell: 12px; /* боковой отступ ячейки */
+
+  /* ===== Поверхности Attio. Замер с канбана 21.09.2026
+     (design/screens/_kit.css, research/attio-product-shots/).
+     #f8f9fa — пустой слот колонки: он же подложка под карточками. ===== */
+  --surface-track: #f8f9fa; /* дорожка колонки канбана, пустой слот */
+  --surface-select: #ebf0fd; /* колонка под перенос, выбранная карточка-опция */
+
+  --radius-card: 8px; /* карточка канбана круглее контролов (замер) */
+
+  /* Мягкая лестница Attio: чёрный 1–7%, расходится, не темнеет. */
+  --shadow-card: 0 1px 2px -1px rgba(0, 0, 0, 0.06), 0 1px 1px rgba(0, 0, 0, 0.03);
+  --shadow-card-hover: 0 4px 10px -3px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+  --shadow-overlay: 0 8px 16px -4px rgba(0, 0, 0, 0.04), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+  --shadow-drag: 0 12px 24px -6px rgba(0, 0, 0, 0.07), 0 4px 8px -2px rgba(0, 0, 0, 0.03);
+
+  /* Палитра значений статуса. Attio красит каждое значение своим тоном:
+     точка — dot, чип — пара «фон + текст». Замер с recruiting-list.
+     У magenta пары bg/tx в замере нет — только dot; фолбэк там, где нужно. */
+  --hue-blue-dot: #3b6ce8; --hue-blue-bg: #e7eefe; --hue-blue-tx: #315abd;
+  --hue-cyan-dot: #53b6e6; --hue-cyan-bg: #e2f6fe; --hue-cyan-tx: #2f6b84;
+  --hue-green-dot: #5fce86; --hue-green-bg: #e6fbee; --hue-green-tx: #367b56;
+  --hue-olive-dot: #c5b33c; --hue-olive-bg: #f6fbd0; --hue-olive-tx: #56631a;
+  --hue-amber-dot: #e97d35; --hue-amber-bg: #fdf4d0; --hue-amber-tx: #7f5019;
+  --hue-red-dot: #ec615b; --hue-red-bg: #fcecec; --hue-red-tx: #ab342d;
+  --hue-pink-dot: #e0518f; --hue-pink-bg: #fbedf3; --hue-pink-tx: #a92e5d;
+  --hue-violet-dot: #946bf7; --hue-violet-bg: #f4f0fe; --hue-violet-tx: #5c3aaf;
+  --hue-magenta-dot: #cb56e4;
+  --hue-grey-dot: #999999; --hue-grey-bg: #f8f9fa; --hue-grey-tx: #505154;
+}
+
+/* Этап как связка «точка + название» (кит, _kit.css .st).
+   Внутри сплошного предложения не применять — там этап живёт словом, без точки. */
+.st {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.tr {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Тёмная тема Attio не снята — в справке кадры только светлые.
