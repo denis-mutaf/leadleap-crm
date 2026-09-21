@@ -134,6 +134,9 @@ export default async function SettingsPage() {
       <Link className={styles.usersLink} href="/settings/fields">
         Поля карточки <span aria-hidden="true">→</span>
       </Link>
+      <Link className={styles.usersLink} href="/settings/dictionaries">
+        Справочники <span aria-hidden="true">→</span>
+      </Link>
     </div>
   );
 }
