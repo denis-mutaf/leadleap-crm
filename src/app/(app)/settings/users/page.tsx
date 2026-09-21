@@ -97,6 +97,9 @@ export default async function UsersPage() {
 
   return (
     <UsersClient
+      key={rows
+        .map((row) => `${row.id}:${row.role}:${row.is_active}`)
+        .join("|")}
       currentUserId={current.id}
       canEdit={current.role === "admin"}
       rows={rows}
