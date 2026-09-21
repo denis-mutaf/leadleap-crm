@@ -21,53 +21,50 @@ type DictionaryRow = {
   position?: number;
   kind?: string;
 };
-type Filter = {
-  column: "status" | "stage_id" | "source_id" | "lost_reason_id";
-  operator: "eq" | "in" | "is";
-  value: string | string[] | null;
-};
 type CountRow = DictionaryRow & { count: number };
+type ReportSnapshot = {
+  total: number;
+  open: number;
+  won: number;
+  lost: number;
+  stage_counts: Record<string, number>;
+  source_counts: Record<string, number>;
+  reason_counts: Record<string, number>;
+  source_without_value: number;
+  reason_without_value: number;
+};
 
-async function countDeals(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  filters?: Filter | Filter[],
-) {
-  let query = supabase
-    .from("deals")
-    .select("id", { count: "exact", head: true });
-  for (const filter of filters
-    ? Array.isArray(filters)
-      ? filters
-      : [filters]
-    : []) {
-    if (filter.operator === "eq")
-      query = query.eq(filter.column, filter.value as string);
-    if (filter.operator === "in")
-      query = query.in(filter.column, filter.value as string[]);
-    if (filter.operator === "is") query = query.is(filter.column, null);
-  }
-  const result = await query;
-  if (result.error) throw new Error(`Сделки: ${result.error.message}`);
-  return result.count ?? 0;
+function isNumberRecord(value: unknown): value is Record<string, number> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    Object.values(value).every(
+      (item) => typeof item === "number" && Number.isInteger(item) && item >= 0,
+    )
+  );
 }
 
-async function mapWithLimit<T, R>(
-  items: T[],
-  limit: number,
-  task: (item: T) => Promise<R>,
-) {
-  const result: R[] = [];
-  let next = 0;
-  async function worker() {
-    while (next < items.length) {
-      const index = next++;
-      result[index] = await task(items[index]);
-    }
-  }
-  await Promise.all(
-    Array.from({ length: Math.min(limit, items.length) }, worker),
+function isReportSnapshot(value: unknown): value is ReportSnapshot {
+  if (typeof value !== "object" || value === null) return false;
+  const record = value as Record<string, unknown>;
+  return (
+    [
+      "total",
+      "open",
+      "won",
+      "lost",
+      "source_without_value",
+      "reason_without_value",
+    ].every(
+      (key) =>
+        typeof record[key] === "number" &&
+        Number.isInteger(record[key]) &&
+        (record[key] as number) >= 0,
+    ) &&
+    isNumberRecord(record.stage_counts) &&
+    isNumberRecord(record.source_counts) &&
+    isNumberRecord(record.reason_counts)
   );
-  return result;
 }
 
 function percent(value: number, denominator: number) {
@@ -125,74 +122,82 @@ export default async function ReportsPage({
   const openStages = stages.filter((stage) => stage.kind === "open");
   const sources = (sourcesResult.data ?? []) as DictionaryRow[];
   const reasons = (reasonsResult.data ?? []) as DictionaryRow[];
-  const openFilter: Filter = {
-    column: "status",
-    operator: "in",
-    value: ["open", "postponed"],
-  };
-  const [total, open, won, lost] = await Promise.all([
-    countDeals(supabase),
-    countDeals(supabase, openFilter),
-    countDeals(supabase, { column: "status", operator: "eq", value: "won" }),
-    countDeals(supabase, { column: "status", operator: "eq", value: "lost" }),
-  ]);
-  const [
-    stageCounts,
-    sourceCounts,
-    reasonCounts,
-    sourceWithoutValue,
-    reasonWithoutValue,
-  ] = await Promise.all([
-    mapWithLimit(openStages, 4, async (stage) => ({
-      ...stage,
-      count: await countDeals(supabase, [
-        { column: "stage_id", operator: "eq", value: stage.id },
-        openFilter,
-      ]),
-    })),
-    mapWithLimit(sources, 4, async (source) => ({
-      ...source,
-      count: await countDeals(supabase, {
-        column: "source_id",
-        operator: "eq",
-        value: source.id,
-      }),
-    })),
-    mapWithLimit(reasons, 4, async (reason) => ({
-      ...reason,
-      count: await countDeals(supabase, [
-        { column: "lost_reason_id", operator: "eq", value: reason.id },
-        { column: "status", operator: "eq", value: "lost" },
-      ]),
-    })),
-    countDeals(supabase, { column: "source_id", operator: "is", value: null }),
-    countDeals(supabase, [
-      { column: "lost_reason_id", operator: "is", value: null },
-      { column: "status", operator: "eq", value: "lost" },
-    ]),
-  ]);
+  const snapshotResult = await supabase.rpc("crm_report_snapshot");
+  if (snapshotResult.error || !isReportSnapshot(snapshotResult.data)) {
+    return (
+      <div className="reports-page">
+        <header className="reports-header">
+          <div>
+            <p className="reports-eyebrow">Сводка отдела</p>
+            <h1>Отчёты</h1>
+          </div>
+        </header>
+        <section className="reports-access">
+          <Info size={20} />
+          <div>
+            <strong>Сводка временно недоступна</strong>
+            <p>
+              Не удалось получить согласованный снимок данных. Проверьте
+              соединение и повторите попытку.
+            </p>
+            <a href="/reports">Повторить</a>
+          </div>
+        </section>
+      </div>
+    );
+  }
+  const snapshot = snapshotResult.data;
+  const {
+    total,
+    open,
+    won,
+    lost,
+    stage_counts,
+    source_counts,
+    reason_counts,
+    source_without_value,
+    reason_without_value,
+  } = snapshot;
+  const stageCounts = openStages.map((stage) => ({
+    ...stage,
+    count: stage_counts[stage.id] ?? 0,
+  }));
+  const sourceCounts = sources.map((source) => ({
+    ...source,
+    count: source_counts[source.id] ?? 0,
+  }));
+  const reasonCounts = reasons.map((reason) => ({
+    ...reason,
+    count: reason_counts[reason.id] ?? 0,
+  }));
   const stageTotal = stageCounts.reduce((sum, stage) => sum + stage.count, 0);
   const reasonTotal = reasonCounts.reduce(
     (sum, reason) => sum + reason.count,
     0,
   );
   const stageResidual = open - stageTotal;
-  const reasonResidual = lost - reasonTotal - reasonWithoutValue;
+  const reasonResidual = lost - reasonTotal - reason_without_value;
   const maxStageCount = Math.max(1, ...stageCounts.map((stage) => stage.count));
   const sourceRows: CountRow[] = [
     ...sourceCounts,
-    ...(sourceWithoutValue
-      ? [{ id: "no-source", name: "Без источника", count: sourceWithoutValue }]
+    ...(source_without_value
+      ? [
+          {
+            id: "no-source",
+            name: "Без источника",
+            count: source_without_value,
+          },
+        ]
       : []),
   ].filter((row) => row.count > 0);
   const reasonRows: CountRow[] = [
     ...reasonCounts,
-    ...(reasonWithoutValue
+    ...(reason_without_value
       ? [
           {
             id: "no-reason",
             name: "Без причины отказа",
-            count: reasonWithoutValue,
+            count: reason_without_value,
           },
         ]
       : []),
