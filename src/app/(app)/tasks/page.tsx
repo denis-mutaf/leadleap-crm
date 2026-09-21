@@ -143,16 +143,29 @@ export default async function TasksPage({
   if (countResult.error)
     throw new Error(`Количество задач: ${countResult.error.message}`);
   const totalCount = countResult.count ?? 0;
-  const [overdueResult, todayResult, tomorrowResult] = await Promise.all([
-    countOpen().lt("due_at", dayStart(today)),
-    countOpen().gte("due_at", dayStart(today)).lt("due_at", dayStart(tomorrow)),
-    countOpen()
-      .gte("due_at", dayStart(tomorrow))
-      .lt("due_at", dayStart(addDays(tomorrow, 1))),
-  ]);
-  for (const result of [overdueResult, todayResult, tomorrowResult]) {
+  const [overdueResult, todayResult, tomorrowResult, openResult] =
+    await Promise.all([
+      countOpen().lt("due_at", dayStart(today)),
+      countOpen()
+        .gte("due_at", dayStart(today))
+        .lt("due_at", dayStart(tomorrow)),
+      countOpen()
+        .gte("due_at", dayStart(tomorrow))
+        .lt("due_at", dayStart(addDays(tomorrow, 1))),
+      countOpen(),
+    ]);
+  for (const result of [
+    overdueResult,
+    todayResult,
+    tomorrowResult,
+    openResult,
+  ]) {
     if (result.error) throw new Error(`Счётчики задач: ${result.error.message}`);
   }
+  const overdueTotal = overdueResult.count ?? 0;
+  const todayTotal = todayResult.count ?? 0;
+  const tomorrowTotal = tomorrowResult.count ?? 0;
+  const openTotal = openResult.count ?? 0;
   const totalPages = Math.ceil(totalCount / pageSize);
   const safePage = totalPages > 0 ? Math.min(page, totalPages) : 1;
   const from = (safePage - 1) * pageSize;
@@ -273,31 +286,43 @@ export default async function TasksPage({
     if (date === tomorrow) return "tomorrow";
     return "later";
   };
+  // Заголовок группы печатал длину загруженной страницы: на экране стояло
+  // «Просрочено 100» под шапкой «Просрочено 118». Одно и то же слово с двумя
+  // числами читается как ошибка. Группа знает свой настоящий размер и говорит
+  // «100 из 118», когда страница его не вмещает.
   const groups = [
     {
       key: "overdue",
       label: "Просрочено",
       tone: "danger",
+      total: overdueTotal,
       tasks: viewTasks.filter((task) => groupForTask(task) === "overdue"),
     },
     {
       key: "today",
       label: "Сегодня",
+      total: todayTotal,
       tasks: viewTasks.filter((task) => groupForTask(task) === "today"),
     },
     {
       key: "tomorrow",
       label: "Завтра",
+      total: tomorrowTotal,
       tasks: viewTasks.filter((task) => groupForTask(task) === "tomorrow"),
     },
     {
       key: "later",
       label: "Позже",
+      total: Math.max(
+        0,
+        openTotal - overdueTotal - todayTotal - tomorrowTotal,
+      ),
       tasks: viewTasks.filter((task) => groupForTask(task) === "later"),
     },
     {
       key: "done",
       label: "Выполненные",
+      total: Math.max(0, totalCount - openTotal),
       tasks: viewTasks.filter((task) => groupForTask(task) === "done"),
     },
   ].filter((group) => group.tasks.length);
@@ -354,15 +379,15 @@ export default async function TasksPage({
         <span className="header-spacer" />
         <span className="task-counter danger">
           <i />
-          Просрочено {overdueResult.count ?? 0}
+          Просрочено {overdueTotal}
         </span>
         <span className="task-counter blue">
           <i />
-          Сегодня {todayResult.count ?? 0}
+          Сегодня {todayTotal}
         </span>
         <span className="task-counter">
           <i />
-          Завтра {tomorrowResult.count ?? 0}
+          Завтра {tomorrowTotal}
         </span>
       </form>
       <main className="task-list">
@@ -372,7 +397,11 @@ export default async function TasksPage({
               className={`task-group-header ${group.tone === "danger" ? "is-danger" : ""}`}
             >
               <span>{group.label}</span>
-              <b>{group.tasks.length}</b>
+              <b>
+                {group.total > group.tasks.length
+                  ? `${group.tasks.length} из ${group.total}`
+                  : group.tasks.length}
+              </b>
             </div>
             {group.tasks.map((task) => <TaskRow key={task.id} task={task} actorId={profile.id} />)}
           </section>
