@@ -9,7 +9,7 @@ import {
   LayoutDashboard,
   Settings,
 } from "lucide-react";
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 
 export type AppNavItem = {
@@ -42,6 +42,37 @@ function isActivePath(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function NavLinkContent({
+  Icon,
+  label,
+}: {
+  Icon: typeof LayoutDashboard;
+  label: string;
+}) {
+  const { pending } = useLinkStatus();
+
+  return (
+    <>
+      <Icon size={16} />
+      {label}
+      {pending && (
+        <span
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            insetInlineStart: 8,
+            insetInlineEnd: 8,
+            bottom: 0,
+            height: 2,
+            borderRadius: "var(--radius)",
+            background: "var(--primary)",
+          }}
+        />
+      )}
+    </>
+  );
+}
+
 export function AppNav({ items }: { items: AppNavItem[] }) {
   const pathname = usePathname();
 
@@ -56,9 +87,9 @@ export function AppNav({ items }: { items: AppNavItem[] }) {
             href={href}
             key={href}
             aria-current={active ? "page" : undefined}
+            style={{ position: "relative" }}
           >
-            <Icon size={16} />
-            {label}
+            <NavLinkContent Icon={Icon} label={label} />
           </Link>
         );
       })}
