@@ -48,11 +48,12 @@ const dateKey = (value: string) =>
   }).format(new Date(value));
 const dayName = (value: string) => {
   const now = new Date();
-  const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
+  const todayKey = dateKey(now.toISOString());
+  const yesterdayDate = new Date(`${todayKey}T00:00:00Z`);
+  yesterdayDate.setUTCDate(yesterdayDate.getUTCDate() - 1);
   const key = dateKey(value);
-  if (key === dateKey(now.toISOString())) return "Сегодня";
-  if (key === dateKey(yesterday.toISOString())) return "Вчера";
+  if (key === todayKey) return "Сегодня";
+  if (key === dateKey(yesterdayDate.toISOString())) return "Вчера";
   return new Intl.DateTimeFormat("ru-RU", {
     timeZone: zone,
     day: "numeric",
@@ -79,10 +80,18 @@ export function NotificationsPanel({ role }: { role: string }) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const requestRef = useRef(0);
   const supabase = useMemo(() => createClient(), []);
+  const refreshCount = useCallback(async () => {
+    if (role === "builder") return;
+    const result = await supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .is("read_at", null);
+    if (!result.error) setUnread(result.count ?? 0);
+  }, [role, supabase]);
   const load = useCallback(
-    async (reset: boolean) => {
+    async (offset: number) => {
+      if (role === "builder") return;
       const request = ++requestRef.current;
-      const offset = reset ? 0 : items.length;
       setLoading(true);
       setError(null);
       const countQuery =
@@ -112,7 +121,7 @@ export function NotificationsPanel({ role }: { role: string }) {
       setTotal(nextTotal);
       setUnread(unreadResult.count ?? 0);
       if (offset >= nextTotal) {
-        if (reset) setItems([]);
+        if (offset === 0) setItems([]);
         setLoading(false);
         return;
       }
@@ -127,18 +136,23 @@ export function NotificationsPanel({ role }: { role: string }) {
       if (result.error) setError("Не удалось загрузить уведомления");
       else
         setItems((current) =>
-          reset
-            ? (result.data as Notification[])
-            : [...current, ...(result.data as Notification[])],
+          offset === 0
+            ? ((result.data ?? []) as Notification[])
+            : [...current, ...((result.data ?? []) as Notification[])],
         );
       setLoading(false);
     },
-    [filter, items.length, supabase],
+    [filter, role, supabase],
   );
   useEffect(() => {
-    const timer = window.setTimeout(() => void load(true), 0);
+    const timer = window.setTimeout(() => void refreshCount(), 0);
     return () => window.clearTimeout(timer);
-  }, [filter, load]);
+  }, [refreshCount]);
+  useEffect(() => {
+    if (!open) return;
+    const timer = window.setTimeout(() => void load(0), 0);
+    return () => window.clearTimeout(timer);
+  }, [filter, load, open]);
   useEffect(() => {
     if (!open) return;
     const close = () => {
@@ -172,11 +186,16 @@ export function NotificationsPanel({ role }: { role: string }) {
     if (result.error) setError("Не удалось отметить уведомление");
     else {
       setItems((current) =>
-        current.map((item) =>
-          item.id === id ? { ...item, read_at: result.data.read_at } : item,
-        ),
+        filter === "unread"
+          ? current.filter((item) => item.id !== id)
+          : current.map((item) =>
+              item.id === id ? { ...item, read_at: result.data.read_at } : item,
+            ),
       );
       setUnread((current) => Math.max(0, current - 1));
+      setTotal((current) =>
+        filter === "unread" ? Math.max(0, current - 1) : current,
+      );
     }
     setPending(null);
   };
@@ -191,9 +210,15 @@ export function NotificationsPanel({ role }: { role: string }) {
     if (result.error) setError("Не удалось отметить уведомления");
     else {
       setItems((current) =>
-        current.map((item) => ({ ...item, read_at: item.read_at ?? readAt })),
+        filter === "unread"
+          ? []
+          : current.map((item) => ({
+              ...item,
+              read_at: item.read_at ?? readAt,
+            })),
       );
       setUnread(0);
+      if (filter === "unread") setTotal(0);
     }
     setPending(null);
   };
@@ -332,7 +357,7 @@ export function NotificationsPanel({ role }: { role: string }) {
               <button
                 className={styles.quiet}
                 disabled={loading || pending !== null}
-                onClick={() => void load(false)}
+                onClick={() => void load(items.length)}
               >
                 {loading ? "Загрузка…" : "Показать ещё"}
               </button>
