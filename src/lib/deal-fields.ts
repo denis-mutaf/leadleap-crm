@@ -33,6 +33,35 @@ export const attributionKeys = [
 
 export type Attribution = Record<(typeof attributionKeys)[number], string | null>;
 
+const normalizedAliases: Record<string, string[]> = {
+  rooms: ["rooms", "roomcount", "roomswanted", "комнат", "комнатность", "количествокомнат", "сколькокомнат", "хочуколичествокомнат"],
+  floor: ["floor", "этаж", "desiredfloor", "хочуэтаж"],
+  area_m2: ["area", "aream2", "sqm", "площадь", "хочуплощадь"],
+  payment: ["payment", "paymentmethod", "способоплаты"],
+  construction_stage: ["constructionstage", "этапстроительства"],
+};
+
+function normalizeFieldName(value: string): string {
+  return value.toLowerCase().replaceAll("ё", "е").replace(/[^a-zа-я0-9]+/g, "");
+}
+
+export function canonicalFieldKey(key: string, label = ""): string | null {
+  const source = `${normalizeFieldName(key)} ${normalizeFieldName(label)}`;
+  for (const [canonical, aliases] of Object.entries(normalizedAliases)) {
+    if (aliases.some((alias) => source.includes(alias))) return canonical;
+  }
+  return null;
+}
+
+export function isAttributionField(key: string, label = ""): boolean {
+  const source = `${normalizeFieldName(key)} ${normalizeFieldName(label)}`;
+  return attributionKeys.some((attributionKey) =>
+    [attributionKey, attributionKey.toLowerCase(), ...(attributionAliases[attributionKey] ?? [])]
+      .map(normalizeFieldName)
+      .some((alias) => source.includes(alias)),
+  );
+}
+
 const attributionAliases: Record<(typeof attributionKeys)[number], string[]> = {
   utm_source: ["utm_source", "source"],
   utm_medium: ["utm_medium", "medium"],

@@ -15,12 +15,12 @@
 .avatar { width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; flex: none; border-radius: 50%; background: var(--primary); color: var(--primary-foreground, var(--foreground)); font-size: 11px; font-weight: 600; }
 .fieldRow, .relationRow { display: flex; align-items: center; min-height: var(--h-control, 28px); gap: 8px; padding: 1px 0; font-size: 13px; }
 .fieldRow > span:first-child, .relationRow > span:first-child { flex: 0 0 132px; color: var(--secondary-text, var(--muted-foreground)); }
-.fieldValue, .relationValue { min-width: 0; flex: 1; overflow-wrap: anywhere; padding: 3px 4px; border: 0; border-radius: var(--radius); background: transparent; color: var(--foreground); text-align: right; font: inherit; cursor: pointer; }
+.fieldValue, .relationValue { min-width: 0; flex: 1; overflow-wrap: anywhere; padding: 3px 4px; border: 0; border-radius: var(--radius); background: transparent; color: var(--foreground); text-align: left; font: inherit; cursor: pointer; }
 .fieldValue:hover, .relationValue:hover, .fieldValue:focus-visible, .relationValue:focus-visible { background: var(--accent); }
 .isEmpty { color: var(--muted-foreground); }
 .fieldControl { min-width: 0; flex: 1; height: var(--h-control, 28px); padding: 0 6px; border: 1px solid var(--input); border-radius: var(--radius); background: var(--background); color: var(--foreground); font: inherit; }
 .fieldSaving { opacity: .65; }
-.relationValue { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+.relationValue { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 4px; }
 .chip { display: inline-flex; align-items: center; min-height: var(--h-control-sm, 26px); padding: 0 7px; border-radius: var(--radius); background: var(--muted); color: var(--foreground); font-size: 12px; }
 .multiSelect { width: 100%; min-height: 60px; border: 1px solid var(--input); border-radius: var(--radius); background: var(--background); color: var(--foreground); font: inherit; }
 .sourceToggle { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 0; border: 0; background: transparent; color: var(--secondary-text, var(--muted-foreground)); font: inherit; font-size: 13px; cursor: pointer; }
@@ -68,7 +68,7 @@
 :global(.record-page) .main { min-height: 0; }
 :global(.record-page) :global(.field-row) { display: flex; align-items: center; min-height: var(--h-control, 28px); gap: 8px; padding: 1px 0; font-size: 13px; }
 :global(.record-page) :global(.field-row) > span:first-child { flex: 0 0 132px; color: var(--secondary-text, var(--muted-foreground)); }
-:global(.record-page) :global(.field-value) { min-width: 0; flex: 1; overflow-wrap: anywhere; padding: 3px 4px; border: 0; border-radius: var(--radius); background: transparent; color: var(--foreground); text-align: right; font: inherit; cursor: pointer; }
+:global(.record-page) :global(.field-value) { min-width: 0; flex: 1; overflow-wrap: anywhere; padding: 3px 4px; border: 0; border-radius: var(--radius); background: transparent; color: var(--foreground); text-align: left; font: inherit; cursor: pointer; }
 :global(.record-page) :global(.field-value:hover), :global(.record-page) :global(.field-value:focus-visible) { background: var(--accent); }
 :global(.record-page) :global(.field-value.is-empty) { color: var(--muted-foreground); }
 :global(.record-page) :global(.field-input), :global(.record-page) :global(.field-select), :global(.record-page) :global(.field-textarea) { min-width: 0; flex: 1; border: 1px solid var(--input); border-radius: var(--radius); background: var(--background); color: var(--foreground); font: inherit; }
