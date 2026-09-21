@@ -22,5 +22,9 @@ export async function getCurrentProfile(): Promise<Profile | null> {
     return null;
   }
 
+  if (!(data as Profile).is_active) {
+    return null;
+  }
+
   return data as Profile;
 }
