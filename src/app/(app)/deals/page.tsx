@@ -248,7 +248,7 @@ export default async function DealsPage({
       .select("id, code, name")
       .eq("is_active", true)
       .order("position"),
-    supabase.from("tags").select("id, name").order("name"),
+    supabase.from("tags").select("id, name").eq("is_active", true).order("name"),
     supabase
       .from("profiles")
       .select("id, full_name")
