@@ -137,40 +137,43 @@ export default async function TasksPage({
   // Счётчики в шапке считает база, а не загруженная страница. Иначе при
   // сотне задач на странице «Просрочено 100» — это размер страницы, а
   // «Сегодня 0» — просто «сегодняшние не попали в первую сотню».
-  const dayStart = (date: string) => new Date(`${date}T00:00:00`).toISOString();
-  const countOpen = () =>
-    applyFilters(
-      supabase.from("tasks").select("id", { count: "exact", head: true }),
-    ).is("done_at", null);
-  const countResult = await applyFilters(
-    supabase.from("tasks").select("id", { count: "exact", head: true }),
-  );
-  if (countResult.error)
-    throw new Error(`Количество задач: ${countResult.error.message}`);
-  const totalCount = countResult.count ?? 0;
-  const [overdueResult, todayResult, tomorrowResult, openResult] =
-    await Promise.all([
-      countOpen().lt("due_at", dayStart(today)),
-      countOpen()
-        .gte("due_at", dayStart(today))
-        .lt("due_at", dayStart(tomorrow)),
-      countOpen()
-        .gte("due_at", dayStart(tomorrow))
-        .lt("due_at", dayStart(addDays(tomorrow, 1))),
-      countOpen(),
-    ]);
-  for (const result of [
-    overdueResult,
-    todayResult,
-    tomorrowResult,
-    openResult,
-  ]) {
-    if (result.error) throw new Error(`Счётчики задач: ${result.error.message}`);
-  }
-  const overdueTotal = overdueResult.count ?? 0;
-  const todayTotal = todayResult.count ?? 0;
-  const tomorrowTotal = tomorrowResult.count ?? 0;
-  const openTotal = openResult.count ?? 0;
+  // Экран собирался восемью последовательными походами в базу — около трёх
+  // секунд, из которых сама база тратит миллисекунды, остальное дорога.
+  // Запросы, которые ничего друг от друга не ждут, идут одной волной:
+  // счётчики и словари фильтров не зависят ни от чего.
+  const [countersResult, allTypes, allPeople] = await Promise.all([
+    supabase.rpc("crm_task_counters", {
+      p_assignee: assignee === "all" ? null : assignee,
+      p_type: typeId || null,
+      p_from: fromDate ? `${fromDate}T00:00:00.000Z` : null,
+      p_to: toDate ? `${addDays(toDate, 1)}T00:00:00.000Z` : null,
+      p_query: query || null,
+    }),
+    relationRows(
+      () => supabase.from("task_types").select("id, name, code").order("name"),
+      "Фильтры типов задач",
+      ["all"],
+    ),
+    relationRows(
+      () => supabase.from("profiles").select("id, full_name").order("full_name"),
+      "Фильтры ответственных",
+      ["all"],
+    ),
+  ]);
+  if (countersResult.error)
+    throw new Error(`Счётчики задач: ${countersResult.error.message}`);
+  const counters = countersResult.data as Record<string, number> | null;
+  const counterValue = (key: string) => {
+    const value = counters?.[key];
+    if (typeof value !== "number" || !Number.isInteger(value) || value < 0)
+      throw new Error(`Счётчики задач: не пришло число «${key}»`);
+    return value;
+  };
+  const totalCount = counterValue("total");
+  const overdueTotal = counterValue("overdue");
+  const todayTotal = counterValue("today");
+  const tomorrowTotal = counterValue("tomorrow");
+  const openTotal = counterValue("open");
   const totalPages = Math.ceil(totalCount / pageSize);
   const safePage = totalPages > 0 ? Math.min(page, totalPages) : 1;
   const from = (safePage - 1) * pageSize;
@@ -220,32 +223,24 @@ export default async function TasksPage({
       profileIds,
     ),
   ]);
-  const allTypes = await relationRows(
-    () => supabase.from("task_types").select("id, name, code").order("name"),
-    "Фильтры типов задач",
-    ["all"],
-  );
-  const allPeople = await relationRows(
-    () => supabase.from("profiles").select("id, full_name").order("full_name"),
-    "Фильтры ответственных",
-    ["all"],
-  );
   const dealContactIds = unique(deals.map((deal) => deal.contact_id));
-  const fallbackContacts = await relationRows(
-    () =>
-      supabase
-        .from("contacts")
-        .select("id, full_name")
-        .in("id", dealContactIds),
-    "Контакты сделок",
-    dealContactIds,
-  );
   const stageIds = unique(deals.map((deal) => deal.stage_id));
-  const stages = await relationRows(
-    () => supabase.from("stages").select("id, name").in("id", stageIds),
-    "Этапы",
-    stageIds,
-  );
+  const [fallbackContacts, stages] = await Promise.all([
+    relationRows(
+      () =>
+        supabase
+          .from("contacts")
+          .select("id, full_name")
+          .in("id", dealContactIds),
+      "Контакты сделок",
+      dealContactIds,
+    ),
+    relationRows(
+      () => supabase.from("stages").select("id, name").in("id", stageIds),
+      "Этапы",
+      stageIds,
+    ),
+  ]);
   const typeMap = new Map(types.map((item) => [item.id, item]));
   const contactMap = new Map(
     [...contacts, ...fallbackContacts].map((item) => [
