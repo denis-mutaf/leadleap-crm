@@ -131,6 +131,9 @@ export default async function SettingsPage() {
       <Link className={styles.usersLink} href="/settings/users">
         Управление пользователями и ролями <span aria-hidden="true">→</span>
       </Link>
+      <Link className={styles.usersLink} href="/settings/fields">
+        Поля карточки <span aria-hidden="true">→</span>
+      </Link>
     </div>
   );
 }
