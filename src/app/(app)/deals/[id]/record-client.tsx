@@ -1,7 +1,14 @@
 "use client";
 
-import { Check, Clock3, FileText, Phone, Plus, X } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { Check, Clock3, FileText, Phone, Plus, Trash2, X } from "lucide-react";
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -54,6 +61,7 @@ type FeedEntry =
   | { type: "notes"; date: string; item: Note }
   | { type: "tasks"; date: string; item: Task }
   | { type: "stages"; date: string; item: Transition };
+type DeleteTarget = { entity: "notes" | "tasks"; id: string; label: string };
 export type DealRecordData = {
   deal: Record<string, unknown> & {
     id: string;
@@ -175,6 +183,10 @@ export function DealRecordClient({ data }: { data: DealRecordData }) {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [completionTask, setCompletionTask] = useState<Task | null>(null);
   const [completionResult, setCompletionResult] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const deleteInFlight = useRef(false);
+  const deleteDialogRef = useRef<HTMLFormElement>(null);
+  const deleteTriggerRef = useRef<HTMLButtonElement | null>(null);
   const people = useMemo(
     () => new Map(data.people.map((person) => [person.id, person])),
     [data.people],
@@ -217,14 +229,53 @@ export function DealRecordClient({ data }: { data: DealRecordData }) {
     tab !== "all" ? shownCounts[tab as keyof typeof shownCounts] : 0;
   const activeTotal =
     tab !== "all" ? data.feedCounts[tab as keyof typeof data.feedCounts] : 0;
+  const closeDeleteModal = useCallback(() => {
+    if (saving) return;
+    setDeleteTarget(null);
+    window.setTimeout(() => deleteTriggerRef.current?.focus(), 0);
+  }, [saving]);
   useEffect(() => {
-    if (!completionTask) return;
+    if (!completionTask && !deleteTarget) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !saving) setCompletionTask(null);
+      if (event.key === "Escape" && !saving) {
+        setCompletionTask(null);
+        closeDeleteModal();
+      }
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [completionTask, saving]);
+  }, [completionTask, deleteTarget, saving, closeDeleteModal]);
+  useEffect(() => {
+    if (!deleteTarget) return;
+    const dialog = deleteDialogRef.current;
+    if (!dialog) return;
+    const focusable = () =>
+      Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          "button:not(:disabled), [href], input:not(:disabled), textarea:not(:disabled)",
+        ),
+      );
+    const first = focusable()[0];
+    first?.focus();
+    const trapFocus = (event: KeyboardEvent) => {
+      if (event.key !== "Tab") return;
+      const elements = focusable();
+      if (elements.length === 0) return;
+      const current = document.activeElement;
+      const index = elements.indexOf(current as HTMLElement);
+      const next = event.shiftKey
+        ? index <= 0
+          ? elements.length - 1
+          : index - 1
+        : index === elements.length - 1
+          ? 0
+          : index + 1;
+      event.preventDefault();
+      elements[next].focus();
+    };
+    document.addEventListener("keydown", trapFocus);
+    return () => document.removeEventListener("keydown", trapFocus);
+  }, [deleteTarget]);
   function showError(error: { message: string } | null) {
     if (error) setFeedback(error.message);
   }
@@ -295,6 +346,30 @@ export function DealRecordClient({ data }: { data: DealRecordData }) {
       setCompletionResult("");
       setFeedback("Задача выполнена");
       router.refresh();
+    }
+  }
+  async function softDelete(event: FormEvent) {
+    event.preventDefault();
+    if (!deleteTarget || saving || deleteInFlight.current) return;
+    deleteInFlight.current = true;
+    setSaving(true);
+    try {
+      const result = await createClient().rpc("soft_delete_crm_record", {
+        p_entity: deleteTarget.entity,
+        p_id: deleteTarget.id,
+      });
+      if (result.error) {
+        setFeedback("Не удалось удалить запись. Попробуйте ещё раз.");
+      } else {
+        setDeleteTarget(null);
+        setFeedback("Запись удалена");
+        router.refresh();
+      }
+    } catch {
+      setFeedback("Не удалось удалить запись. Попробуйте ещё раз.");
+    } finally {
+      deleteInFlight.current = false;
+      setSaving(false);
     }
   }
   return (
@@ -475,40 +550,76 @@ export function DealRecordClient({ data }: { data: DealRecordData }) {
                 )}
                 {entry.type === "notes" && (
                   <FeedItem icon={<FileText size={15} />}>
-                    <p>{entry.item.body}</p>
-                    <small>
-                      {people.get(entry.item.author_id ?? "")?.full_name ??
-                        "Сотрудник"}
-                    </small>
+                    <div className="record-feed-content">
+                      <p>{entry.item.body}</p>
+                      <small>
+                        {people.get(entry.item.author_id ?? "")?.full_name ??
+                          "Сотрудник"}
+                      </small>
+                      <button
+                        className="record-delete-action"
+                        type="button"
+                        onClick={(event) => {
+                          deleteTriggerRef.current = event.currentTarget;
+                          setDeleteTarget({
+                            entity: "notes",
+                            id: entry.item.id,
+                            label: entry.item.body,
+                          });
+                        }}
+                        disabled={saving}
+                        aria-label="Удалить примечание"
+                      >
+                        <Trash2 size={14} /> Удалить
+                      </button>
+                    </div>
                   </FeedItem>
                 )}
                 {entry.type === "tasks" && (
                   <FeedItem icon={<Check size={15} />}>
-                    <button
-                      className={`record-task ${entry.item.done_at ? "done" : ""}`}
-                      onClick={() => {
-                        if (!entry.item.done_at) {
-                          setCompletionTask(entry.item);
-                          setCompletionResult("");
-                        }
-                      }}
-                      disabled={Boolean(entry.item.done_at) || saving}
-                    >
-                      <span className="record-check">
-                        {entry.item.done_at ? <Check size={12} /> : null}
-                      </span>
-                      <span>{entry.item.title}</span>
-                      <small>
-                        {entry.item.done_at
-                          ? "Выполнена"
-                          : fmtDate(entry.item.due_at)}
-                      </small>
-                    </button>
-                    {entry.item.done_at && entry.item.result_text && (
-                      <div className="record-task-result">
-                        “{entry.item.result_text}”
-                      </div>
-                    )}
+                    <div className="record-feed-content">
+                      <button
+                        className={`record-task ${entry.item.done_at ? "done" : ""}`}
+                        onClick={() => {
+                          if (!entry.item.done_at) {
+                            setCompletionTask(entry.item);
+                            setCompletionResult("");
+                          }
+                        }}
+                        disabled={Boolean(entry.item.done_at) || saving}
+                      >
+                        <span className="record-check">
+                          {entry.item.done_at ? <Check size={12} /> : null}
+                        </span>
+                        <span>{entry.item.title}</span>
+                        <small>
+                          {entry.item.done_at
+                            ? "Выполнена"
+                            : fmtDate(entry.item.due_at)}
+                        </small>
+                      </button>
+                      {entry.item.done_at && entry.item.result_text && (
+                        <div className="record-task-result">
+                          “{entry.item.result_text}”
+                        </div>
+                      )}
+                      <button
+                        className="record-delete-action"
+                        type="button"
+                        onClick={(event) => {
+                          deleteTriggerRef.current = event.currentTarget;
+                          setDeleteTarget({
+                            entity: "tasks",
+                            id: entry.item.id,
+                            label: entry.item.title,
+                          });
+                        }}
+                        disabled={saving}
+                        aria-label="Удалить задачу"
+                      >
+                        <Trash2 size={14} /> Удалить
+                      </button>
+                    </div>
                   </FeedItem>
                 )}
                 {entry.type === "stages" && (
@@ -584,6 +695,55 @@ export function DealRecordClient({ data }: { data: DealRecordData }) {
                 disabled={saving || !completionResult.trim()}
               >
                 {saving ? "Сохраняем…" : "Выполнить задачу"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+      {deleteTarget && (
+        <div
+          className="record-modal-backdrop"
+          role="presentation"
+          onMouseDown={closeDeleteModal}
+        >
+          <form
+            ref={deleteDialogRef}
+            className="record-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-title"
+            onSubmit={softDelete}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="record-modal-head">
+              <h2 id="delete-title">Удалить запись?</h2>
+              <button
+                type="button"
+                className="record-modal-close"
+                onClick={closeDeleteModal}
+                aria-label="Закрыть"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <p className="record-modal-task">
+              «{deleteTarget.label}» будет перемещено в корзину.
+            </p>
+            <div className="record-modal-actions">
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={closeDeleteModal}
+                disabled={saving}
+              >
+                Отмена <span className="record-kbd">Esc</span>
+              </button>
+              <button
+                type="submit"
+                className="btn record-danger"
+                disabled={saving}
+              >
+                {saving ? "Удаляем…" : "Удалить"}
               </button>
             </div>
           </form>
