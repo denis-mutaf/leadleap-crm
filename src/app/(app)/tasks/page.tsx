@@ -127,12 +127,32 @@ export default async function TasksPage({
     }
     return next;
   };
+  const today = localDate(new Date());
+  const tomorrow = addDays(today, 1);
+  // Счётчики в шапке считает база, а не загруженная страница. Иначе при
+  // сотне задач на странице «Просрочено 100» — это размер страницы, а
+  // «Сегодня 0» — просто «сегодняшние не попали в первую сотню».
+  const dayStart = (date: string) => new Date(`${date}T00:00:00`).toISOString();
+  const countOpen = () =>
+    applyFilters(
+      supabase.from("tasks").select("id", { count: "exact", head: true }),
+    ).is("done_at", null);
   const countResult = await applyFilters(
     supabase.from("tasks").select("id", { count: "exact", head: true }),
   );
   if (countResult.error)
     throw new Error(`Количество задач: ${countResult.error.message}`);
   const totalCount = countResult.count ?? 0;
+  const [overdueResult, todayResult, tomorrowResult] = await Promise.all([
+    countOpen().lt("due_at", dayStart(today)),
+    countOpen().gte("due_at", dayStart(today)).lt("due_at", dayStart(tomorrow)),
+    countOpen()
+      .gte("due_at", dayStart(tomorrow))
+      .lt("due_at", dayStart(addDays(tomorrow, 1))),
+  ]);
+  for (const result of [overdueResult, todayResult, tomorrowResult]) {
+    if (result.error) throw new Error(`Счётчики задач: ${result.error.message}`);
+  }
   const totalPages = Math.ceil(totalCount / pageSize);
   const safePage = totalPages > 0 ? Math.min(page, totalPages) : 1;
   const from = (safePage - 1) * pageSize;
@@ -222,8 +242,6 @@ export default async function TasksPage({
   const peopleMap = new Map(
     people.map((item) => [item.id, item.full_name ?? profile.full_name]),
   );
-  const today = localDate(new Date());
-  const tomorrow = addDays(today, 1);
   const viewTasks: ViewTask[] = rows.map((row) => {
     const type = typeMap.get(row.type_id ?? "");
     const deal = dealMap.get(row.deal_id ?? "");
@@ -248,6 +266,7 @@ export default async function TasksPage({
     };
   });
   const groupForTask = (task: ViewTask) => {
+    if (task.done_at) return "done";
     const date = localDate(new Date(task.due_at));
     if (date < today) return "overdue";
     if (date === today) return "today";
@@ -279,11 +298,9 @@ export default async function TasksPage({
     {
       key: "done",
       label: "Выполненные",
-      tasks: viewTasks.filter((task) => Boolean(task.done_at)),
+      tasks: viewTasks.filter((task) => groupForTask(task) === "done"),
     },
   ].filter((group) => group.tasks.length);
-  const groupCount = (key: string) =>
-    groups.find((group) => group.key === key)?.tasks.length ?? 0;
   return (
     <div className="tasks-page">
       <header className="tasks-header">
@@ -337,15 +354,15 @@ export default async function TasksPage({
         <span className="header-spacer" />
         <span className="task-counter danger">
           <i />
-          Просрочено {groupCount("overdue")}
+          Просрочено {overdueResult.count ?? 0}
         </span>
         <span className="task-counter blue">
           <i />
-          Сегодня {groupCount("today")}
+          Сегодня {todayResult.count ?? 0}
         </span>
         <span className="task-counter">
           <i />
-          Завтра {groupCount("tomorrow")}
+          Завтра {tomorrowResult.count ?? 0}
         </span>
       </form>
       <main className="task-list">

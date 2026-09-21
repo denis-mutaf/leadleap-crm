@@ -16,8 +16,11 @@ export default async function SettingsPage() {
   if (result.error) throw new Error(`Этапы: ${result.error.message}`);
   const snapshot = await supabase.rpc("crm_report_snapshot");
   if (snapshot.error) throw new Error(`Счётчики этапов: ${snapshot.error.message}`);
-  const payload = snapshot.data as { stage_counts?: Record<string, number> } | null;
-  const counts = payload?.stage_counts ?? {};
+  // В настройках считаются все сделки этапа, включая успешные и отказы:
+  // рядом стоит запрет удалять этап со сделками. stage_counts — это живая
+  // воронка для отчёта, там «Договор» и «Отказ» законно нулевые.
+  const payload = snapshot.data as { stage_totals?: Record<string, number> } | null;
+  const counts = payload?.stage_totals ?? {};
   const rows = ((result.data ?? []) as Stage[]).map((stage) => ({ ...stage, counts: { total: Number(counts[stage.id] ?? 0) } }));
   return <div className={styles.page}>
     <header className={styles.header}><div><h1>Воронка и этапы</h1><p className={styles.subtitle}>Порядок меняется перетаскиванием. Этапы видят все менеджеры</p></div></header>
