@@ -2237,3 +2237,11 @@
 @media (max-width: 900px) { .counter-filters { gap: 7px; } .counter-filters a { font-size: 12px; } .pipeline-search { min-width: 28px; width: 28px; padding: 0; justify-content: center; } .pipeline-search span { display: none; } }
 @media (max-width: 640px) { .filterbar { min-height: auto; padding-block: 8px; flex-wrap: wrap; } .counter-filters { width: 100%; order: 4; justify-content: space-between; } .filter-chips { width: 100%; } .toolbar { overflow: auto; } .toolbar .view-switch { white-space: nowrap; } }
 @media (prefers-reduced-motion: reduce) { .deal-card, .deal-card-overlay { transition: none; transform: none; } }
+
+/* Колокольчик уведомлений висит абсолютом в правом верхнем углу рабочей
+   области, поэтому правый край шапки любого экрана заезжал под иконку:
+   «Показано 0 и🔔», «Звонки и заявки формы уже работа🔔». Запас под него
+   резервируется один раз здесь, а не на каждом экране отдельно. */
+.main-shell > * > header:first-child {
+  padding-right: 44px;
+}
