@@ -662,6 +662,7 @@ export function DealsBoard(props: Props) {
   return (
     <>
       <DndContext
+        id="crm-deals-board"
         sensors={sensors}
         collisionDetection={collisionDetectionStrategy}
         onDragStart={onDragStart}
