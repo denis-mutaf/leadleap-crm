@@ -4,6 +4,7 @@ import { USER_ROLE_LABELS } from "@/lib/types";
 import { SignOutButton } from "./sign-out-button";
 import { AppNav, type AppNavItem } from "./app-nav";
 import { GlobalSearch } from "./global-search";
+import { NotificationsPanel } from "./notifications-panel";
 
 type NavEntry = AppNavItem & {
   roles: string[];
@@ -81,7 +82,7 @@ export default async function AppLayout({
           <SignOutButton />
         </div>
       </aside>
-      <main className="main-shell">{children}</main>
+      <main className="main-shell"><NotificationsPanel role={profile.role} />{children}</main>
     </div>
   );
 }
