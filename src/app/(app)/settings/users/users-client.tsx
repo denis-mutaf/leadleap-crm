@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { UserRole } from "@/lib/types";
 import { USER_ROLE_LABELS } from "@/lib/types";
 import styles from "./users.module.css";
@@ -42,6 +43,7 @@ export default function UsersClient({
   currentUserId: string;
   canEdit: boolean;
 }) {
+  const router = useRouter();
   const [rows, setRows] = useState(initialRows);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -51,10 +53,20 @@ export default function UsersClient({
     full_name: "",
     role: "manager" as UserRole,
   });
+  const pendingRef = useRef(false);
+  const inviteButtonRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    if (inviteOpen)
+      dialogRef.current?.querySelector<HTMLInputElement>("input")?.focus();
+    else inviteButtonRef.current?.focus();
+  }, [inviteOpen]);
   async function update(
     id: string,
     data: Partial<Pick<Row, "role" | "is_active">>,
   ) {
+    if (pendingRef.current) return;
+    pendingRef.current = true;
     setBusy(id);
     setError("");
     try {
@@ -76,12 +88,14 @@ export default function UsersClient({
           : "Не удалось сохранить изменения",
       );
     } finally {
+      pendingRef.current = false;
       setBusy(null);
     }
   }
   async function submitInvite(event: React.FormEvent) {
     event.preventDefault();
-    if (busy) return;
+    if (pendingRef.current) return;
+    pendingRef.current = true;
     setBusy("invite");
     setError("");
     try {
@@ -95,6 +109,7 @@ export default function UsersClient({
         throw new Error(result.error || "Не удалось отправить приглашение");
       setInviteOpen(false);
       setInvite({ email: "", full_name: "", role: "manager" });
+      router.refresh();
     } catch (cause) {
       setError(
         cause instanceof Error
@@ -102,11 +117,12 @@ export default function UsersClient({
           : "Не удалось отправить приглашение",
       );
     } finally {
+      pendingRef.current = false;
       setBusy(null);
     }
   }
   return (
-    <main className={styles.page}>
+    <div className={styles.page}>
       <div className={styles.top}>
         <div>
           <Link href="/settings" className={styles.back}>
@@ -121,6 +137,7 @@ export default function UsersClient({
         {canEdit && (
           <button
             className={styles.primary}
+            ref={inviteButtonRef}
             onClick={() => setInviteOpen(true)}
           >
             Пригласить
@@ -207,25 +224,32 @@ export default function UsersClient({
       <section className={styles.policy}>
         <h2>Доступ и экспорт</h2>
         <p>
-          Видимость сделок определяется текущими правилами CRM: руководитель
-          видит все сделки, менеджер — в соответствии с политикой команды.
+          По текущим правилам RLS менеджер видит свои сделки и сделки общего
+          котла без владельца. Руководитель и администратор видят все сделки.
           Отдельного переключателя в схеме нет.
         </p>
         <p>
-          Экспорт доступен руководителю и администратору. Настройки видимости и
-          экспорта здесь не изменяются.
+          Экспорт недоступен: отдельного CRM export route сейчас нет. Эта
+          страница не изменяет политики доступа.
         </p>
       </section>
       {inviteOpen && (
         <div
           className={styles.overlay}
-          role="presentation"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="invite-title"
           onKeyDown={(event) => {
-            if (event.key === "Escape") setInviteOpen(false);
+            if (event.key === "Escape" && !pendingRef.current)
+              setInviteOpen(false);
           }}
         >
-          <form className={styles.dialog} onSubmit={submitInvite}>
-            <h2>Пригласить пользователя</h2>
+          <form
+            ref={dialogRef}
+            className={styles.dialog}
+            onSubmit={submitInvite}
+          >
+            <h2 id="invite-title">Пригласить пользователя</h2>
             <label>
               Имя
               <input
@@ -273,6 +297,6 @@ export default function UsersClient({
           </form>
         </div>
       )}
-    </main>
+    </div>
   );
 }
