@@ -1,0 +1,296 @@
+.dashboard {
+  min-height: 100%;
+  color: var(--foreground);
+  background: var(--background);
+}
+.header,
+.toolbar {
+  min-height: var(--h-header);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+}
+.header {
+  font-size: 16px;
+  font-weight: 600;
+}
+.headerIcon,
+.mutedIcon {
+  color: var(--muted-foreground);
+}
+.spacer {
+  flex: 1;
+}
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 600;
+}
+.toolbar {
+  min-height: var(--h-toolbar);
+}
+.periods {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--secondary);
+}
+.period {
+  min-height: 24px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: calc(var(--radius) - 1px);
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+.period:hover,
+.period:focus-visible,
+.periodActive {
+  background: var(--accent);
+  outline: none;
+}
+.quiet {
+  color: var(--muted-foreground);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.export {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid var(--input);
+  border-radius: var(--radius);
+  color: var(--foreground);
+  background: var(--secondary);
+  font-size: 13px;
+  text-decoration: none;
+}
+.export:hover,
+.export:focus-visible {
+  background: var(--accent);
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 16px 12px 24px;
+}
+.sectionTitle {
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.metric {
+  min-width: 0;
+  min-height: 76px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+.metricLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 18px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.metricValue {
+  font-size: 18px;
+  line-height: 24px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.metricHint,
+.partial {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 16px;
+}
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.table {
+  width: 100%;
+  min-width: 820px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 13px;
+}
+.table th,
+.table td {
+  height: var(--h-row);
+  padding: 0 var(--px-cell);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.table th {
+  height: var(--h-row-header);
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+}
+.table tr:last-child td {
+  border-bottom: 0;
+}
+.right {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+}
+.empty {
+  padding: 24px 12px;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+.tableNote {
+  margin: 6px 0 0;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 16px;
+}
+.barRow {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 30px;
+}
+.barName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.barTrack {
+  height: 20px;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--accent);
+  transition: width 350ms ease;
+}
+.barNumber {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.insight,
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--muted);
+  font-size: 13px;
+  line-height: 18px;
+}
+.insight p,
+.notice p {
+  margin: 0;
+}
+.insight svg {
+  color: var(--warning);
+  flex: 0 0 auto;
+}
+.notice svg {
+  color: var(--muted-foreground);
+  flex: 0 0 auto;
+}
+.tag {
+  display: inline-flex;
+  max-width: 100%;
+  padding: 2px 6px;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 760px) {
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .barRow {
+    grid-template-columns: 145px minmax(0, 1fr);
+  }
+}
+@media (max-width: 480px) {
+  .header,
+  .toolbar {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .content {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+  .quiet {
+    display: none;
+  }
+  .metrics {
+    gap: 8px;
+  }
+  .metric {
+    padding: 8px;
+  }
+  .metricValue {
+    font-size: 16px;
+  }
+  .barRow {
+    grid-template-columns: 112px minmax(0, 1fr);
+    gap: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .barTrack {
+    transition: none;
+  }
+}
