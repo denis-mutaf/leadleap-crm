@@ -1,13 +1,31 @@
-import { Funnel } from "lucide-react";
+import {
+  Bell,
+  ChevronDown,
+  Funnel,
+  ListFilter,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { DealsBoard } from "./deals-board";
+import { DealsBoard, type BoardCard, type BoardColumn } from "./deals-board";
 import { CreateDealModal } from "./create-deal-modal";
 
 const PAGE_SIZE = 24;
-const CHUNK_SIZE = 100;
+const SORTS = [
+  ["updated", "Дата обновления"],
+  ["created", "Дата создания"],
+  ["budget", "Сумма"],
+  ["contact", "Имя контакта"],
+] as const;
+const FLAGS = [
+  ["no_next_step", "Без следующего шага"],
+  ["overdue", "Просрочено"],
+  ["today", "На сегодня"],
+] as const;
+
 type Stage = {
   id: string;
   name: string;
@@ -16,54 +34,34 @@ type Stage = {
   requires_next_step: boolean;
   requires_qualification_tag: boolean;
 };
-type Deal = {
-  id: string;
-  contact_id: string;
-  owner_id: string | null;
-  stage_id: string;
-  status: "open" | "postponed" | "won" | "lost";
-  object_text: string | null;
-  source_id: string | null;
-  budget: number | null;
-  budget_currency: string;
-  postponed_until: string | null;
-};
-type Contact = { id: string; full_name: string };
+type Option = { id: string; name: string };
+type Project = Option & { code: string };
 type Profile = { id: string; full_name: string; role?: string };
-type Project = { id: string; code: string; name: string };
-type Source = { id: string; name: string };
-type Tag = { id: string; name: string };
-type LinkRow = { deal_id: string; project_id?: string; tag_id?: string };
-type Task = { deal_id: string; title: string; due_at: string };
-type LostReason = { id: string; name: string };
-type TaskType = { id: string; name: string };
-type ColumnData = { deals: Deal[]; total: number };
+type LostReason = Option;
+type TaskType = Option;
+type BoardResponse = {
+  columns: Record<string, { total: number; sum: number | null; deals: BoardCard[] }>;
+  counters: { no_next_step: number; overdue: number; today: number };
+  total: number;
+};
 
-function chunks<T>(values: T[], size: number): T[][] {
-  const result: T[][] = [];
-  for (let index = 0; index < values.length; index += size)
-    result.push(values.slice(index, index + size));
-  return result;
+function one(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
 }
 
-async function loadByIds<T>(
-  ids: string[],
-  load: (
-    ids: string[],
-  ) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
-  label: string,
-): Promise<T[]> {
-  if (ids.length === 0) return [];
-  const result: T[] = [];
-  for (const chunk of chunks(ids, CHUNK_SIZE)) {
-    const response = await load(chunk);
-    if (response.error) throw new Error(label + ": " + response.error.message);
-    result.push(...(response.data ?? []));
-  }
-  return result;
+function validSort(value: string | undefined): (typeof SORTS)[number][0] {
+  return SORTS.some(([key]) => key === value)
+    ? (value as (typeof SORTS)[number][0])
+    : "updated";
 }
 
-function initials(name: string): string {
+function validFlag(value: string | undefined): (typeof FLAGS)[number][0] | null {
+  return FLAGS.some(([key]) => key === value)
+    ? (value as (typeof FLAGS)[number][0])
+    : null;
+}
+
+function initials(name: string) {
   return name
     .split(" ")
     .map((part) => part[0])
@@ -72,287 +70,256 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
-async function loadColumn(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  stageId: string | null,
-  page: number,
-): Promise<ColumnData> {
-  const countQuery = stageId
-    ? supabase
-        .from("deals")
-        .select("id", { count: "exact", head: true })
-        .eq("stage_id", stageId)
-        .not("owner_id", "is", null)
-    : supabase
-        .from("deals")
-        .select("id", { count: "exact", head: true })
-        .is("owner_id", null)
-        .not("status", "in", "(won,lost)");
-  const countResponse = await countQuery;
-  if (countResponse.error)
-    throw new Error("Сделки: " + countResponse.error.message);
-  const total = countResponse.count ?? 0;
-  const offset = page * PAGE_SIZE;
-  if (offset >= total) return { deals: [], total };
-  const query = stageId
-    ? supabase
-        .from("deals")
-        .select(
-          "id, contact_id, owner_id, stage_id, status, object_text, source_id, budget, budget_currency, postponed_until",
-          { count: "exact" },
-        )
-        .eq("stage_id", stageId)
-        .not("owner_id", "is", null)
-        .order("updated_at", { ascending: false })
-        .range(offset, Math.min(offset + PAGE_SIZE, total) - 1)
-    : supabase
-        .from("deals")
-        .select(
-          "id, contact_id, owner_id, stage_id, status, object_text, source_id, budget, budget_currency, postponed_until",
-          { count: "exact" },
-        )
-        .is("owner_id", null)
-        .not("status", "in", "(won,lost)")
-        .order("updated_at", { ascending: false })
-        .range(offset, Math.min(offset + PAGE_SIZE, total) - 1);
-  const response = await query;
-  if (response.error) throw new Error("Сделки: " + response.error.message);
-  return { deals: (response.data ?? []) as Deal[], total };
+function withQuery(
+  current: Record<string, string | string[] | undefined>,
+  changes: Record<string, string | null | undefined>,
+) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(current)) {
+    const item = one(value);
+    if (item !== undefined && item !== "") params.set(key, item);
+  }
+  for (const [key, value] of Object.entries(changes)) {
+    if (value === null || value === undefined || value === "") params.delete(key);
+    else params.set(key, value);
+  }
+  params.set("page", changes.page ?? "0");
+  const query = params.toString();
+  return query ? `/deals?${query}` : "/deals";
+}
+
+function FilterChip({ label, href }: { label: string; href: string }) {
+  return (
+    <Link className="filter-chip" href={href}>
+      {label}
+      <X size={12} aria-hidden="true" />
+    </Link>
+  );
+}
+
+function FilterBar({
+  query,
+  owners,
+  projects,
+  tags,
+  sources,
+  counters,
+}: {
+  query: Record<string, string | string[] | undefined>;
+  owners: Profile[];
+  projects: Project[];
+  tags: Option[];
+  sources: Option[];
+  counters: BoardResponse["counters"];
+}) {
+  const sort = validSort(one(query.sort));
+  const flag = validFlag(one(query.flag));
+  const owner = one(query.owner);
+  const project = one(query.project);
+  const tag = one(query.tag);
+  const source = one(query.source);
+  const mine = one(query.mine) === "1" && !owner;
+  const ownerName = !mine ? owners.find((item) => item.id === owner)?.full_name : undefined;
+  const projectName = projects.find((item) => item.id === project)?.name;
+  const tagName = tags.find((item) => item.id === tag)?.name;
+  const sourceName = sources.find((item) => item.id === source)?.name;
+  const activeChips = [
+    mine ? { label: "Только мои", changes: { mine: null } } : null,
+    ownerName ? { label: `Ответственный: ${ownerName}`, changes: { owner: null } } : null,
+    projectName ? { label: `Проект: ${projectName}`, changes: { project: null } } : null,
+    tagName ? { label: `Метка: ${tagName}`, changes: { tag: null } } : null,
+    sourceName ? { label: `Источник: ${sourceName}`, changes: { source: null } } : null,
+    flag ? { label: FLAGS.find(([key]) => key === flag)?.[1] ?? flag, changes: { flag: null } } : null,
+  ].filter(Boolean) as unknown as { label: string; changes: Record<string, string | null | undefined> }[];
+
+  return (
+    <div className="filterbar">
+      <details className="filter-popover">
+        <summary className="filter-button">
+          <SlidersHorizontal size={14} /> Сортировка <ChevronDown size={13} />
+        </summary>
+        <div className="filter-menu">
+          {SORTS.map(([key, label]) => (
+            <Link
+              className={sort === key ? "is-selected" : ""}
+              href={withQuery(query, { sort: key })}
+              key={key}
+            >
+              {label}
+              {sort === key && <span aria-hidden="true">✓</span>}
+            </Link>
+          ))}
+        </div>
+      </details>
+      <span className="separator" />
+      <details className="filter-popover">
+        <summary className="filter-button">
+          <ListFilter size={14} /> Фильтр <ChevronDown size={13} />
+        </summary>
+        <form className="filter-menu filter-form" method="get">
+          <input type="hidden" name="sort" value={sort} />
+          <label>
+            Ответственный
+            <select name="owner" defaultValue={mine ? "" : owner ?? ""}>
+              <option value="">Все ответственные</option>
+              {owners.map((item) => <option key={item.id} value={item.id}>{item.full_name}</option>)}
+            </select>
+          </label>
+          <label>
+            Проект
+            <select name="project" defaultValue={project ?? ""}>
+              <option value="">Все проекты</option>
+              {projects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </select>
+          </label>
+          <label>
+            Метка
+            <select name="tag" defaultValue={tag ?? ""}>
+              <option value="">Все метки</option>
+              {tags.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </select>
+          </label>
+          <label>
+            Источник
+            <select name="source" defaultValue={source ?? ""}>
+              <option value="">Все источники</option>
+              {sources.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </select>
+          </label>
+          <label>
+            Состояние
+            <select name="flag" defaultValue={flag ?? ""}>
+              <option value="">Все сделки</option>
+              {FLAGS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+            </select>
+          </label>
+          <label className="filter-check">
+            <input type="checkbox" name="mine" value="1" defaultChecked={mine && !owner} />
+            Только мои
+          </label>
+          <button className="btn filter-submit" type="submit">Применить</button>
+          <span className="filter-help">Мои сделки фильтруются по текущему пользователю</span>
+        </form>
+      </details>
+      <div className="filter-chips">
+        {activeChips.map((chip) => <FilterChip key={chip.label} label={chip.label} href={withQuery(query, chip.changes)} />)}
+      </div>
+      <span className="header-spacer" />
+      <div className="counter-filters" aria-label="Быстрые фильтры">
+        <Link className={flag === "no_next_step" ? "is-active counter-no-step" : "counter-no-step"} href={withQuery(query, { flag: flag === "no_next_step" ? null : "no_next_step" })}>
+          <i /> Без следующего шага <b>{counters.no_next_step}</b>
+        </Link>
+        <Link className={flag === "overdue" ? "is-active counter-overdue" : "counter-overdue"} href={withQuery(query, { flag: flag === "overdue" ? null : "overdue" })}>
+          <i /> Просрочено <b>{counters.overdue}</b>
+        </Link>
+        <Link className={flag === "today" ? "is-active counter-today" : "counter-today"} href={withQuery(query, { flag: flag === "today" ? null : "today" })}>
+          <i /> На сегодня <b>{counters.today}</b>
+        </Link>
+      </div>
+    </div>
+  );
 }
 
 export default async function DealsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
   if (profile.role === "builder") redirect("/reports");
-  const pageValue = Number.parseInt((await searchParams).page ?? "0", 10);
+  const query = await searchParams;
+  const pageValue = Number.parseInt(one(query.page) ?? "0", 10);
   const page = Number.isFinite(pageValue) && pageValue > 0 ? pageValue : 0;
+  const sort = validSort(one(query.sort));
+  const flag = validFlag(one(query.flag));
+  const ownerParam = one(query.owner);
+  const mine = one(query.mine) === "1" && !ownerParam;
+  const owner = mine ? profile.id : ownerParam || null;
   const supabase = await createClient();
-  const stagesResponse = await supabase
-    .from("stages")
-    .select("id, name, position, kind, requires_next_step, requires_qualification_tag")
-    .eq("is_active", true)
-    .order("position");
-  if (stagesResponse.error)
-    throw new Error("Этапы: " + stagesResponse.error.message);
+  const boardResult = await supabase.rpc("crm_board", {
+    p_page: page,
+    p_page_size: PAGE_SIZE,
+    p_owner: owner,
+    p_project: one(query.project) || null,
+    p_tag: one(query.tag) || null,
+    p_source: one(query.source) || null,
+    p_flag: flag,
+    p_sort: sort,
+  });
+  if (boardResult.error) throw new Error("Доска сделок: " + boardResult.error.message);
+  const board = (boardResult.data ?? {
+    columns: {},
+    counters: { no_next_step: 0, overdue: 0, today: 0 },
+    total: 0,
+  }) as BoardResponse;
+  const [stagesResponse, sourcesResponse, projectsResponse, tagsResponse, ownersResponse, lostReasonsResponse, taskTypesResponse] = await Promise.all([
+    supabase.from("stages").select("id, name, position, kind, requires_next_step, requires_qualification_tag").eq("is_active", true).order("position"),
+    supabase.from("sources").select("id, name").eq("is_active", true).order("name"),
+    supabase.from("projects").select("id, code, name").eq("is_active", true).order("position"),
+    supabase.from("tags").select("id, name").eq("is_active", true).order("name"),
+    supabase.from("profiles").select("id, full_name, role").eq("is_active", true).in("role", ["manager", "head", "admin"]).order("full_name"),
+    supabase.from("lost_reasons").select("id, name").eq("is_active", true).order("position"),
+    supabase.from("task_types").select("id, name").eq("is_active", true).order("name"),
+  ]);
+  const responses = [stagesResponse, sourcesResponse, projectsResponse, tagsResponse, ownersResponse, lostReasonsResponse, taskTypesResponse];
+  const failed = responses.find((item) => item.error);
+  if (failed?.error) throw new Error("Справочники воронки: " + failed.error.message);
+  console.info("[deals] Supabase calls: before ≈40; after 8 data calls (1 crm_board + 7 справочников)");
+
   const allStages = (stagesResponse.data ?? []) as Stage[];
   const stages = allStages.filter((stage) => stage.kind !== "lost");
   const lostStage = allStages.find((stage) => stage.kind === "lost");
-  const [kettle, ...columns] = await Promise.all([
-    loadColumn(supabase, null, page),
-    ...stages.map((stage) => loadColumn(supabase, stage.id, page)),
-  ]);
-  const lostResponse = lostStage
-    ? await supabase
-        .from("deals")
-        .select("id", { count: "exact", head: true })
-        .eq("stage_id", lostStage.id)
-    : null;
-  if (lostResponse?.error)
-    throw new Error("Отказ: " + lostResponse.error.message);
-  const lostCount = lostResponse?.count ?? 0;
-  const allDeals = [
-    kettle.deals,
-    ...columns.map((column) => column.deals),
-  ].flat();
-  const dealIds = allDeals.map((deal) => deal.id);
-  const sourceIds = allDeals.flatMap((deal) =>
-    deal.source_id ? [deal.source_id] : [],
-  );
-  const ownerIds = allDeals.flatMap((deal) =>
-    deal.owner_id ? [deal.owner_id] : [],
-  );
-  const [contacts, owners, projectRows, sources, tagRows, tasks] =
-    await Promise.all([
-      loadByIds(
-        allDeals.map((deal) => deal.contact_id),
-        (ids) =>
-          supabase.from("contacts").select("id, full_name").in("id", ids),
-        "Контакты",
-      ),
-      loadByIds(
-        [...new Set(ownerIds)],
-        (ids) =>
-          supabase.from("profiles").select("id, full_name").in("id", ids),
-        "Ответственные",
-      ),
-      loadByIds(
-        dealIds,
-        (ids) =>
-          supabase
-            .from("deal_projects")
-            .select("deal_id, project_id")
-            .in("deal_id", ids),
-        "Проекты сделок",
-      ),
-      loadByIds(
-        [...new Set(sourceIds)],
-        (ids) => supabase.from("sources").select("id, name").in("id", ids),
-        "Источники",
-      ),
-      loadByIds(
-        dealIds,
-        (ids) =>
-          supabase
-            .from("deal_tags")
-            .select("deal_id, tag_id")
-            .in("deal_id", ids),
-        "Теги сделок",
-      ),
-      loadByIds(
-        dealIds,
-        (ids) =>
-          supabase
-            .from("tasks")
-            .select("deal_id, title, due_at")
-            .in("deal_id", ids)
-            .is("done_at", null)
-            .order("due_at"),
-        "Задачи",
-      ),
-    ]);
-  const projectIds = (projectRows as LinkRow[]).flatMap((row) =>
-    row.project_id ? [row.project_id] : [],
-  );
-  const tagIds = (tagRows as LinkRow[]).flatMap((row) =>
-    row.tag_id ? [row.tag_id] : [],
-  );
-  const [
-    projectsResponse,
-    tagsResponse,
-    modalSourcesResponse,
-    modalProjectsResponse,
-    modalTagsResponse,
-    modalOwnersResponse,
-  ] = await Promise.all([
-    loadByIds(
-      [...new Set(projectIds)],
-      (ids) => supabase.from("projects").select("id, code, name").in("id", ids),
-      "Проекты",
-    ),
-    loadByIds(
-      [...new Set(tagIds)],
-      (ids) => supabase.from("tags").select("id, name").in("id", ids),
-      "Теги",
-    ),
-    supabase
-      .from("sources")
-      .select("id, name")
-      .eq("is_active", true)
-      .order("name"),
-    supabase
-      .from("projects")
-      .select("id, code, name")
-      .eq("is_active", true)
-      .order("position"),
-    supabase.from("tags").select("id, name").eq("is_active", true).order("name"),
-    supabase
-      .from("profiles")
-      .select("id, full_name")
-      .eq("is_active", true)
-      .in("role", ["manager", "head", "admin"])
-      .order("full_name"),
-  ]);
-  const [lostReasonsResponse, taskTypesResponse, activeAssigneesResponse] = await Promise.all([
-    supabase.from("lost_reasons").select("id, name").eq("is_active", true).order("position"),
-    supabase.from("task_types").select("id, name").eq("is_active", true).order("name"),
-    supabase.from("profiles").select("id, full_name").eq("is_active", true).in("role", ["manager", "head", "admin"]).order("full_name"),
-  ]);
-  if (lostReasonsResponse.error) throw new Error("Причины отказа: " + lostReasonsResponse.error.message);
-  if (taskTypesResponse.error) throw new Error("Типы задач: " + taskTypesResponse.error.message);
-  if (activeAssigneesResponse.error) throw new Error("Исполнители: " + activeAssigneesResponse.error.message);
-  if (modalSourcesResponse.error)
-    throw new Error("Источники: " + modalSourcesResponse.error.message);
-  if (modalProjectsResponse.error)
-    throw new Error("Проекты: " + modalProjectsResponse.error.message);
-  if (modalTagsResponse.error)
-    throw new Error("Теги: " + modalTagsResponse.error.message);
-  if (modalOwnersResponse.error)
-    throw new Error("Ответственные: " + modalOwnersResponse.error.message);
-  const projects = projectsResponse;
-  const tags = tagsResponse;
-  const shown = allDeals.length;
-  const total =
-    kettle.total + columns.reduce((sum, column) => sum + column.total, 0);
-  const hasNextPage = [kettle, ...columns].some(
-    (column) => (page + 1) * PAGE_SIZE < column.total,
-  );
+  const columnData = (id: string) => board.columns[id] ?? { total: 0, sum: null, deals: [] };
+  const columns: BoardColumn[] = [
+    { id: "kettle", title: "Общий котёл", ...columnData("kettle"), kettle: true },
+    ...stages.map((stage) => ({
+      id: stage.id,
+      title: stage.name,
+      ...columnData(stage.id),
+      kind: stage.kind,
+      position: stage.position,
+      requires_next_step: stage.requires_next_step,
+      requires_qualification_tag: stage.requires_qualification_tag,
+      won: stage.kind === "won",
+    })),
+  ];
+  const lost = lostStage ? { id: "lost", title: lostStage.name, ...columnData(lostStage.id), kind: "lost" as const, position: lostStage.position } : null;
+  const hasNextPage = columns.some((column) => (page + 1) * PAGE_SIZE < column.total);
+  const owners = (ownersResponse.data ?? []) as Profile[];
+  const sources = (sourcesResponse.data ?? []) as Option[];
+  const projects = (projectsResponse.data ?? []) as Project[];
+  const tags = (tagsResponse.data ?? []) as Option[];
   return (
     <div className="deals-page">
       <header className="page-header">
         <Funnel size={16} />
         <span>Сделки</span>
         <span className="header-spacer" />
+        <span className="header-notification"><Bell size={15} /><b>38</b></span>
         <span className="avatar">{initials(profile.full_name)}</span>
       </header>
       <div className="toolbar">
-        <span className="view-switch active">Воронка</span>
+        <button className="view-switch active" type="button"><Funnel size={14} /> Воронка <ChevronDown size={13} /></button>
         <Link className="view-switch" href="/deals/table">Таблица</Link>
+        <button className="view-switch" type="button"><SlidersHorizontal size={14} /> Настройки вида <ChevronDown size={13} /></button>
         <span className="header-spacer" />
-        <span className="summary">Сделки в воронке</span>
-        <CreateDealModal
-          stages={stages}
-          sources={(modalSourcesResponse.data ?? []) as Source[]}
-          projects={(modalProjectsResponse.data ?? []) as Project[]}
-          tags={(modalTagsResponse.data ?? []) as Tag[]}
-          owners={(modalOwnersResponse.data ?? []) as Profile[]}
-        />
+        <CreateDealModal stages={stages} sources={sources} projects={projects} tags={tags} owners={owners} />
       </div>
-      <div className="filterbar">
-        <span className="static-filter">Сортировка</span>
-        <span className="separator" />
-        <span className="static-filter">Фильтр</span>
-        <span className="header-spacer" />
-        <span className="summary">
-          Страница {page + 1} · показано {shown} из {total}
-        </span>
-      </div>
+      <FilterBar query={query} owners={owners} projects={projects} tags={tags} sources={sources} counters={board.counters} />
+      <div className="applied-summary">Страница {page + 1} · показано {columns.reduce((sum, column) => sum + column.deals.length, 0)} из {board.total}</div>
       <DealsBoard
-        columns={[
-          {
-            id: "kettle",
-            title: "Общий котёл",
-            total: kettle.total,
-            deals: kettle.deals,
-            kettle: true,
-          },
-          ...stages.map((stage, index) => ({
-            id: stage.id,
-            title: stage.name,
-            total: columns[index].total,
-            deals: columns[index].deals,
-            won: stage.kind === "won",
-            kind: stage.kind,
-            position: stage.position,
-            requires_next_step: stage.requires_next_step,
-            requires_qualification_tag: stage.requires_qualification_tag,
-          })),
-        ]}
-        lostCount={lostCount}
+        columns={columns}
+        lost={lost}
         currentUserId={profile.id}
-        contacts={contacts as Contact[]}
-        owners={owners as Profile[]}
-        sources={sources as Source[]}
-        projects={projects as Project[]}
-        tags={tags as Tag[]}
-        projectLinks={projectRows as LinkRow[]}
-        tagLinks={tagRows as LinkRow[]}
-        tasks={tasks as Task[]}
         lostReasons={(lostReasonsResponse.data ?? []) as LostReason[]}
         taskTypes={(taskTypesResponse.data ?? []) as TaskType[]}
-        activeAssignees={(activeAssigneesResponse.data ?? []) as Profile[]}
-        lostStageId={lostStage?.id ?? null}
-        lostStageTitle={lostStage?.name ?? "Отказ"}
+        activeAssignees={owners.map((item) => ({ id: item.id, name: item.full_name }))}
       />
       {(page > 0 || hasNextPage) && (
         <nav className="deals-pagination" aria-label="Страницы сделок">
-          {page > 0 && <Link href={`/deals?page=${page - 1}`}>Предыдущая</Link>}
-          {hasNextPage && (
-            <Link href={`/deals?page=${page + 1}`}>Следующая</Link>
-          )}
+          {page > 0 && <Link href={withQuery(query, { page: String(page - 1) })}>Предыдущая</Link>}
+          {hasNextPage && <Link href={withQuery(query, { page: String(page + 1) })}>Следующая</Link>}
         </nav>
       )}
     </div>

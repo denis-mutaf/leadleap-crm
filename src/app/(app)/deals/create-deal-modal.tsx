@@ -62,6 +62,11 @@ export function CreateDealModal({
     }, 350);
     return () => window.clearTimeout(timer);
   }, [open, phone, digits.length]);
+  useEffect(() => {
+    const openFromBoard = () => setOpen(true);
+    window.addEventListener("crm:create-deal-open", openFromBoard);
+    return () => window.removeEventListener("crm:create-deal-open", openFromBoard);
+  }, []);
   // reset is intentionally stable in behavior; Escape closes the current form snapshot.
   useEffect(() => {
     if (!open) return;
