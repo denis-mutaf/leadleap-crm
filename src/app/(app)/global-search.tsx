@@ -110,6 +110,9 @@ export function GlobalSearch() {
       phoneDigits = digits(value);
     invalidate();
     const current = requestId.current;
+    queueMicrotask(() => {
+      if (current === requestId.current) setGroups([]);
+    });
     if (value.length < 2 || (phone && phoneDigits.length < 4)) {
       queueMicrotask(() => {
         setGroups([]);
@@ -141,7 +144,21 @@ export function GlobalSearch() {
                 .is("done_at", null)
                 .ilike("title", `%${pattern}%`)
                 .limit(LIMIT),
-            ])
+            ]).then(
+              ([dealsByTitle, dealsByObject, tasksByTitle]) => ({
+                dealsByTitle,
+                dealsByObject,
+                tasksByTitle,
+                error: null,
+              }),
+              (cause) => ({
+                dealsByTitle: null,
+                dealsByObject: null,
+                tasksByTitle: null,
+                error:
+                  cause instanceof Error ? cause : new Error(String(cause)),
+              }),
+            )
           : null;
         let contactIds: string[] = [];
         if (phone) {
@@ -194,6 +211,64 @@ export function GlobalSearch() {
               })),
             },
           ]);
+        }
+        if (!phone && textSearch) {
+          const direct = await textSearch;
+          if (current !== requestId.current) return;
+          if (direct.error) {
+            setError(`Прямой поиск: ${direct.error.message}`);
+          } else {
+            const directDeals = [
+              ...new Map(
+                [
+                  ...(direct.dealsByTitle?.data ?? []),
+                  ...(direct.dealsByObject?.data ?? []),
+                ].map((row) => [row.id, row]),
+              ).values(),
+            ];
+            const directTasks = direct.tasksByTitle?.data ?? [];
+            setGroups((previous) => [
+              ...previous,
+              ...(directDeals.length
+                ? [
+                    {
+                      label: "Сделки",
+                      icon: BriefcaseBusiness,
+                      items: directDeals
+                        .slice(0, LIMIT)
+                        .map((row) => ({
+                          id: row.id,
+                          kind: "deal" as const,
+                          title: row.title || row.object_text || "Без названия",
+                          meta: row.status,
+                          href: `/deals/${row.id}`,
+                        })),
+                    },
+                  ]
+                : []),
+              ...(directTasks.length
+                ? [
+                    {
+                      label: "Задачи",
+                      icon: ListTodo,
+                      items: directTasks
+                        .slice(0, LIMIT)
+                        .map((row) => ({
+                          id: row.id,
+                          kind: "task" as const,
+                          title: row.title,
+                          meta: row.due_at
+                            ? new Date(row.due_at).toLocaleDateString("ru-RU")
+                            : undefined,
+                          href: row.deal_id
+                            ? `/deals/${row.deal_id}`
+                            : "/tasks",
+                        })),
+                    },
+                  ]
+                : []),
+            ]);
+          }
         }
         const directDeals = contactIds.length
           ? await chunks<Row>(contactIds, (ids) =>
@@ -262,12 +337,11 @@ export function GlobalSearch() {
           ];
         }
         if (!phone) {
-          const [a, b, c] = await textSearch!;
+          const direct = await textSearch;
           if (current !== requestId.current) return;
-          if (a.error || b.error || c.error)
-            throw new Error(
-              a.error?.message ?? b.error?.message ?? c.error?.message,
-            );
+          if (!direct || direct.error) return;
+          const { dealsByTitle: a, dealsByObject: b, tasksByTitle: c } = direct;
+          if (a?.error || b?.error || c?.error) return;
           deals = [
             ...new Map(
               [...(deals ?? []), ...(a.data ?? []), ...(b.data ?? [])].map(
