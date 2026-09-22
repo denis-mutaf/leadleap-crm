@@ -286,6 +286,69 @@
   font: inherit;
   font-size: 12px;
 }
+.deleteMenuButton {
+  display: inline-grid;
+  place-items: center;
+  margin-left: 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  padding: 7px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.deleteActions {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+}
+.deletePopover {
+  position: absolute;
+  z-index: 10;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--background);
+  padding: 4px;
+  box-shadow: 0 8px 24px rgb(15 23 42 / 14%);
+  animation: deletePopoverIn 120ms ease-out;
+}
+.deletePopover button {
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  padding: 8px 12px;
+  color: var(--destructive, #b42318);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.deletePopover button:hover { background: var(--muted); }
+@keyframes deletePopoverIn {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .deletePopover { animation: none; }
+}
+.deleteModal {
+  width: min(460px, 100%);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--background);
+  color: var(--foreground);
+  box-shadow: 0 20px 60px rgb(15 23 42 / 20%);
+}
+.deleteBody { padding: 16px 20px; font-size: 14px; }
+.deleteBody p { margin: 0 0 12px; }
+.deleteBody .mergeHint { padding: 0; font-size: 13px; }
+.deleteConfirm { border-color: var(--destructive, #b42318) !important; background: var(--destructive, #b42318) !important; color: white !important; }
+.kbd { color: var(--muted-foreground); font-size: 10px; }
 .mergeScrim {
   position: fixed;
   inset: 0;

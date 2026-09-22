@@ -12,6 +12,7 @@ import {
 import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import ContactMergeButton from "../contact-merge-button";
+import ContactDeleteButton from "../contact-delete-button";
 import "../contacts.module.css";
 
 const LIMIT = 50;
@@ -279,6 +280,7 @@ export default async function ContactPage({
             dealCount: directDeals.count ?? 0,
           }}
         />
+        <ContactDeleteButton contactId={contact.data.id} />
       </div>
       <div className="contact-layout">
         <aside className="contact-sidebar">
