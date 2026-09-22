@@ -3,24 +3,7 @@ import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { DictionariesClient, type DictionaryData } from "./dictionaries-client";
 
-async function mapWithLimit<T, R>(
-  items: T[],
-  limit: number,
-  task: (item: T) => Promise<R>,
-) {
-  const result: R[] = [];
-  let cursor = 0;
-  async function worker() {
-    while (cursor < items.length) {
-      const i = cursor++;
-      result[i] = await task(items[i]);
-    }
-  }
-  await Promise.all(
-    Array.from({ length: Math.min(limit, items.length) }, worker),
-  );
-  return result;
-}
+type UsageCount = { dictionary_key: string; value_id: string; usage: number };
 
 export default async function DictionariesPage() {
   const profile = await getCurrentProfile();
@@ -70,51 +53,83 @@ export default async function DictionariesPage() {
       select: "id, name, is_active, code",
     },
   ] as const;
-  const data: DictionaryData[] = [];
-  for (const spec of specs) {
-    const rows = await db.from(spec.table).select(spec.select).order("name");
-    if (rows.error) throw new Error(`${spec.label}: ${rows.error.message}`);
-    const values = rows.data ?? [];
-    const counts = await mapWithLimit(values, 4, async (row) => {
-      const count = await db
-        .from(spec.relation)
-        .select(
-          spec.key === "tags"
-            ? "tag_id"
-            : spec.key === "projects"
-              ? "project_id"
-              : "id",
-          { count: "exact", head: true },
-        )
-        .eq(spec.foreign, row.id);
-      if (count.error) throw new Error(`${spec.label}: ${count.error.message}`);
-      if (spec.key !== "tags") {
-        if (count.count === null)
-          throw new Error(
-            `${spec.label}: не удалось получить точное число использований`,
-          );
-        return [row.id, count.count] as const;
-      }
-      const contacts = await db
-        .from("contact_tags")
-        .select("tag_id", { count: "exact", head: true })
-        .eq("tag_id", row.id);
-      if (contacts.error)
-        throw new Error(`${spec.label}: ${contacts.error.message}`);
-      if (count.count === null || contacts.count === null)
-        throw new Error(
-          `${spec.label}: не удалось получить точное число использований`,
-        );
-      return [row.id, count.count + contacts.count] as const;
-    });
-    data.push({
-      key: spec.key,
-      label: spec.label,
-      rows: values.map((row) => ({
-        ...row,
-        usage: counts.find(([id]) => id === row.id)?.[1] ?? 0,
-      })),
-    });
+  let loaded: Awaited<ReturnType<typeof loadDictionaries>>;
+  let counts: Awaited<ReturnType<typeof loadCounts>>;
+  try {
+    loaded = await loadDictionaries(db, specs);
+    counts = await loadCounts(db);
+  } catch {
+    return (
+      <DictionariesClient
+        initialData={[]}
+        initialError="Использования временно недоступны. Повторите попытку позже."
+        role={profile.role}
+      />
+    );
   }
+  const knownKeys = new Set<string>(specs.map((spec) => spec.key));
+  const uuid =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (
+    (counts.data ?? []).some(
+      (item) =>
+        !knownKeys.has(item.dictionary_key) ||
+        !uuid.test(item.value_id) ||
+        !Number.isSafeInteger(Number(item.usage)) ||
+        Number(item.usage) < 0,
+    )
+  ) {
+    return (
+      <DictionariesClient
+        initialData={[]}
+        initialError="Данные справочников временно недоступны. Повторите попытку позже."
+        role={profile.role}
+      />
+    );
+  }
+  const usage = new Map<string, number>();
+  for (const item of counts.data ?? []) {
+    const key = `${item.dictionary_key}:${item.value_id}`;
+    usage.set(key, (usage.get(key) ?? 0) + Number(item.usage));
+  }
+  const data: DictionaryData[] = loaded.map(({ spec, values }) => ({
+    key: spec.key,
+    label: spec.label,
+    rows: values.map((row) => ({
+      ...row,
+      usage: usage.get(`${spec.key}:${row.id}`) ?? 0,
+    })),
+  }));
   return <DictionariesClient initialData={data} role={profile.role} />;
+}
+
+async function loadDictionaries(
+  db: Awaited<ReturnType<typeof createClient>>,
+  specs: readonly {
+    key: string;
+    label: string;
+    table: string;
+    select: string;
+  }[],
+) {
+  return Promise.all(
+    specs.map(async (spec) => {
+      const rows = await db.from(spec.table).select(spec.select).order("name");
+      if (rows.error) throw new Error(`${spec.label}: ${rows.error.message}`);
+      return {
+        spec,
+        values: (rows.data ?? []) as unknown as Array<
+          Record<string, unknown> & { id: string; name: string }
+        >,
+      };
+    }),
+  );
+}
+
+async function loadCounts(
+  db: Awaited<ReturnType<typeof createClient>>,
+): Promise<{ data: UsageCount[] }> {
+  const result = await db.rpc("dictionary_usage_counts");
+  if (result.error) throw result.error;
+  return { data: (result.data ?? []) as UsageCount[] };
 }

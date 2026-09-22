@@ -29,19 +29,14 @@ const relationText: Record<string, string> = {
   lost_reasons: "причина отказа",
   projects: "площадка",
 };
-const relationFor: Record<string, [string, string]> = {
-  tags: ["deal_tags", "tag_id"],
-  sources: ["deals", "source_id"],
-  task_types: ["tasks", "type_id"],
-  lost_reasons: ["deals", "lost_reason_id"],
-  projects: ["deal_projects", "project_id"],
-};
 
 export function DictionariesClient({
   initialData,
+  initialError = "",
   role,
 }: {
   initialData: DictionaryData[];
+  initialError?: string;
   role: UserRole;
 }) {
   const [data, setData] = useState(initialData),
@@ -53,30 +48,13 @@ export function DictionariesClient({
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   const canEdit = role === "admin" || (role === "head" && active === "tags"),
-    dictionary = data.find((x) => x.key === active)!,
+    dictionary = data.find((x) => x.key === active) ?? {
+      key: active,
+      label: "",
+      rows: [],
+    },
     isSystemTag = (row: Row) =>
       active === "tags" && (row.name === "КВАЛ" || row.name === "неквал");
-  const countFor = async (
-    db: ReturnType<typeof createClient>,
-    table: string,
-    column: string,
-    id: string,
-  ) => {
-    const select =
-      table === "deal_tags" || table === "contact_tags"
-        ? "tag_id"
-        : table === "deal_projects"
-          ? "project_id"
-          : "id";
-    const result = await db
-      .from(table)
-      .select(select, { count: "exact", head: true })
-      .eq(column, id);
-    if (result.error) throw result.error;
-    if (result.count === null)
-      throw new Error("Не удалось получить точное число использований.");
-    return result.count;
-  };
   const refresh = async () => {
     const db = createClient(),
       selection =
@@ -87,21 +65,18 @@ export function DictionariesClient({
             : `id,name,is_active,code`;
     const result = await db.from(active).select(selection).order("name");
     if (result.error) throw result.error;
-    let cursor = 0;
-    const rows = result.data ?? [],
-      updated: Row[] = Array(rows.length);
-    const worker = async () => {
-      while (cursor < rows.length) {
-        const index = cursor++;
-        const row = rows[index];
-        const [table, column] = relationFor[active];
-        let usage = await countFor(db, table, column, row.id);
-        if (active === "tags")
-          usage += await countFor(db, "contact_tags", "tag_id", row.id);
-        updated[index] = { ...row, usage };
-      }
-    };
-    await Promise.all(Array.from({ length: Math.min(4, rows.length) }, worker));
+    const rows = result.data ?? [];
+    const counts = await db.rpc("dictionary_usage_counts");
+    if (counts.error) throw counts.error;
+    const usage = new Map<string, number>();
+    for (const item of counts.data ?? []) {
+      const key = `${item.dictionary_key}:${item.value_id}`;
+      usage.set(key, (usage.get(key) ?? 0) + Number(item.usage));
+    }
+    const updated = rows.map((row) => ({
+      ...row,
+      usage: usage.get(`${active}:${row.id}`) ?? 0,
+    }));
     setData((all) =>
       all.map((item) =>
         item.key === active ? { ...item, rows: updated } : item,
@@ -206,6 +181,30 @@ export function DictionariesClient({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+  if (initialError) {
+    return (
+      <div className={styles.page} role="alert">
+        <header className={styles.header}>
+          <div>
+            <p className={styles.eyebrow}>Настройки</p>
+            <h1>Справочники</h1>
+            <p className={styles.subtitle}>{initialError}</p>
+          </div>
+        </header>
+        <section className={styles.card}>
+          <div className={styles.unavailable}>
+            <strong>Справочники временно недоступны</strong>
+            <button
+              className={styles.primary}
+              onClick={() => window.location.reload()}
+            >
+              Повторить
+            </button>
+          </div>
+        </section>
+      </div>
+    );
+  }
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -318,6 +317,11 @@ export function DictionariesClient({
       {error && (
         <p className={styles.error} role="alert">
           {error}
+        </p>
+      )}
+      {initialError && (
+        <p className={styles.error} role="alert">
+          {initialError}
         </p>
       )}
       {adding && (
