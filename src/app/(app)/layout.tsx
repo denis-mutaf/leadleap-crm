@@ -47,6 +47,12 @@ const NAV: NavEntry[] = [
     icon: "settings",
     roles: ["head", "admin"],
   },
+  {
+    href: "/trash",
+    label: "Корзина",
+    icon: "trash",
+    roles: ["manager", "head", "admin"],
+  },
 ];
 
 export default async function AppLayout({
