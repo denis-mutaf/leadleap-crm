@@ -310,6 +310,11 @@ export default async function DealsTablePage({
         tags={tags.data ?? []}
         lostReasons={lostReasons.data ?? []}
         canExport={profile.role === "head" || profile.role === "admin"}
+        canDelete={
+          profile.role === "manager" ||
+          profile.role === "head" ||
+          profile.role === "admin"
+        }
       />
     </div>
   );

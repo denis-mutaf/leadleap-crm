@@ -702,7 +702,14 @@
 .deals-page .deals-table th:nth-child(8), .deals-page .deals-table td:nth-child(8) { width: 140px; }
 .deals-page .deals-table th:nth-child(9), .deals-page .deals-table td:nth-child(9) { width: 90px; }
 .deals-page .deals-table th:nth-child(10), .deals-page .deals-table td:nth-child(10) { width: 110px; }
+.deals-page .deals-table th:nth-child(11), .deals-page .deals-table td:nth-child(11) { width: 44px; }
 .deals-page .deal-table-contact { display: block; overflow: hidden; color: var(--foreground); text-decoration: none; font-weight: 500; text-overflow: ellipsis; }
+.deals-page .deal-row-menu { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: 0; background: transparent; color: var(--muted-foreground); cursor: pointer; }
+.deals-page .deal-row-menu:hover, .deals-page .deal-row-menu:focus-visible { color: var(--destructive); background: var(--muted); border-radius: var(--radius); }
+.deals-page .deal-row-menu-wrap { position: relative; }
+.deals-page .deal-row-menu-popover { position: absolute; right: 0; top: 30px; z-index: 4; min-width: 150px; padding: 4px; background: var(--background); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 8px 24px #24252922; }
+.deals-page .deal-row-menu-popover button { width: 100%; padding: 6px 8px; border: 0; background: transparent; color: var(--foreground); text-align: left; cursor: pointer; }
+.deals-page .deal-row-menu-popover button:hover, .deals-page .deal-row-menu-popover button:focus-visible { background: var(--muted); }
 .deals-page .deal-table-contact:hover { text-decoration: underline; }
 .deals-page .deals-table-stage-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--primary); margin-right: 7px; }
 .deals-page .deals-table-stage-dot.won { background: #2e9d63; }
