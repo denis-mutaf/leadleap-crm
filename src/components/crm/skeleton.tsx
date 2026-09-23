@@ -147,7 +147,7 @@ export function SkRecord() {
 
 function SkPage({ children }: { children: ReactNode }) {
   return (
-    <div className="sk-page" style={{ minHeight: "100vh" }}>
+    <div className="sk-page" style={{ minHeight: "var(--vh-shell)" }}>
       {children}
     </div>
   );

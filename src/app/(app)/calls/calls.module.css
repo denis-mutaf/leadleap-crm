@@ -908,7 +908,7 @@ tr.row:hover .dealLink {
   background: transparent;
   padding: 4px 0;
   font-size: 13px;
-  color: var(--primary);
+  color: var(--info);
   cursor: pointer;
   text-decoration: none;
 }

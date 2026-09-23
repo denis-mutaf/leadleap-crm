@@ -1,6 +1,6 @@
 .contactsPage,
 .contactRecord {
-  height: 100vh;
+  height: var(--vh-shell);
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -37,7 +37,7 @@
 }
 .searchForm { height: var(--h-control); display: flex; align-items: center; gap: 7px; min-width: 310px; border: 1px solid var(--input); border-radius: var(--radius); padding: 0 8px; color: var(--muted-foreground); }
 .searchForm input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: var(--foreground); font: inherit; font-size: 13px; }
-.searchForm button, .sortSubmit button { height: var(--h-control); border: 0; background: transparent; color: var(--primary); cursor: pointer; font: inherit; font-size: 13px; }
+.searchForm button, .sortSubmit button { height: var(--h-control); border: 0; background: transparent; color: var(--info); cursor: pointer; font: inherit; font-size: 13px; }
 .sortControl { display: inline-flex; align-items: center; gap: 6px; color: var(--secondary-text, var(--muted-foreground)); font-size: 13px; }
 .sortControl select { height: var(--h-control); border: 1px solid var(--input); border-radius: var(--radius); background: var(--secondary); color: var(--foreground); padding: 0 8px; font: inherit; font-size: 13px; }
 .sortSubmit { margin-left: auto; }
@@ -47,7 +47,7 @@
 .contactsHead { min-height: var(--h-row-header); background: var(--muted); color: var(--secondary-text, var(--muted-foreground)); font-size: 13px; }
 .contactsHead:hover { background: var(--muted); }
 .contactName { min-width: 0; display: flex; align-items: center; gap: 8px; font-weight: 500; }
-.contactAvatar { width: var(--h-control); height: var(--h-control); flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--accent); color: var(--primary); font-size: 11px; font-weight: 600; }
+.contactAvatar { width: var(--h-control); height: var(--h-control); flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--accent); color: var(--info); font-size: 11px; font-weight: 600; }
 .avatarLarge { width: 32px; height: 32px; }
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dealCount { color: var(--secondary-text, var(--muted-foreground)); font-variant-numeric: tabular-nums; }
@@ -84,7 +84,7 @@
 .primaryValue { font-weight: 500; }
 .primaryLabel { flex: none; color: var(--secondary-text, var(--muted-foreground)); font-size: 12px; font-weight: 400; }
 .emptyValue { color: var(--muted-foreground); }
-.addButton { display: inline-flex; align-items: center; gap: 5px; width: fit-content; min-height: var(--h-control); border: 0; background: transparent; padding: 0 4px; color: var(--primary); cursor: pointer; font: inherit; font-size: 13px; }
+.addButton { display: inline-flex; align-items: center; gap: 5px; width: fit-content; min-height: var(--h-control); border: 0; background: transparent; padding: 0 4px; color: var(--info); cursor: pointer; font: inherit; font-size: 13px; }
 .addButton:hover { background: var(--accent); border-radius: var(--radius); }
 .compactInput, .customInput { width: 100%; height: var(--h-control); min-width: 0; border: 1px solid var(--primary); border-radius: var(--radius); background: var(--background); padding: 0 6px; color: var(--foreground); outline: 0; font: inherit; font-size: 13px; }
 .customField { display: grid; grid-template-columns: 140px minmax(0, 1fr); align-items: start; gap: 8px; min-height: var(--h-control); padding: 3px 0; }
@@ -149,7 +149,7 @@
 .mergeResults span, .mergeCard span, .mergeCard small { color: var(--muted-foreground); font-size: 13px; }
 .mergeColumns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 0 16px; }
 .mergeCard { display: grid; gap: 6px; border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; cursor: pointer; }
-.mergeCard.selected { border-color: var(--primary); background: var(--muted); }
+.mergeCard.selected { border-color: var(--foreground); background: var(--muted); }
 .mergeCard input, .nameChoice input { accent-color: var(--primary); }
 .candidateHeader { display: flex; align-items: center; gap: 8px; }
 .candidateHeader > span:nth-child(2) { min-width: 0; display: flex; flex-direction: column; gap: 2px; }

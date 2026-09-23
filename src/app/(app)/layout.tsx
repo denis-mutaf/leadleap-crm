@@ -118,7 +118,10 @@ export default async function AppLayout({
         <RouteProgress />
       </Suspense>
       <aside className="nav">
-        <div className="nav-brand">ISRAGRUP</div>
+        <div className="nav-brand">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/logo.svg" alt="ISRAGRUP" />
+        </div>
         {profile.role !== "builder" && <GlobalSearch />}
         <AppNav items={visibleNav} badges={badges} />
         <div className="nav-foot">

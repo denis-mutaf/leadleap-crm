@@ -160,7 +160,7 @@
   justify-self: start;
   border: 0;
   background: transparent;
-  color: var(--primary);
+  color: var(--info);
   font: inherit;
   font-size: 12px;
   cursor: pointer;
@@ -237,7 +237,7 @@
     right: 8px;
     left: 8px;
     width: auto;
-    max-height: calc(100vh - 64px);
+    max-height: calc(var(--vh-shell) - 64px);
   }
 }
 @media (prefers-reduced-motion: reduce) {

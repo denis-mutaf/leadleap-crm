@@ -1,5 +1,5 @@
 .page {
-  min-height: 100vh;
+  min-height: var(--vh-shell);
   padding: 28px 32px 48px;
   background: var(--background);
   color: var(--foreground);
@@ -292,7 +292,7 @@
   top: 0;
   right: 0;
   width: min(360px, 100vw);
-  height: 100vh;
+  height: var(--vh-shell);
   padding: 18px;
   background: var(--background);
   border-left: 1px solid var(--border);
@@ -305,7 +305,7 @@
   margin-bottom: 22px;
 }
 .panelBody {
-  height: calc(100vh - 112px);
+  height: calc(var(--vh-shell) - 112px);
   overflow-y: auto;
   padding-bottom: 18px;
 }
