@@ -74,7 +74,6 @@ function withQuery(
     if (value === null || value === undefined || value === "") params.delete(key);
     else params.set(key, value);
   }
-  params.set("page", changes.page ?? "0");
   const query = params.toString();
   return query ? `/deals?${query}` : "/deals";
 }
@@ -220,8 +219,6 @@ export default async function DealsPage({
   if (!profile) redirect("/login");
   if (profile.role === "builder") redirect("/reports");
   const query = await searchParams;
-  const pageValue = Number.parseInt(one(query.page) ?? "0", 10);
-  const page = Number.isFinite(pageValue) && pageValue > 0 ? pageValue : 0;
   const sort = validSort(one(query.sort));
   const flag = validFlag(one(query.flag));
   const ownerParam = one(query.owner);
@@ -230,7 +227,7 @@ export default async function DealsPage({
   const supabase = await createClient();
   const [boardResult, stagesResponse, sourcesResponse, projectsResponse, tagsResponse, ownersResponse, lostReasonsResponse, taskTypesResponse] = await Promise.all([
     supabase.rpc("crm_board", {
-      p_page: page,
+      p_page: 0,
       p_page_size: PAGE_SIZE,
       p_owner: owner,
       p_project: one(query.project) || null,
@@ -276,7 +273,6 @@ export default async function DealsPage({
     })),
   ];
   const lost = lostStage ? { id: "lost", title: lostStage.name, ...columnData(lostStage.id), kind: "lost" as const, position: lostStage.position } : null;
-  const hasNextPage = columns.some((column) => (page + 1) * PAGE_SIZE < column.total);
   const owners = (ownersResponse.data ?? []) as Profile[];
   const sources = (sourcesResponse.data ?? []) as Option[];
   const projects = (projectsResponse.data ?? []) as Project[];
@@ -294,10 +290,10 @@ export default async function DealsPage({
         <CreateDealModal stages={stages} sources={sources} projects={projects} tags={tags} owners={owners} />
       </div>
       <FilterBar query={query} owners={owners} projects={projects} tags={tags} sources={sources} counters={board.counters} />
-      <div className="applied-summary">Страница {page + 1} · показано {columns.reduce((sum, column) => sum + column.deals.length, 0)} из {board.total}</div>
+      <div className="applied-summary">Показано {columns.reduce((sum, column) => sum + column.deals.length, 0)} из {board.total}</div>
       <BoardRefreshGuard serverFlag={flag ?? ""} />
       <DealsBoard
-        key={`${page}|${sort}|${flag ?? ""}|${mine ? "mine" : ownerParam ?? ""}|${one(query.project) ?? ""}|${one(query.tag) ?? ""}|${one(query.source) ?? ""}`}
+        key={`${sort}|${flag ?? ""}|${mine ? "mine" : ownerParam ?? ""}|${one(query.project) ?? ""}|${one(query.tag) ?? ""}|${one(query.source) ?? ""}`}
         columns={columns}
         lost={lost}
         currentUserId={profile.id}
@@ -306,12 +302,6 @@ export default async function DealsPage({
         activeAssignees={owners.map((item) => ({ id: item.id, name: item.full_name }))}
         query={{ pageSize: PAGE_SIZE, owner, project: one(query.project) || null, tag: one(query.tag) || null, source: one(query.source) || null, flag, sort, lostKey: lostStage?.id ?? null }}
       />
-      {(page > 0 || hasNextPage) && (
-        <nav className="deals-pagination" aria-label="Страницы сделок">
-          {page > 0 && <Link href={withQuery(query, { page: String(page - 1) })}>Предыдущая</Link>}
-          {hasNextPage && <Link href={withQuery(query, { page: String(page + 1) })}>Следующая</Link>}
-        </nav>
-      )}
     </div>
   );
 }

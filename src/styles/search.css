@@ -82,10 +82,10 @@
   min-width: 0;
   flex: 1;
   height: var(--h-control);
-  border: 0;
+  border: 1px solid var(--field-border);
   outline: 0;
   border-radius: var(--radius-control);
-  background: var(--sidebar);
+  background: var(--field);
   padding: 0 12px;
   color: var(--foreground);
   font: inherit;
@@ -93,7 +93,7 @@
 }
 
 .global-search-field input::placeholder {
-  color: var(--muted-foreground);
+  color: var(--field-placeholder);
 }
 
 .global-search-field button {

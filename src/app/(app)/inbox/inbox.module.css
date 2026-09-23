@@ -47,9 +47,9 @@
   align-items: center;
   gap: 6px;
   padding: 0 12px;
-  border: 0;
+  border: 1px solid var(--field-border);
   border-radius: var(--radius-control);
-  background: var(--sidebar);
+  background: var(--field);
   color: var(--muted-foreground);
 }
 
@@ -65,7 +65,7 @@
 }
 
 .search input::placeholder {
-  color: var(--muted-foreground);
+  color: var(--field-placeholder);
 }
 
 .preview {

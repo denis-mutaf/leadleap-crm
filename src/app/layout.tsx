@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Doto, Inter_Tight, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { DetailsDismiss } from "@/components/crm/details-dismiss";
 import { TooltipLayer } from "@/components/crm/tooltip-layer";
 
 // Интерфейс русский (ТЗ, раздел 2) — кириллица обязательна в подмножестве.
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="min-h-full flex flex-col">
         {children}
         <TooltipLayer />
+        <DetailsDismiss />
       </body>
     </html>
   );

@@ -31,7 +31,7 @@
 .fieldValue, .relationValue { min-width: 0; flex: 1; overflow-wrap: anywhere; padding: 3px 8px; margin-left: -8px; border: 0; border-radius: 10px; background: transparent; color: var(--foreground); text-align: left; font: inherit; cursor: pointer; transition: background-color var(--motion-fast) var(--ease); }
 .fieldValue:hover, .relationValue:hover, .fieldValue:focus-visible, .relationValue:focus-visible { background: var(--accent); }
 .isEmpty { color: var(--muted-foreground); }
-.fieldControl { min-width: 0; flex: 1; height: var(--h-control); padding: 0 12px; border: 1px solid transparent; border-radius: var(--radius-control); background: var(--sidebar); color: var(--foreground); font: inherit; transition: background-color var(--motion-fast) var(--ease), border-color var(--motion-fast) var(--ease), box-shadow var(--motion) var(--ease); }
+.fieldControl { min-width: 0; flex: 1; height: var(--h-control); padding: 0 12px; border: 1px solid var(--field-border); border-radius: var(--radius-control); background: var(--field); color: var(--foreground); font: inherit; transition: background-color var(--motion-fast) var(--ease), border-color var(--motion-fast) var(--ease), box-shadow var(--motion) var(--ease); }
 .fieldControl:focus { outline: none; border-color: var(--foreground); background: var(--card); box-shadow: 0 0 0 3px var(--ghost); }
 .fieldSaving { opacity: .65; }
 .relationValue { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 4px; }
@@ -57,7 +57,7 @@
 .activeTab .tabCount { background: var(--ghost); color: var(--foreground); }
 .quickActions { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 4px; }
 .quickActions form { display: flex; flex: 1 1 360px; gap: 6px; }
-.quickActions input { min-width: 0; flex: 1; height: var(--h-control); padding: 0 12px; border: 1px solid transparent; border-radius: var(--radius-control); background: var(--sidebar); color: var(--foreground); font: inherit; font-size: 13px; transition: background-color var(--motion-fast) var(--ease), border-color var(--motion-fast) var(--ease), box-shadow var(--motion) var(--ease); }
+.quickActions input { min-width: 0; flex: 1; height: var(--h-control); padding: 0 12px; border: 1px solid var(--field-border); border-radius: var(--radius-control); background: var(--field); color: var(--foreground); font: inherit; font-size: 13px; transition: background-color var(--motion-fast) var(--ease), border-color var(--motion-fast) var(--ease), box-shadow var(--motion) var(--ease); }
 .quickActions input:focus { outline: none; border-color: var(--foreground); background: var(--card); box-shadow: 0 0 0 3px var(--ghost); }
 .quickActions button, .modalActions button { display: inline-flex; align-items: center; gap: 5px; height: var(--h-control); padding: 0 14px; border: 0; border-radius: var(--radius-control); background: var(--module-card); color: var(--foreground); font: inherit; font-size: 13px; cursor: pointer; box-shadow: var(--shadow-pill); transition: background-color var(--motion-fast) var(--ease), box-shadow var(--motion) var(--ease), transform var(--motion-fast) var(--ease); }
 .quickActions button:hover, .modalActions button:hover { background: var(--card); box-shadow: var(--shadow-pill-hover); }
@@ -68,8 +68,10 @@
 .feed { flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px; }
 .feedGroup { margin: 0 0 16px; }
 .feedGroup h3 { margin: 8px 0 4px; color: var(--secondary-text); font-size: 13px; font-weight: 400; }
-.feedRow { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 8px; align-items: start; min-height: var(--h-row); padding: 7px 8px; border-radius: 12px; transition: background-color var(--motion-fast) var(--ease); }
-.feedRow:hover { background: var(--accent); }
+/* Каждая запись ленты — своя светлая плитка, а не строка сплошного списка. */
+.feedRow { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 8px; align-items: start; min-height: var(--h-row); padding: 10px 12px; border-radius: 14px; background: var(--module-card); transition: background-color var(--motion-fast) var(--ease), box-shadow var(--motion) var(--ease); }
+.feedRow + .feedRow { margin-top: 6px; }
+.feedRow:hover { background: var(--card); box-shadow: var(--shadow-pill); }
 .feedRow > svg { margin-top: 2px; color: var(--muted-foreground); }
 .feedRow p { margin: 0; white-space: pre-wrap; }
 .feedRow strong { display: block; font-weight: 500; }
@@ -93,7 +95,7 @@
 .modalHead button { margin-left: auto; width: var(--h-control); height: var(--h-control); display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: var(--radius-control); background: transparent; color: inherit; cursor: pointer; transition: background-color var(--motion-fast) var(--ease), transform var(--motion-fast) var(--ease); }
 .modalHead button:hover { background: var(--ghost); }
 .modalHead button:active { transform: scale(var(--press-scale)); }
-.modal textarea { width: 100%; min-height: 96px; box-sizing: border-box; resize: vertical; margin-top: 8px; padding: 8px 12px; border: 1px solid transparent; border-radius: 14px; background: var(--sidebar); color: var(--foreground); font: inherit; transition: background-color var(--motion-fast) var(--ease), border-color var(--motion-fast) var(--ease), box-shadow var(--motion) var(--ease); }
+.modal textarea { width: 100%; min-height: 96px; box-sizing: border-box; resize: vertical; margin-top: 8px; padding: 8px 12px; border: 1px solid var(--field-border); border-radius: 14px; background: var(--field); color: var(--foreground); font: inherit; transition: background-color var(--motion-fast) var(--ease), border-color var(--motion-fast) var(--ease), box-shadow var(--motion) var(--ease); }
 .modal textarea:focus { outline: none; border-color: var(--foreground); background: var(--card); box-shadow: 0 0 0 3px var(--ghost); }
 .modalActions { display: flex; justify-content: flex-end; gap: 7px; margin-top: 12px; }
 .modalActions button:last-child { background: var(--primary); color: var(--primary-foreground); font-weight: 500; }

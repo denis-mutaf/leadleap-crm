@@ -17,7 +17,7 @@ import styles from "./calls.module.css";
 
 // Правая панель звонка: грузится отдельным запросом, чтобы при переключении
 // строки список не исчезал, а панель показывала скелетон (образец — inbox).
-export async function CallPanel({ callId }: { callId: string }) {
+export async function CallPanel({ callId, closeHref }: { callId: string; closeHref: string }) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("calls")
@@ -58,7 +58,7 @@ export async function CallPanel({ callId }: { callId: string }) {
             <ExternalLink size={15} aria-hidden="true" />
           </Link>
         ) : null}
-        <Link className={styles.iconBtn} href="/calls" title="Закрыть" aria-label="Закрыть">
+        <Link className={styles.iconBtn} href={closeHref} scroll={false} title="Закрыть" aria-label="Закрыть">
           <X size={15} aria-hidden="true" />
         </Link>
       </div>

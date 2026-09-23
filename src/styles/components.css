@@ -141,9 +141,9 @@ button.tile:active {
   .app-shell :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"]), select) {
     height: var(--h-control);
     padding: 0 12px;
-    border: 1px solid transparent;
+    border: 1px solid var(--field-border);
     border-radius: var(--radius-control);
-    background: var(--sidebar);
+    background: var(--field);
     color: var(--foreground);
     font: inherit;
     font-size: var(--text-body);
@@ -154,9 +154,9 @@ button.tile:active {
   }
   .app-shell :where(textarea) {
     padding: 8px 12px;
-    border: 1px solid transparent;
+    border: 1px solid var(--field-border);
     border-radius: 14px;
-    background: var(--sidebar);
+    background: var(--field);
     color: var(--foreground);
     font: inherit;
     font-size: var(--text-body);
@@ -165,14 +165,14 @@ button.tile:active {
       border-color var(--motion-fast) var(--ease),
       box-shadow var(--motion) var(--ease);
   }
-  .app-shell :where(input, select, textarea):hover { background: #ececec; }
+  .app-shell :where(input, select, textarea):hover { border-color: var(--field-border-hover); }
   .app-shell :where(input, select, textarea):focus {
     outline: none;
     border-color: var(--foreground);
     background: var(--card);
     box-shadow: 0 0 0 3px rgba(38, 38, 38, 0.08);
   }
-  .app-shell :where(input, textarea)::placeholder { color: var(--muted-foreground); }
+  .app-shell :where(input, textarea)::placeholder { color: var(--field-placeholder); }
   .app-shell :where(input[type="checkbox"], input[type="radio"]) {
     accent-color: var(--foreground);
     transition: transform var(--motion-fast) var(--ease);
@@ -188,10 +188,16 @@ button.tile:active {
   gap: 6px;
   padding: 0 12px;
   border-radius: var(--radius-control);
-  background: var(--sidebar);
-  color: var(--muted-foreground);
+  border: 1px solid var(--field-border);
+  background: var(--field);
+  color: var(--foreground);
   font-size: var(--text-body);
 }
+
+.input svg { flex: none; color: var(--muted-foreground); }
+
+.input::placeholder,
+.input input::placeholder { color: var(--field-placeholder); }
 
 /* ===== Пилюли, метки, чипы, точки, аватары ===== */
 
@@ -758,7 +764,7 @@ input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus {
   -webkit-text-fill-color: var(--foreground);
-  -webkit-box-shadow: 0 0 0 40px var(--sidebar) inset;
+  -webkit-box-shadow: 0 0 0 40px var(--field) inset;
   caret-color: var(--foreground);
   transition: background-color 9999s;
 }
@@ -778,9 +784,9 @@ html { scrollbar-color: #c9c9c9 transparent; }
   align-items: center;
   gap: 6px;
   padding: 0 12px;
-  border: 1px solid transparent;
+  border: 1px solid var(--field-border);
   border-radius: var(--radius-control);
-  background: var(--sidebar);
+  background: var(--field);
   color: var(--foreground);
   font: inherit;
   font-size: var(--text-body);
@@ -792,7 +798,7 @@ html { scrollbar-color: #c9c9c9 transparent; }
     transform var(--motion-fast) var(--ease);
 }
 
-.date-field:hover { background: #ececec; }
+.date-field:hover { border-color: var(--field-border-hover); }
 
 .date-field:active { transform: scale(var(--press-scale)); }
 
@@ -800,7 +806,7 @@ html { scrollbar-color: #c9c9c9 transparent; }
 
 .date-field svg { flex: none; color: var(--muted-foreground); }
 
-.date-field .date-field-empty { color: var(--muted-foreground); }
+.date-field .date-field-empty { color: var(--field-placeholder); }
 
 .date-field-wrap { position: relative; display: inline-flex; align-items: center; }
 
@@ -938,9 +944,9 @@ html { scrollbar-color: #c9c9c9 transparent; }
 .date-pop-time select {
   height: var(--h-control);
   padding: 0 10px;
-  border: 0;
+  border: 1px solid var(--field-border);
   border-radius: var(--radius-control);
-  background: var(--sidebar);
+  background: var(--field);
   color: var(--foreground);
   font: inherit;
   font-size: var(--text-body);
@@ -979,4 +985,46 @@ html { scrollbar-color: #c9c9c9 transparent; }
 @keyframes tooltip-in {
   from { opacity: 0; transform: translateY(2px) scale(0.97); }
   to { opacity: 1; transform: none; }
+}
+
+/* ===== Источник заявки: объёмная плитка (SourceIcon) ===== */
+
+.source-icon {
+  --src: var(--module-card);
+  --src-hi: var(--card);
+  width: 22px;
+  height: 22px;
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 7px;
+  background: linear-gradient(180deg, var(--src-hi), var(--src));
+  box-shadow: var(--shadow-source);
+  color: var(--card);
+}
+
+.source-icon b { font-size: 8px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+
+.source-facebook { --src: var(--brand-facebook); --src-hi: var(--brand-facebook-hi); }
+.source-meta { --src: var(--brand-meta); --src-hi: var(--brand-meta-hi); }
+.source-whatsapp { --src: var(--brand-whatsapp); --src-hi: var(--brand-whatsapp-hi); }
+.source-viber { --src: var(--brand-viber); --src-hi: var(--brand-viber-hi); }
+.source-telegram { --src: var(--brand-telegram); --src-hi: var(--brand-telegram-hi); }
+.source-messenger { background: linear-gradient(200deg, var(--brand-messenger-hi), var(--brand-messenger)); }
+.source-instagram { background: var(--brand-instagram); }
+.source-tiktok { --src: var(--brand-tiktok); --src-hi: var(--brand-tiktok-hi); }
+.source-googleads { --src: var(--brand-google); --src-hi: var(--brand-google-hi); }
+.source-board999 { --src: var(--brand-999); --src-hi: var(--brand-999-hi); }
+.source-phone { --src: var(--brand-phone); --src-hi: var(--brand-phone-hi); }
+
+/* Свои каналы без бренда — светлая плитка с графитовым значком. */
+.source-site,
+.source-friends,
+.source-manual,
+.source-street,
+.source-partner,
+.source-email,
+.source-other {
+  color: var(--foreground);
+  box-shadow: var(--shadow-source), inset 0 0 0 1px var(--field-border);
 }

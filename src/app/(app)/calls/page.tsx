@@ -30,6 +30,7 @@ import {
 } from "@/lib/calls/types";
 import { hydrateCalls } from "@/lib/calls/server";
 import { CallPanel, PanelSkeleton } from "./call-panel";
+import { CallRow } from "./call-row";
 import { AutoSubmitForm } from "./calls-filters";
 import styles from "./calls.module.css";
 
@@ -341,7 +342,7 @@ export default async function CallsPage({ searchParams }: { searchParams: Promis
         </span>
       </div>
 
-      <div className={styles.work}>
+      <div className={`${styles.work} ${selectedId ? "" : styles.workSolo}`}>
         <div className={styles.tableCol}>
           <div className={styles.tableScroll}>
             {calls.length === 0 ? (
@@ -377,8 +378,9 @@ export default async function CallsPage({ searchParams }: { searchParams: Promis
                     const callback = needsCallback(call);
                     const dur = call.duration_sec ?? 0;
                     return (
-                      <tr
+                      <CallRow
                         key={call.id}
+                        href={link({ call: call.id })}
                         style={{ "--i": index } as CSSProperties}
                         className={`${styles.row} ${selectedId === call.id ? styles.selected : ""} ${callback ? styles.isCallback : ""}`}
                       >
@@ -463,7 +465,7 @@ export default async function CallsPage({ searchParams }: { searchParams: Promis
                           )}
                         </td>
                         <td className={styles.dim}>{formatCallDate(call.started_at)}</td>
-                      </tr>
+                      </CallRow>
                     );
                   })}
                 </tbody>
@@ -485,17 +487,10 @@ export default async function CallsPage({ searchParams }: { searchParams: Promis
           </div>
         </div>
 
-        {selectedId ? (
+        {selectedId && (
           <Suspense key={selectedId} fallback={<PanelSkeleton />}>
-            <CallPanel callId={selectedId} />
+            <CallPanel callId={selectedId} closeHref={link({ call: null })} />
           </Suspense>
-        ) : (
-          <aside className={styles.panel} aria-label="Звонок">
-            <div className={`${styles.panelEmpty} empty-state`}>
-              <Phone size={20} aria-hidden="true" />
-              <p>Выберите звонок из журнала — запись и детали появятся здесь.</p>
-            </div>
-          </aside>
         )}
       </div>
     </section>

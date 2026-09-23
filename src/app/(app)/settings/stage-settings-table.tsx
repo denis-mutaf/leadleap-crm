@@ -10,6 +10,7 @@ import type { Stage, StageKind } from "@/lib/types";
 import { dbErrorText } from "@/lib/db-errors";
 import { StageIndicator } from "@/components/crm/stage-indicator";
 import styles from "./settings.module.css";
+import { useDismiss } from "@/lib/use-dismiss";
 
 type Row = Stage & { counts: { total: number } };
 type GateKey = "requires_next_step" | "requires_qualification_tag";
@@ -22,6 +23,8 @@ function Toggle({ value, disabled, label, onClick }: { value: boolean; disabled:
 function StageRow({ row, canEdit, menu, setMenu, onEdit, onToggle, allStages }: { row: Row; canEdit: boolean; menu: string | null; setMenu: (id: string | null) => void; onEdit: (row: Row) => void; onToggle: (row: Row, key: GateKey) => void; allStages: readonly Row[] }) {
   const closed = row.kind !== "open";
   const { setNodeRef, transform, transition, attributes, listeners } = useSortable({ id: row.id, disabled: !canEdit || closed });
+  const menuRef = useRef<HTMLTableCellElement>(null);
+  useDismiss(menuRef, menu === row.id, () => setMenu(null));
   return <tr ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={closed ? styles.closed : undefined}>
     <td className={styles.grip}>{!closed && <button className={styles.dragHandle} {...attributes} {...listeners} disabled={!canEdit} aria-label={`Переместить ${row.name}`}><GripVertical size={14} /></button>}</td>
     <td><span className={styles.stageCell}><StageIndicator stage={row} stages={allStages} name={row.name} /></span></td>
@@ -29,7 +32,7 @@ function StageRow({ row, canEdit, menu, setMenu, onEdit, onToggle, allStages }: 
     <td><Toggle value={row.requires_next_step} disabled={!canEdit || closed} label={`${row.name}: требовать следующий шаг`} onClick={() => onToggle(row, "requires_next_step")} /></td>
     <td><Toggle value={row.requires_qualification_tag} disabled={!canEdit} label={`${row.name}: требовать квалификацию`} onClick={() => onToggle(row, "requires_qualification_tag")} /></td>
     <td className={styles.count}><strong>{row.counts.total.toLocaleString("ru-RU")}</strong></td>
-    <td className={styles.menuCell}>{canEdit && <button className={styles.menuButton} aria-label={`Действия: ${row.name}`} aria-expanded={menu === row.id} onClick={(event) => { event.stopPropagation(); setMenu(menu === row.id ? null : row.id); }}><Ellipsis size={16} /></button>}{menu === row.id && <div className={styles.menu} role="menu"><button onClick={() => onEdit(row)}>Переименовать</button></div>}</td>
+    <td className={styles.menuCell} ref={menuRef}>{canEdit && <button className={styles.menuButton} aria-label={`Действия: ${row.name}`} aria-expanded={menu === row.id} onClick={(event) => { event.stopPropagation(); setMenu(menu === row.id ? null : row.id); }}><Ellipsis size={16} /></button>}{menu === row.id && <div className={styles.menu} role="menu"><button onClick={() => onEdit(row)}>Переименовать</button></div>}</td>
   </tr>;
 }
 

@@ -191,7 +191,10 @@ body { letter-spacing: -0.005em; -webkit-font-smoothing: antialiased; }
 /* Экран появляется мягко при каждом переходе: сегмент страницы
    монтируется заново, анимация проигрывается сама. */
 .main-shell > * {
-  animation: screen-in var(--motion-slow) var(--ease) both;
+  /* backwards, не both: после въезда transform снимается совсем. Иначе
+     остаётся matrix(1,0,0,1,0,0), экран становится опорой для fixed —
+     оверлей перетаскивания и модалки съезжают на ширину меню. */
+  animation: screen-in var(--motion-slow) var(--ease) backwards;
 }
 
 @keyframes screen-in {

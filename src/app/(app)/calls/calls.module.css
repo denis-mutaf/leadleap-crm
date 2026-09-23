@@ -140,8 +140,9 @@
   height: var(--h-control);
   padding: 0 12px;
   border-radius: var(--radius-control);
-  background: var(--sidebar);
+  background: var(--field);
   color: var(--muted-foreground);
+  border: 1px solid var(--field-border);
 }
 
 .searchForm input {
@@ -245,6 +246,11 @@
   grid-template-columns: minmax(0, 1fr) clamp(300px, 26vw, 380px);
   gap: var(--gap-module);
   padding: 0 var(--px-cell) var(--px-cell);
+}
+
+/* Звонок не выбран — панели нет, журнал на всю ширину. */
+.work.workSolo {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .tableCol {
@@ -953,10 +959,11 @@ tr.row:hover .dealLink {
   height: var(--h-control);
   padding: 0 12px;
   border-radius: var(--radius-control);
-  background: var(--sidebar);
+  background: var(--field);
   color: var(--muted-foreground);
   font-size: var(--text-body);
   opacity: 0.6;
+  border: 1px solid var(--field-border);
 }
 
 .fields {
@@ -1102,9 +1109,9 @@ tr.row:hover .dealLink {
 }
 
 .noteField {
-  border: 1px solid transparent;
+  border: 1px solid var(--field-border);
   border-radius: 14px;
-  background: var(--sidebar);
+  background: var(--field);
   padding: 8px 12px;
   font: inherit;
   font-size: var(--text-body);

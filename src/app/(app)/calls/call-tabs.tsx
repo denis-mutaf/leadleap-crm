@@ -5,7 +5,7 @@ import Link from "next/link";
 import { FileText, Loader2, Search } from "lucide-react";
 import type { CallRow, CallTranscriptRow } from "@/lib/calls/types";
 import { RESULT_LABEL, callResult, formatCallDate, formatDuration, formatWait, callPhone, callWaitSec } from "@/lib/calls/types";
-import { TranscribeButton } from "./transcribe-button";
+import { AutoTranscribe, TranscribeButton } from "./transcribe-button";
 import styles from "./calls.module.css";
 
 type Tab = "transcript" | "about" | "links";
@@ -15,6 +15,8 @@ type Tab = "transcript" | "about" | "links";
 // без сегментов — прежний цельный текст.
 export function CallTabs({ call, transcript }: { call: CallRow; transcript: CallTranscriptRow | null }) {
   const [tab, setTab] = useState<Tab>("transcript");
+  // Запись есть, расшифровки нет — запускаем сами, без кнопки.
+  const autoRun = !transcript && (call.duration_sec ?? 0) > 0;
   const result = callResult(call);
   const phone = callPhone(call);
   const line = call.direction === "out" ? call.from_phone : call.to_phone;
@@ -53,8 +55,9 @@ export function CallTabs({ call, transcript }: { call: CallRow; transcript: Call
                   .join(" · ")}
               </p>
             </>
-          ) : transcript?.status === "processing" || transcript?.status === "pending" ? (
+          ) : transcript?.status === "processing" || transcript?.status === "pending" || autoRun ? (
             <div className={styles.transcriptEmpty} role="status">
+              {autoRun && <AutoTranscribe callId={call.id} />}
               <Loader2 size={24} aria-hidden="true" className={styles.spin} />
               <strong>Расшифровка идёт</strong>
               <p>Текст появится на этой вкладке через минуту-другую</p>

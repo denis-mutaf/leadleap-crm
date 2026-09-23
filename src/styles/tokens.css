@@ -59,6 +59,11 @@
   --card: #ffffff; /* всплывающее: меню, поповер, диалог; наведение на плитку */
   --popover: #ffffff;
   --sidebar: #f2f2f2; /* остров навигации */
+  /* поле ввода: белое с тонкой рамкой — видно на фарфоре, модуле и плитке */
+  --field: #ffffff;
+  --field-border: #d9d9d9;
+  --field-border-hover: #bdbdbd;
+  --field-placeholder: #8c8c8c; /* 3.4:1 на белом; #a3a3a3 почти не читался */
 
   /* ---- текст ---- */
   --foreground: #262626;
@@ -176,6 +181,20 @@
   --hue-violet-dot: #946bf7; --hue-violet-bg: #f4f0fe; --hue-violet-tx: #5c3aaf;
   --hue-magenta-dot: #cb56e4;
   --hue-grey-dot: #a3a3a3; --hue-grey-bg: #efefef; --hue-grey-tx: #4a4a4a;
+
+  /* Источник заявки — плитка SourceIcon: цвет бренда + светлый верх для объёма. */
+  --brand-facebook: #1467d8; --brand-facebook-hi: #3d8ef6;
+  --brand-meta: #0070e0; --brand-meta-hi: #2c9bff;
+  --brand-whatsapp: #1ea852; --brand-whatsapp-hi: #3fd46f;
+  --brand-viber: #6a55e8; --brand-viber-hi: #8f7ff7;
+  --brand-telegram: #1b8cc4; --brand-telegram-hi: #40b6ec;
+  --brand-messenger: #8c3cf5; --brand-messenger-hi: #1f86ff;
+  --brand-instagram: linear-gradient(45deg, #f7b733 0%, #ee2a7b 50%, #6228d7 100%);
+  --brand-tiktok: #111111; --brand-tiktok-hi: #3a3a3a;
+  --brand-google: #3474e0; --brand-google-hi: #5c96f5;
+  --brand-999: #d62b1f; --brand-999-hi: #f0503f;
+  --brand-phone: #262626; --brand-phone-hi: #545454; /* звонок — графит: не спутать с зелёным WhatsApp */
+  --shadow-source: inset 0 1px 0 rgba(255, 255, 255, 0.4), inset 0 -1px 0 rgba(0, 0, 0, 0.14), 0 1px 2px rgba(0, 0, 0, 0.14);
 }
 
 @media (max-width: 600px) {

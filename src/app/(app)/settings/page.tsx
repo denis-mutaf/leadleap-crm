@@ -22,7 +22,7 @@ export default async function SettingsPage() {
   const payload = snapshot.data as { stage_totals?: Record<string, number> } | null;
   const counts = payload?.stage_totals ?? {};
   const rows = ((result.data ?? []) as Stage[]).map((stage) => ({ ...stage, counts: { total: Number(counts[stage.id] ?? 0) } }));
-  return <div className={styles.page}>
+  return <div className={`${styles.page} settings-content`}>
     <header className={styles.header}><div><h1>Воронка и этапы</h1><p className={styles.subtitle}>Порядок меняется перетаскиванием. Этапы видят все менеджеры</p></div></header>
     <div className={styles.tableWrap}><StageTable rows={rows} canEdit={profile.role === "admin"} /></div>
     <aside className={styles.note}><Info size={16} aria-hidden="true" /><p>Этап со сделками удалить нельзя — сначала переведите их. История переходов сохраняется даже по удалённым этапам.</p></aside>

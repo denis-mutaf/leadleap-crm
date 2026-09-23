@@ -85,10 +85,20 @@
 | `.page-header`, `.toolbar`, `.filterbar` | полосы без линий | |
 | `.empty-state`, `.sk-*`, `.field-*` | кит | |
 
-Нативные поля в `.app-shell` уже пилюли на `--sidebar` с графитовым фокусом (слой base).
+Нативные поля в `.app-shell` уже пилюли с графитовым фокусом (слой base).
 Если у экрана свой класс поля — приведи его к тем же значениям: высота `--h-control`,
-радиус `--radius-control` (textarea — 14px), фон `var(--sidebar)`, без рамки,
+радиус `--radius-control` (textarea — 14px), фон `var(--field)` (белый),
+рамка `1px solid var(--field-border)`, наведение — `border-color: var(--field-border-hover)`,
+текст `--foreground`, плейсхолдер `--field-placeholder`,
 фокус `border-color: var(--foreground); background: var(--card); box-shadow: 0 0 0 3px rgba(38,38,38,.08)`.
+Фон `--sidebar` для полей запрещён: на модуле #efefef и плитке #fafafa он сливается (24.09.2026).
+Контрол внутри пилюли (дата в «Периоде», селект в фильтре) — без своей рамки и фона: текст пилюли,
+а не вторая пилюля.
+
+Источник заявки — только `<SourceIcon source={name} />` (`src/components/crm/source-icon.tsx`):
+объёмная плитка 22px в цвете бренда (`--brand-*`), название — в подсказке. Звонок — графит, чтобы
+не путать с зелёным WhatsApp. Логотипы брендов — пути Simple Icons внутри компонента; новые
+источники добавляются правилом в `RULES`, не подписью на карточке.
 
 ## 7. Рецепты экранов
 

@@ -16,11 +16,8 @@ import {
 import {
   ChevronDown,
   ChevronRight,
-  Globe,
   House,
-  MessageCircle,
   MoreHorizontal,
-  Phone,
   Plus,
   X,
 } from "lucide-react";
@@ -32,6 +29,8 @@ import { DateField } from "@/components/crm/date-field";
 import { createClient } from "@/lib/supabase/client";
 import { dbErrorText } from "@/lib/db-errors";
 import { startRouteProgress } from "../route-progress";
+import { useDismiss } from "@/lib/use-dismiss";
+import { SourceIcon } from "@/components/crm/source-icon";
 
 type OpenEvent = { metaKey: boolean; ctrlKey: boolean; button: number };
 type OpenDeal = (event?: OpenEvent) => void;
@@ -160,12 +159,6 @@ function amount(value: number | null, currency: string) {
   return `${currency || "€"} ${new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(value)}`;
 }
 
-function channelIcon(source: string | null) {
-  if (!source) return <Globe size={14} aria-hidden="true" />;
-  if (/звон|call|phone/i.test(source)) return <Phone size={14} aria-hidden="true" />;
-  return <MessageCircle size={14} aria-hidden="true" />;
-}
-
 function cardMoney(deal: BoardCard) {
   const price = amount(deal.budget, deal.budget_currency);
   if (price) return price;
@@ -209,10 +202,7 @@ function PresentationalCard({
     >
       <div className="deal-title">
         <span>{deal.contact_name || deal.phone}</span>
-        {deal.source_name && <span className="deal-channel" title={deal.source_name}>
-          {channelIcon(deal.source_name)}
-          <span>{deal.source_name}</span>
-        </span>}
+        {deal.source_name && <SourceIcon className="deal-channel" source={deal.source_name} />}
       </div>
       {deal.object_text && <div className="deal-object">
         <House size={14} aria-hidden="true" />
@@ -250,7 +240,7 @@ function KettleCard({ deal, onOpen, onClaim, index = 0 }: { deal: BoardCard; onO
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: deal.id });
   return (
     <article ref={setNodeRef} {...listeners} {...attributes} className={`kettle-card ${isDragging ? "deal-card-dragging" : ""}`} style={{ "--i": index } as CSSProperties} onClick={(event) => onOpen(event)} onAuxClick={(event) => { if (event.button === 1) { event.preventDefault(); onOpen(event); } }}>
-      <div className="kettle-meta">{deal.source_name && channelIcon(deal.source_name)} {deal.source_name && <span>{deal.source_name} · </span>}{time(deal.updated_at)}</div>
+      <div className="kettle-meta">{deal.source_name && <SourceIcon source={deal.source_name} />}<span>{time(deal.updated_at)}</span></div>
       <strong>{deal.contact_name || deal.phone}</strong>
       {(deal.title || deal.object_text) && <p>{deal.title || deal.object_text}</p>}
       <div className="kettle-footer"><span>ждёт {relative(deal.updated_at)}</span><button className="btn kettle-claim" type="button" onClick={(event) => { event.stopPropagation(); onClaim(); }}>Взять</button></div>
@@ -304,6 +294,8 @@ function BoardColumn({
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useDismiss(menuRef, menuOpen, () => setMenuOpen(false));
   const [hidden, setHidden] = useState(false);
   if (hidden) return <button className="hidden-column" type="button" onClick={() => setHidden(false)}>Показать «{column.title}»</button>;
   return (
@@ -314,7 +306,7 @@ function BoardColumn({
           ? <StageIndicator hue="grey" name={column.title} />
           : <StageIndicator stage={{ id: column.id, kind: column.kind ?? (column.won ? "won" : "open"), position: column.position ?? 0 }} stages={stages} name={column.title} />}
         <span className="pill">{column.total}</span>
-        {!column.kettle && <div className="column-menu-wrap"><button className="column-more" type="button" aria-label={`Меню колонки ${column.title}`} onClick={() => setMenuOpen((open) => !open)}><MoreHorizontal size={15} /></button>{menuOpen && <div className="column-menu"><button type="button" onClick={() => { setHidden(true); setMenuOpen(false); }}>Скрыть колонку</button></div>}</div>}
+        {!column.kettle && <div className="column-menu-wrap" ref={menuRef}><button className="column-more" type="button" aria-label={`Меню колонки ${column.title}`} onClick={() => setMenuOpen((open) => !open)}><MoreHorizontal size={15} /></button>{menuOpen && <div className="column-menu"><button type="button" onClick={() => { setHidden(true); setMenuOpen(false); }}>Скрыть колонку</button></div>}</div>}
       </div>
       {column.sum !== null && column.sum > 0 && <div className="column-sum">€ {new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(column.sum)}</div>}
       <div className="column-track motion-list">

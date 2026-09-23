@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { dbErrorText } from "@/lib/db-errors";
@@ -46,4 +46,34 @@ export function TranscribeButton({ callId, label }: { callId: string; label: str
       {pending ? "Расшифровываем…" : label}
     </button>
   );
+}
+
+// Открыли звонок с записью, а текста ещё нет — расшифровка стартует сама.
+// Только один запрос на открытие; упавшую не повторяем автоматически,
+// там остаётся кнопка «Попробовать снова».
+export function AutoTranscribe({ callId }: { callId: string }) {
+  const router = useRouter();
+  const started = useRef(false);
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+    void (async () => {
+      try {
+        const res = await fetch("/api/calls/transcribe", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ callId }),
+        });
+        if (!res.ok && res.status !== 409 && res.status !== 422) {
+          const body = (await res.json().catch(() => null)) as { error?: string } | null;
+          toast.error(dbErrorText(body?.error, "Не удалось расшифровать"));
+        }
+      } catch (err) {
+        toast.error(dbErrorText(err, "Не удалось расшифровать"));
+      } finally {
+        router.refresh();
+      }
+    })();
+  }, [callId, router]);
+  return null;
 }

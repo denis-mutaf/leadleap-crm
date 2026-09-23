@@ -81,7 +81,7 @@ export default async function ContactsPage({
           <Search size={15} aria-hidden="true" />
           <input name="q" defaultValue={q} placeholder="Поиск по имени или телефону" aria-label="Поиск по имени или телефону" />
           <input type="hidden" name="sort" value={sort} />
-          <button type="submit" className="btn btn-primary">Найти</button>
+          <button type="submit">Найти</button>
         </form>
         <ContactSortSelect value={sort} q={q} />
       </div>

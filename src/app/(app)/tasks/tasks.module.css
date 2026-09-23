@@ -6,9 +6,9 @@
   align-items: center;
   gap: 6px;
   padding: 0 6px 0 12px;
-  border: 0;
+  border: 1px solid var(--field-border);
   border-radius: var(--radius-control);
-  background: var(--sidebar);
+  background: var(--field);
   color: var(--muted-foreground);
   transition: background-color var(--motion-fast) var(--ease);
 }
@@ -24,7 +24,7 @@
 }
 
 .searchForm input::placeholder {
-  color: var(--muted-foreground);
+  color: var(--field-placeholder);
 }
 
 .total {
@@ -84,7 +84,23 @@
 
 .periodField {
   gap: 2px;
-  max-width: 250px;
+  flex: 0 0 auto;
+  max-width: none;
+  padding-right: 4px;
+}
+
+/* Даты внутри пилюли — текст пилюли, а не вторая пилюля. */
+.periodField :global(.date-field) {
+  height: var(--h-control-sm);
+  padding: 0 8px;
+  border-color: transparent;
+  background: transparent;
+}
+
+.periodField :global(.date-field:hover),
+.periodField :global(.date-field[data-state="open"]) {
+  border-color: transparent;
+  background: var(--ghost);
 }
 
 .periodField input {

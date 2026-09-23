@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { dbErrorText } from "@/lib/db-errors";
+import { useDismiss } from "@/lib/use-dismiss";
 type Option = { id: string; name: string };
 type Stage = Option & { kind: "open" | "won" | "lost" };
 type Owner = { id: string; full_name: string };
@@ -40,6 +41,7 @@ export function CreateDealModal({
     [objectText, setObjectText] = useState(""),
     [tagIds, setTagIds] = useState<string[]>([]),
     [tagPickerOpen, setTagPickerOpen] = useState(false),
+    tagPickerRef = useRef<HTMLDivElement>(null),
     [tagSearch, setTagSearch] = useState(""),
     [note, setNote] = useState(""),
     [candidates, setCandidates] = useState<Candidate[]>([]),
@@ -49,6 +51,7 @@ export function CreateDealModal({
     [error, setError] = useState<string | null>(null);
   const request = useRef(0);
   const digits = phone.replace(/\D/g, "");
+  useDismiss(tagPickerRef, tagPickerOpen, () => setTagPickerOpen(false));
   useEffect(() => {
     if (!open || digits.length < 8) return;
     const n = ++request.current;
@@ -381,7 +384,7 @@ export function CreateDealModal({
                     ))}
                   </select>
                 </label>
-                <div className="create-deal-tag-picker">
+                <div className="create-deal-tag-picker" ref={tagPickerRef}>
                   <span className="create-deal-field-label">Метки</span>
                   <div className="create-deal-tag-control">
                     <div className="create-deal-tag-chips">

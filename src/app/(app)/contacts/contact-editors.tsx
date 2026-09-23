@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Check, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -8,6 +8,7 @@ import { DateField } from "@/components/crm/date-field";
 import { createClient } from "@/lib/supabase/client";
 import { dbErrorText } from "@/lib/db-errors";
 import styles from "./contacts.module.css";
+import { useDismiss } from "@/lib/use-dismiss";
 
 type Phone = { id: string; phone: string; is_primary: boolean };
 type Email = { ordinal: number; email: string };
@@ -351,6 +352,8 @@ export function ContactTags({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
+  useDismiss(pickerRef, open, () => setOpen(false));
   const [busy, setBusy] = useState(false);
   const available = allTags.filter((tag) => !tags.some((selected) => selected.id === tag.id));
   async function addTag(tagId: string) {
@@ -368,7 +371,7 @@ export function ContactTags({
     setBusy(false);
   }
   return (
-    <div className={styles.tagEditor}>
+    <div className={styles.tagEditor} ref={pickerRef}>
       <div className={styles.tagList}>
         {tags.map((tag) => <span className={styles.tag} key={tag.id}>{tag.name}<button type="button" onClick={() => void removeTag(tag.id)} disabled={busy} aria-label={`Удалить метку ${tag.name}`}><X size={12} /></button></span>)}
       </div>

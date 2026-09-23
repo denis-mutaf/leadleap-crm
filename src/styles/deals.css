@@ -175,8 +175,11 @@
   display: flex;
   align-items: flex-start;
   gap: var(--gap-module);
+  align-items: stretch;
   overflow-x: auto;
   overflow-y: hidden;
+  /* Край доски скруглён: крайняя колонка уходит под скругление, а не под срез. */
+  border-radius: var(--radius-module);
   padding: 4px 0 12px;
   background: transparent;
 }
@@ -186,7 +189,7 @@
   width: 268px;
   flex: 0 0 268px;
   min-width: 0;
-  min-height: calc(var(--vh-shell) - 160px);
+  min-height: 0;
   display: flex;
   flex-direction: column;
   background: var(--module);
@@ -203,11 +206,23 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 2px 0;
+  /* Колонка листается сама: шапка стоит, скругление рамки не рвётся.
+     Поля по бокам — чтобы кольцо и тень карточки не срезались. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0 -4px;
+  padding: 2px 4px 20px;
   border-radius: var(--radius-tile);
   background: transparent;
+  /* Карточки внизу растворяются, а не обрезаются линией. */
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 20px), transparent);
   transition: background-color var(--motion) var(--ease);
 }
+
+.kanban-column .column-track > *,
+.kettle .column-track > * { flex: none; }
+
+.column-sum { flex: none; }
 
 /* Место под перенос — лаймовый тон с плавной сменой фона. */
 .kanban-column.drop-target .column-track,
@@ -219,6 +234,7 @@
 
 .column-head {
   height: 39px;
+  flex: none;
   display: flex;
   align-items: flex-start;
   gap: 8px;
@@ -438,22 +454,7 @@
 }
 
 .deal-channel {
-  display: inline-flex;
-  align-items: flex-start;
-  gap: 4px;
-  max-width: 42%;
   margin-left: auto;
-  color: var(--muted-foreground);
-  font-size: 11px;
-  font-weight: 400;
-  white-space: normal;
-  text-align: right;
-}
-
-.deal-channel span {
-  max-width: none;
-  overflow-wrap: anywhere;
-  white-space: normal;
 }
 
 .deal-object {
@@ -746,9 +747,9 @@
   height: var(--h-control);
   min-width: 170px;
   padding: 0 9px;
-  border: 0;
+  border: 1px solid var(--field-border);
   border-radius: var(--radius-control);
-  background: var(--sidebar);
+  background: var(--field);
   color: var(--muted-foreground);
   font-size: 13px;
 }

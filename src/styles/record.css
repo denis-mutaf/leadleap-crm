@@ -78,7 +78,7 @@ button.record-highlight:active { transform: translateY(0) scale(.99); transition
 
 .record-actions form { display: flex; flex: 1 1 360px; gap: 6px; }
 
-.record-actions input { min-width: 0; flex: 1; height: var(--h-control); padding: 0 12px; border: 1px solid transparent; border-radius: var(--radius-control); background: var(--sidebar); color: var(--foreground); font: inherit; font-size: 13px; transition: background-color var(--motion-fast) var(--ease), border-color var(--motion-fast) var(--ease), box-shadow var(--motion) var(--ease); }
+.record-actions input { min-width: 0; flex: 1; height: var(--h-control); padding: 0 12px; border: 1px solid var(--field-border); border-radius: var(--radius-control); background: var(--field); color: var(--foreground); font: inherit; font-size: 13px; transition: background-color var(--motion-fast) var(--ease), border-color var(--motion-fast) var(--ease), box-shadow var(--motion) var(--ease); }
 
 .record-actions input:focus { outline: none; border-color: var(--foreground); background: var(--card); box-shadow: 0 0 0 3px var(--ghost); }
 
@@ -146,7 +146,7 @@ button.record-highlight:active { transform: translateY(0) scale(.99); transition
 
 .record-modal-label { display: block; margin-bottom: 5px; font-size: 13px; }
 
-.record-modal textarea { width: 100%; min-height: 96px; box-sizing: border-box; resize: vertical; padding: 8px 12px; border: 1px solid transparent; border-radius: 14px; background: var(--sidebar); color: var(--foreground); font: inherit; font-size: 13px; transition: background-color var(--motion-fast) var(--ease), border-color var(--motion-fast) var(--ease), box-shadow var(--motion) var(--ease); }
+.record-modal textarea { width: 100%; min-height: 96px; box-sizing: border-box; resize: vertical; padding: 8px 12px; border: 1px solid var(--field-border); border-radius: 14px; background: var(--field); color: var(--foreground); font: inherit; font-size: 13px; transition: background-color var(--motion-fast) var(--ease), border-color var(--motion-fast) var(--ease), box-shadow var(--motion) var(--ease); }
 
 .record-modal textarea:focus { outline: none; border-color: var(--foreground); background: var(--card); box-shadow: 0 0 0 3px var(--ghost); }
 

@@ -20,6 +20,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { dbErrorText } from "@/lib/db-errors";
 import styles from "./fields.module.css";
+import { useDismiss } from "@/lib/use-dismiss";
 
 export type FieldRow = {
   id: string;
@@ -60,6 +61,7 @@ function SortableRow({
   onDelete,
   total,
   noun,
+  locked,
 }: {
   row: FieldRow;
   canEdit: boolean;
@@ -70,8 +72,12 @@ function SortableRow({
   onDelete: () => void;
   total: number;
   noun: string;
+  /** Открыто подтверждение — меню держит выбранную строку, клик мимо его не закрывает. */
+  locked: boolean;
 }) {
   const sortable = useSortable({ id: row.id, disabled: !canEdit });
+  const menuRef = useRef<HTMLTableCellElement>(null);
+  useDismiss(menuRef, menu === row.id && !locked, () => setMenu(null));
   const percent = total ? (row.filled / total) * 100 : 0;
   return (
     <tr
@@ -119,7 +125,7 @@ function SortableRow({
           <i style={{ width: `${Math.min(percent, 100)}%`, minWidth: percent > 0 ? 4 : 0 }} />
         </span>
       </td>
-      <td className={styles.menuCell}>
+      <td className={styles.menuCell} ref={menuRef}>
         {canEdit && (
           <button
             className={styles.icon}
@@ -414,6 +420,7 @@ export default function FieldsClient({
                     onDelete={() => setConfirm("delete")}
                     total={total}
                     noun={noun}
+                    locked={Boolean(confirm)}
                   />
                 ))}
               </SortableContext>

@@ -510,9 +510,9 @@
   min-height: 108px;
   resize: vertical;
   padding: 8px 12px;
-  border: 1px solid transparent;
+  border: 1px solid var(--field-border);
   border-radius: 14px;
-  background: var(--sidebar);
+  background: var(--field);
   font: inherit;
   font-size: var(--text-body);
 }

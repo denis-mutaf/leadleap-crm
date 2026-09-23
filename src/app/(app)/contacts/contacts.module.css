@@ -45,10 +45,10 @@
   border-bottom: 0;
   background: transparent;
 }
-.searchForm { height: var(--h-control); display: flex; align-items: center; gap: 7px; min-width: 310px; border: 0; border-radius: var(--radius-control); padding: 0 6px 0 12px; background: var(--sidebar); color: var(--muted-foreground); transition: background-color var(--motion-fast) var(--ease), box-shadow var(--motion) var(--ease); }
+.searchForm { height: var(--h-control); display: flex; align-items: center; gap: 7px; min-width: 310px; border: 1px solid var(--field-border); border-radius: var(--radius-control); padding: 0 6px 0 12px; background: var(--field); color: var(--muted-foreground); transition: background-color var(--motion-fast) var(--ease), box-shadow var(--motion) var(--ease); }
 .searchForm:focus-within { background: var(--card); box-shadow: 0 0 0 3px var(--ghost); }
 .searchForm input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: var(--foreground); font: inherit; font-size: 13px; }
-.searchForm input::placeholder { color: var(--muted-foreground); }
+.searchForm input::placeholder { color: var(--field-placeholder); }
 .searchForm button, .sortSubmit button { height: var(--h-control-sm); display: inline-flex; align-items: center; padding: 0 12px; border: 0; border-radius: var(--radius-control); background: var(--module-card); color: var(--foreground); cursor: pointer; font: inherit; font-size: 13px; box-shadow: var(--shadow-pill); transition: background-color var(--motion-fast) var(--ease), box-shadow var(--motion) var(--ease), transform var(--motion-fast) var(--ease); }
 .searchForm button:hover, .sortSubmit button:hover { background: var(--card); box-shadow: var(--shadow-pill-hover); }
 .searchForm button:active, .sortSubmit button:active { transform: scale(var(--press-scale)); }
@@ -122,7 +122,7 @@ a.contactsRow:hover .rowArrow { color: var(--foreground); transform: translateX(
 .addButton { display: inline-flex; align-items: center; gap: 5px; width: fit-content; min-height: var(--h-control); border: 0; background: transparent; padding: 0 8px; margin-left: -8px; border-radius: 10px; color: var(--info); cursor: pointer; font: inherit; font-size: 13px; transition: background-color var(--motion-fast) var(--ease), transform var(--motion-fast) var(--ease); }
 .addButton:hover { background: var(--accent); }
 .addButton:active { transform: scale(var(--press-scale)); }
-.compactInput, .customInput { width: 100%; height: var(--h-control); min-width: 0; border: 1px solid transparent; border-radius: var(--radius-control); background: var(--sidebar); padding: 0 12px; color: var(--foreground); outline: 0; font: inherit; font-size: 13px; transition: background-color var(--motion-fast) var(--ease), border-color var(--motion-fast) var(--ease), box-shadow var(--motion) var(--ease); }
+.compactInput, .customInput { width: 100%; height: var(--h-control); min-width: 0; border: 1px solid var(--field-border); border-radius: var(--radius-control); background: var(--field); padding: 0 12px; color: var(--foreground); outline: 0; font: inherit; font-size: 13px; transition: background-color var(--motion-fast) var(--ease), border-color var(--motion-fast) var(--ease), box-shadow var(--motion) var(--ease); }
 .compactInput:focus, .customInput:focus { border-color: var(--foreground); background: var(--card); box-shadow: 0 0 0 3px var(--ghost); }
 .customField { display: grid; grid-template-columns: 140px minmax(0, 1fr); align-items: start; gap: 8px; min-height: var(--h-control); padding: 3px 0; }
 .customValue { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 5px; width: 100%; min-height: 22px; border: 0; border-radius: 10px; background: transparent; padding: 2px 8px; margin-left: -8px; color: var(--foreground); cursor: text; text-align: left; font: inherit; font-size: 14px; overflow-wrap: anywhere; transition: background-color var(--motion-fast) var(--ease); }
@@ -189,7 +189,7 @@ a.contactsRow:hover .rowArrow { color: var(--foreground); transform: translateX(
 .mergeHeader button:active { transform: scale(var(--press-scale)); }
 .mergeSearchArea, .mergeIntro, .mergeHint, .nameChoice { margin: 0; padding: 12px 16px; font-size: 13px; }
 .mergeSearchArea p { margin: 0 0 8px; color: var(--secondary-text); }
-.mergeSearch { height: var(--h-control); display: flex; align-items: center; gap: 7px; border: 0; border-radius: var(--radius-control); background: var(--sidebar); padding: 0 12px; color: var(--muted-foreground); transition: background-color var(--motion-fast) var(--ease), box-shadow var(--motion) var(--ease); }
+.mergeSearch { height: var(--h-control); display: flex; align-items: center; gap: 7px; border: 1px solid var(--field-border); border-radius: var(--radius-control); background: var(--field); padding: 0 12px; color: var(--muted-foreground); transition: background-color var(--motion-fast) var(--ease), box-shadow var(--motion) var(--ease); }
 .mergeSearch:focus-within { background: var(--card); box-shadow: 0 0 0 3px var(--ghost); }
 .mergeSearch input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: inherit; font: inherit; }
 .mergeResults { display: grid; gap: 2px; margin-top: 8px; }
