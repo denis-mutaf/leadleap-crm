@@ -126,11 +126,12 @@ button.tile:active {
 .btn-ghost:hover svg { transform: scale(1.06); }
 
 /* ===== Поля ввода =====
-   Нативные контролы получают фарфоровую форму по умолчанию (слой base —
-   любой класс экрана сильнее). Поле — пилюля на ступень темнее плитки. */
+   Нативные контролы получают фарфоровую форму по умолчанию. Слой base, но
+   специфичность .app-shell (0,1,0) — выше preflight Tailwind (input, select),
+   который иначе сбрасывает фон и радиус; любой экранный CSS вне слоя сильнее. */
 
 @layer base {
-  :where(.app-shell) :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"]), select) {
+  .app-shell :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"]), select) {
     height: var(--h-control);
     padding: 0 12px;
     border: 1px solid transparent;
@@ -144,7 +145,7 @@ button.tile:active {
       border-color var(--motion-fast) var(--ease),
       box-shadow var(--motion) var(--ease);
   }
-  :where(.app-shell) :where(textarea) {
+  .app-shell :where(textarea) {
     padding: 8px 12px;
     border: 1px solid transparent;
     border-radius: 14px;
@@ -157,19 +158,19 @@ button.tile:active {
       border-color var(--motion-fast) var(--ease),
       box-shadow var(--motion) var(--ease);
   }
-  :where(.app-shell) :where(input, select, textarea):hover { background: #ececec; }
-  :where(.app-shell) :where(input, select, textarea):focus {
+  .app-shell :where(input, select, textarea):hover { background: #ececec; }
+  .app-shell :where(input, select, textarea):focus {
     outline: none;
     border-color: var(--foreground);
     background: var(--card);
     box-shadow: 0 0 0 3px rgba(38, 38, 38, 0.08);
   }
-  :where(.app-shell) :where(input, textarea)::placeholder { color: var(--muted-foreground); }
-  :where(.app-shell) :where(input[type="checkbox"], input[type="radio"]) {
+  .app-shell :where(input, textarea)::placeholder { color: var(--muted-foreground); }
+  .app-shell :where(input[type="checkbox"], input[type="radio"]) {
     accent-color: var(--foreground);
     transition: transform var(--motion-fast) var(--ease);
   }
-  :where(.app-shell) :where(input[type="checkbox"], input[type="radio"]):active { transform: scale(0.9); }
+  .app-shell :where(input[type="checkbox"], input[type="radio"]):active { transform: scale(0.9); }
 }
 
 /* Поле-пилюля с иконкой поиска (кит: .input). */
@@ -553,4 +554,422 @@ kbd {
   .filter-chips { width: 100%; }
   .toolbar { overflow: auto; }
   .toolbar .view-switch { white-space: nowrap; }
+}
+
+/* ===== Системные элементы в стиле «Фарфор» =====
+   Всё, что браузер иначе рисует сам: список селекта, чекбокс, радио,
+   полосы прокрутки, стрелки числового поля, автозаполнение.
+   Календарь — компонент DateField (src/components/crm/date-field.tsx),
+   подсказки title — TooltipLayer (src/components/crm/tooltip-layer.tsx). */
+
+/* Выпадающий список селекта — наш поповер. Chrome/Edge 135+ (appearance:
+   base-select); в браузерах без поддержки остаётся системный список,
+   закрытое поле всё равно пилюля. */
+@supports (appearance: base-select) {
+  .app-shell select:not([multiple]),
+  .date-pop select {
+    appearance: base-select;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+
+  .app-shell select:not([multiple])::picker-icon,
+  .date-pop select::picker-icon {
+    content: "";
+    width: 14px;
+    height: 14px;
+    margin-left: auto;
+    background: currentColor;
+    color: var(--muted-foreground);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+    transition: rotate var(--motion) var(--ease);
+  }
+
+  .app-shell select:not([multiple]):open::picker-icon,
+  .date-pop select:open::picker-icon { rotate: 180deg; }
+
+  .app-shell select:not([multiple])::picker(select),
+  .date-pop select::picker(select) {
+    appearance: base-select;
+    min-width: anchor-size(width);
+    max-height: min(360px, 60vh);
+    margin-block: 6px;
+    padding: 6px;
+    border: 0;
+    border-radius: var(--radius-popover);
+    background: var(--popover);
+    color: var(--foreground);
+    box-shadow: var(--shadow-overlay);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+    transform-origin: top;
+    transition:
+      opacity var(--motion) var(--ease),
+      transform var(--motion) var(--ease),
+      overlay var(--motion) allow-discrete,
+      display var(--motion) allow-discrete;
+  }
+
+  .app-shell select:not([multiple]):open::picker(select),
+  .date-pop select:open::picker(select) { opacity: 1; transform: none; }
+
+  @starting-style {
+    .app-shell select:not([multiple]):open::picker(select),
+    .date-pop select:open::picker(select) { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  }
+
+  .app-shell select:not([multiple]) option,
+  .date-pop select option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+    padding: 0 10px;
+    border-radius: 10px;
+    font-size: var(--text-body);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color var(--motion-fast) var(--ease);
+  }
+
+  .app-shell select:not([multiple]) option:hover,
+  .app-shell select:not([multiple]) option:focus-visible,
+  .date-pop select option:hover,
+  .date-pop select option:focus-visible { background: var(--accent); outline: none; }
+
+  .app-shell select:not([multiple]) option:checked,
+  .date-pop select option:checked { font-weight: 500; }
+
+  .app-shell select:not([multiple]) option::checkmark,
+  .date-pop select option::checkmark {
+    order: 1;
+    margin-left: auto;
+    content: "";
+    width: 14px;
+    height: 14px;
+    background: var(--foreground);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+
+  .app-shell select:not([multiple]) option:disabled { color: var(--muted-foreground); cursor: default; }
+}
+
+/* Список с множественным выбором (метки и проекты в карточке): плитка с пунктами. */
+.app-shell select[multiple] {
+  height: auto;
+  min-height: 120px;
+  padding: 6px;
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: var(--shadow-overlay);
+  scrollbar-width: thin;
+}
+
+.app-shell select[multiple] option {
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: var(--text-body);
+}
+
+.app-shell select[multiple] option:checked {
+  background: var(--surface-select) linear-gradient(0deg, var(--surface-select), var(--surface-select));
+  color: var(--foreground);
+}
+
+/* Чекбокс и радио: свой вид, галочка появляется с масштабом. */
+@layer base {
+  .app-shell :where(input[type="checkbox"], input[type="radio"]) {
+    appearance: none;
+    flex: none;
+    display: inline-grid;
+    place-content: center;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    border: 0;
+    border-radius: 5px;
+    background: var(--card);
+    box-shadow: inset 0 0 0 1.5px #cfcfcf;
+    cursor: pointer;
+    vertical-align: middle;
+    transition:
+      background-color var(--motion-fast) var(--ease),
+      box-shadow var(--motion-fast) var(--ease),
+      transform var(--motion-fast) var(--ease);
+  }
+  .app-shell :where(input[type="radio"]) { border-radius: 50%; }
+  .app-shell :where(input[type="checkbox"], input[type="radio"]):hover { box-shadow: inset 0 0 0 1.5px var(--secondary-text); }
+  .app-shell :where(input[type="checkbox"], input[type="radio"]):checked,
+  .app-shell :where(input[type="checkbox"]):indeterminate {
+    background: var(--foreground);
+    box-shadow: none;
+  }
+  .app-shell :where(input[type="checkbox"])::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    background: #fff;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+    transform: scale(0);
+    transition: transform var(--motion) var(--ease);
+  }
+  .app-shell :where(input[type="checkbox"]):indeterminate::before {
+    mask: none;
+    height: 2px;
+    border-radius: 1px;
+  }
+  .app-shell :where(input[type="radio"])::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #fff;
+    transform: scale(0);
+    transition: transform var(--motion) var(--ease);
+  }
+  .app-shell :where(input[type="checkbox"]):checked::before,
+  .app-shell :where(input[type="checkbox"]):indeterminate::before,
+  .app-shell :where(input[type="radio"]):checked::before { transform: scale(1); }
+  .app-shell :where(input[type="checkbox"], input[type="radio"]):disabled { opacity: 0.45; cursor: default; }
+}
+
+/* Числовое поле без системных стрелок. */
+.app-shell input[type="number"] { appearance: textfield; -moz-appearance: textfield; }
+
+.app-shell input[type="number"]::-webkit-inner-spin-button,
+.app-shell input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+/* Поиск без системного крестика; крестик у нас свой там, где он нужен. */
+.app-shell input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; }
+
+/* Автозаполнение браузера не красит поле жёлтым. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--foreground);
+  -webkit-box-shadow: 0 0 0 40px var(--sidebar) inset;
+  caret-color: var(--foreground);
+  transition: background-color 9999s;
+}
+
+/* Полосы прокрутки: тонкие, серые, без стрелок. */
+html { scrollbar-color: #c9c9c9 transparent; }
+
+.app-shell *,
+.date-pop,
+.tooltip-layer { scrollbar-width: thin; }
+
+/* ===== Поле даты: пилюля + календарь в нашем поповере ===== */
+
+.date-field {
+  height: var(--h-control);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: var(--sidebar);
+  color: var(--foreground);
+  font: inherit;
+  font-size: var(--text-body);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    border-color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
+}
+
+.date-field:hover { background: #ececec; }
+
+.date-field:active { transform: scale(var(--press-scale)); }
+
+.date-field[data-state="open"] { border-color: var(--foreground); background: var(--card); }
+
+.date-field svg { flex: none; color: var(--muted-foreground); }
+
+.date-field .date-field-empty { color: var(--muted-foreground); }
+
+.date-field-wrap { position: relative; display: inline-flex; align-items: center; }
+
+.date-field-clear {
+  position: absolute;
+  right: 6px;
+  width: 20px;
+  height: 20px;
+  display: inline-grid;
+  place-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: background-color var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease);
+}
+
+.date-field-clear:hover { background: var(--ghost); color: var(--foreground); }
+
+.date-field-wrap:has(.date-field-clear) .date-field { padding-right: 30px; }
+
+.date-pop {
+  z-index: 1000;
+  width: 284px;
+  padding: 12px;
+  border-radius: var(--radius-popover);
+  background: var(--popover);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  box-shadow: var(--shadow-overlay);
+  transform-origin: var(--radix-popover-content-transform-origin);
+  animation: popover-in var(--motion) var(--ease) both;
+}
+
+.date-pop .rdp-root { position: relative; }
+
+.date-pop .rdp-month_caption {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  font-size: 14px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.date-pop .rdp-nav {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  gap: 2px;
+}
+
+.date-pop .rdp-button_previous,
+.date-pop .rdp-button_next {
+  width: 32px;
+  height: 32px;
+  display: inline-grid;
+  place-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--secondary-text);
+  cursor: pointer;
+  transition: background-color var(--motion-fast) var(--ease), transform var(--motion-fast) var(--ease);
+}
+
+.date-pop .rdp-button_previous:hover,
+.date-pop .rdp-button_next:hover { background: var(--accent); color: var(--foreground); }
+
+.date-pop .rdp-button_previous:active,
+.date-pop .rdp-button_next:active { transform: scale(0.9); }
+
+.date-pop .rdp-chevron { width: 16px; height: 16px; fill: currentColor; }
+
+.date-pop .rdp-month_grid { width: 100%; border-collapse: collapse; margin-top: 4px; }
+
+.date-pop .rdp-weekday {
+  height: 28px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: lowercase;
+}
+
+.date-pop .rdp-day { padding: 1px; text-align: center; }
+
+.date-pop .rdp-day_button {
+  width: 36px;
+  height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: var(--text-body);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
+}
+
+.date-pop .rdp-day_button:hover { background: var(--accent); }
+
+.date-pop .rdp-day_button:active { transform: scale(0.92); }
+
+.date-pop .rdp-today .rdp-day_button { box-shadow: inset 0 0 0 1.5px var(--foreground); font-weight: 500; }
+
+.date-pop .rdp-selected .rdp-day_button {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.date-pop .rdp-outside .rdp-day_button { color: var(--muted-foreground); }
+
+.date-pop .rdp-disabled .rdp-day_button { opacity: 0.35; cursor: default; }
+
+.date-pop-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  color: var(--secondary-text);
+}
+
+.date-pop-time select {
+  height: var(--h-control);
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--sidebar);
+  color: var(--foreground);
+  font: inherit;
+  font-size: var(--text-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.date-pop-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.date-pop-foot .btn,
+.date-pop-foot .btn-ghost { height: 28px; }
+
+/* ===== Подсказка вместо системного title ===== */
+
+.tooltip-layer {
+  position: fixed;
+  z-index: 2000;
+  max-width: 320px;
+  padding: 5px 9px;
+  border-radius: 8px;
+  background: var(--foreground);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: var(--text-small);
+  line-height: 16px;
+  box-shadow: var(--shadow-overlay);
+  pointer-events: none;
+  white-space: pre-line;
+  animation: tooltip-in var(--motion-fast) var(--ease) both;
+}
+
+@keyframes tooltip-in {
+  from { opacity: 0; transform: translateY(2px) scale(0.97); }
+  to { opacity: 1; transform: none; }
 }

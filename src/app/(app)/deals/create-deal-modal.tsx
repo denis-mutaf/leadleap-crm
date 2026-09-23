@@ -187,12 +187,12 @@ export function CreateDealModal({
       </button>
       {open && (
         <div
-          className="create-deal-overlay"
+          className="create-deal-overlay motion-veil"
           role="presentation"
           onMouseDown={(e) => e.target === e.currentTarget && close()}
         >
           <section
-            className="create-deal-modal create-deal-modal-wide"
+            className="create-deal-modal create-deal-modal-wide motion-dialog"
             role="dialog"
             aria-modal="true"
             aria-labelledby="create-deal-title"
@@ -392,7 +392,7 @@ export function CreateDealModal({
                       </button>
                     </div>
                     {tagPickerOpen && (
-                      <div className="create-deal-tag-menu">
+                      <div className="create-deal-tag-menu motion-popover">
                         <input
                           autoFocus
                           aria-label="Поиск меток"

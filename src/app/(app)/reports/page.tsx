@@ -1,5 +1,6 @@
 import { Database, Info } from "lucide-react";
 import { redirect } from "next/navigation";
+import type { CSSProperties } from "react";
 import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { StageIndicator } from "@/components/crm/stage-indicator";
@@ -259,16 +260,20 @@ export default async function ReportsPage({
         <Info size={16} /> Остатки сделок показывают текущее состояние базы, а
         не конверсию между этапами.
       </div>
-      <section className="report-metrics" aria-label="Итоги сделок">
+      <section className="report-metrics motion-list" aria-label="Итоги сделок">
         {[
           ["Всего сделок", total],
           ["Открытые", open],
           ["Выигранные", won],
           ["Проигранные", lost],
-        ].map(([label, value]) => (
-          <article className="report-metric" key={label as string}>
+        ].map(([label, value], index) => (
+          <article
+            className="report-metric"
+            key={label as string}
+            style={{ "--i": index } as CSSProperties}
+          >
             <span>{label}</span>
-            <strong>{value}</strong>
+            <strong className="num-dots">{value}</strong>
           </article>
         ))}
       </section>
@@ -282,9 +287,13 @@ export default async function ReportsPage({
             </p>
           </div>
         </div>
-        <div className="stage-list">
-          {stageCounts.map((stage) => (
-            <div className={styles.frow} key={stage.id}>
+        <div className="stage-list motion-list">
+          {stageCounts.map((stage, index) => (
+            <div
+              className={styles.frow}
+              key={stage.id}
+              style={{ "--i": index } as CSSProperties}
+            >
               <span className={styles.fname}>
                 <StageIndicator
                   stage={{
@@ -340,10 +349,14 @@ export default async function ReportsPage({
               ? "По меткам канала: справочник источников в Amo не заполнялся"
               : "Все сделки, включая исторические значения справочника"}
           </p>
-          <div className="simple-list">
+          <div className="simple-list motion-list">
             {sourceRows.length ? (
-              sourceRows.map((row) => (
-                <div className="simple-row" key={row.id}>
+              sourceRows.map((row, index) => (
+                <div
+                  className="simple-row"
+                  key={row.id}
+                  style={{ "--i": index } as CSSProperties}
+                >
                   <span>{row.name}</span>
                   <strong>{row.count}</strong>
                   <em>{percent(row.count, total)}</em>
@@ -361,10 +374,14 @@ export default async function ReportsPage({
           <p className="section-subtitle">
             Все проигранные сделки, включая незаполненные причины
           </p>
-          <div className="simple-list">
+          <div className="simple-list motion-list">
             {reasonRows.length ? (
-              reasonRows.map((row) => (
-                <div className="simple-row" key={row.id}>
+              reasonRows.map((row, index) => (
+                <div
+                  className="simple-row"
+                  key={row.id}
+                  style={{ "--i": index } as CSSProperties}
+                >
                   <span>{row.name}</span>
                   <strong>{row.count}</strong>
                   <em>{percent(row.count, lost)}</em>

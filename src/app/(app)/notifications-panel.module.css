@@ -1,26 +1,38 @@
+/* Панель уведомлений — всплывающее по рецепту: группы-модули, строки hover, табы пилюлями. */
+
 .root {
   position: absolute;
   top: 8px;
   right: 12px;
   z-index: 40;
 }
+
 .bell {
   position: relative;
-  width: 32px;
-  height: 32px;
+  width: var(--h-control);
+  height: var(--h-control);
   display: grid;
   place-items: center;
-  border: 1px solid transparent;
-  border-radius: 6px;
+  border: 0;
+  border-radius: var(--radius-control);
   background: transparent;
   color: var(--foreground);
   cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
 }
+
 .bell:hover,
 .bell:focus-visible {
   background: var(--accent);
   outline: none;
 }
+
+.bell:active {
+  transform: scale(var(--press-scale));
+}
+
 .count {
   position: absolute;
   top: -2px;
@@ -29,12 +41,15 @@
   height: 15px;
   padding: 0 3px;
   border-radius: 999px;
-  background: var(--primary);
-  color: white;
+  background: var(--destructive);
+  color: var(--card);
   font-size: 10px;
   line-height: 15px;
   text-align: center;
+  font-variant-numeric: tabular-nums;
+  animation: chip-in var(--motion) var(--ease) both;
 }
+
 .panel {
   position: absolute;
   top: 48px;
@@ -44,97 +59,152 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-overlay, 0 8px 16px -4px rgb(0 0 0 / 4%), 0 2px 4px -1px rgb(0 0 0 / 2%));
+  background: var(--popover);
+  border: 0;
+  border-radius: var(--radius-dialog);
+  box-shadow: var(--shadow-overlay);
 }
+
 .header {
-  height: 49px;
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 12px;
+  padding: 0 12px 0 16px;
   border-bottom: 1px solid var(--border);
 }
+
 .header h2 {
   margin: 0;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
 }
+
 .headerActions {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
+
 .settings {
   width: var(--h-control);
   height: var(--h-control);
   display: grid;
   place-items: center;
   border: 0;
-  border-radius: var(--radius);
+  border-radius: var(--radius-control);
   color: var(--muted-foreground);
   text-decoration: none;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
 }
+
 .settings:hover,
 .settings:focus-visible {
   background: var(--accent);
   color: var(--foreground);
   outline: 0;
 }
-.quiet {
-  border: 0;
-  background: transparent;
-  color: var(--muted-foreground);
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
+
+.settings:active {
+  transform: scale(var(--press-scale));
 }
+
+.quiet {
+  height: var(--h-control-sm);
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--ghost);
+  color: var(--foreground);
+  font: inherit;
+  font-size: var(--text-small);
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
+}
+
 .quiet:hover:not(:disabled) {
+  background: var(--ghost-hover);
   color: var(--foreground);
 }
+
+.quiet:active:not(:disabled) {
+  transform: scale(var(--press-scale));
+}
+
 .quiet:disabled {
   cursor: default;
   opacity: 0.5;
 }
+
 .tabs {
-  min-height: 39px;
+  min-height: 44px;
   display: flex;
-  gap: 4px;
+  gap: 2px;
   align-items: center;
-  padding: 0 12px;
+  padding: 6px 12px;
   border-bottom: 1px solid var(--border);
 }
+
 .tab {
   border: 0;
-  border-radius: 4px;
-  padding: 5px 8px;
+  border-radius: var(--radius-control);
+  height: var(--h-control);
+  padding: 0 12px;
   background: transparent;
-  color: var(--muted-foreground);
+  color: var(--secondary-text);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-body);
   cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
 }
+
+.tab:hover {
+  background: var(--ghost);
+  color: var(--foreground);
+}
+
+.tab:active {
+  transform: scale(var(--press-scale));
+}
+
 .tabActive {
-  background: var(--accent);
+  background: var(--card);
   color: var(--foreground);
   font-weight: 500;
+  box-shadow: var(--shadow-pill);
 }
+
 .body {
   overflow-y: auto;
   min-height: 110px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
+
 .groupTitle {
-  height: 26px;
+  min-height: 30px;
   display: flex;
   align-items: center;
-  padding: 0 12px;
-  background: var(--muted);
-  color: var(--muted-foreground);
-  font-size: 12px;
+  padding: 8px 10px 4px;
+  background: transparent;
+  color: var(--foreground);
+  font-size: var(--text-section);
   font-weight: 500;
 }
+
 .row {
   width: 100%;
   min-height: 56px;
@@ -144,17 +214,24 @@
   align-items: center;
   padding: 7px 12px;
   border: 0;
-  border-bottom: 1px solid var(--border);
-  background: var(--card);
+  border-radius: var(--radius-tile);
+  background: var(--module-card);
+  box-shadow: var(--shadow-module);
   color: inherit;
   text-align: left;
   cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    box-shadow var(--motion) var(--ease);
 }
+
 .linkRow {
   display: block;
   color: inherit;
   text-decoration: none;
+  border-radius: var(--radius-tile);
 }
+
 .readButton {
   grid-column: 2 / -1;
   justify-self: start;
@@ -162,17 +239,28 @@
   background: transparent;
   color: var(--info);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--text-small);
   cursor: pointer;
+  border-radius: 8px;
+  padding: 2px 6px;
+  margin-left: -6px;
+  transition: background-color var(--motion-fast) var(--ease);
 }
+
+.readButton:hover {
+  background: var(--accent);
+}
+
 .row:hover,
 .row:focus-visible {
   background: var(--accent);
   outline: none;
 }
+
 .unread {
-  background: var(--secondary);
+  background: var(--surface-select);
 }
+
 .icon {
   width: 28px;
   height: 28px;
@@ -180,52 +268,64 @@
   place-items: center;
   border-radius: 50%;
   background: var(--muted);
-  color: var(--muted-foreground);
+  color: var(--secondary-text);
 }
+
 .copy {
   min-width: 0;
 }
+
 .title,
 .bodyText {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .title {
   font-size: 14px;
   font-weight: 500;
 }
+
 .bodyText,
 .time {
-  color: var(--muted-foreground);
-  font-size: 13px;
+  color: var(--secondary-text);
+  font-size: var(--text-body);
 }
+
 .time {
   align-self: start;
   padding-top: 2px;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
+
 .dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--primary);
+  background: var(--destructive);
 }
+
 .footer {
   min-height: 44px;
   display: grid;
   place-items: center;
   border-top: 1px solid var(--border);
+  padding: 6px;
 }
+
 .status {
   padding: 24px 16px;
-  color: var(--muted-foreground);
-  font-size: 13px;
+  color: var(--secondary-text);
+  font-size: var(--text-body);
   text-align: center;
 }
+
 .error {
   color: var(--destructive);
 }
+
 @media (max-width: 600px) {
   .root {
     top: 56px;
@@ -238,12 +338,5 @@
     left: 8px;
     width: auto;
     max-height: calc(var(--vh-shell) - 64px);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .panel,
-  .row,
-  .bell {
-    transition: none;
   }
 }

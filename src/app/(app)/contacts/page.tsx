@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Search, Users } from "lucide-react";
@@ -80,15 +81,15 @@ export default async function ContactsPage({
           <Search size={15} aria-hidden="true" />
           <input name="q" defaultValue={q} placeholder="Поиск по имени или телефону" aria-label="Поиск по имени или телефону" />
           <input type="hidden" name="sort" value={sort} />
-          <button type="submit">Найти</button>
+          <button type="submit" className="btn btn-primary">Найти</button>
         </form>
         <ContactSortSelect value={sort} />
         <form id="contacts-sort-form" className={styles.sortSubmit}>
           <input type="hidden" name="q" value={q} />
-          <button type="submit">Применить</button>
+          <button type="submit" className="btn">Применить</button>
         </form>
       </div>
-      <div className={styles.contactsTable} role="table" aria-label="Контакты">
+      <div className={`${styles.contactsTable} motion-list`} role="table" aria-label="Контакты">
         <div className={`${styles.contactsRow} ${styles.contactsHead}`} role="row">
           <span>Имя</span>
           <span>Телефон</span>
@@ -97,8 +98,8 @@ export default async function ContactsPage({
           <span>Добавлен</span>
           <span />
         </div>
-        {rows.map((contact) => (
-          <Link className={styles.contactsRow} role="row" key={contact.id} href={`/contacts/${contact.id}`}>
+        {rows.map((contact, index) => (
+          <Link className={styles.contactsRow} role="row" key={contact.id} href={`/contacts/${contact.id}`} style={{ "--i": index } as CSSProperties}>
             <span className={styles.contactName}>
               <span className={styles.contactAvatar}>{initials(contact.full_name)}</span>
               <span className={styles.truncate}>{contact.full_name}</span>
@@ -121,8 +122,8 @@ export default async function ContactsPage({
       <nav className={styles.pagination} aria-label="Страницы контактов">
         <span>{total ? `${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, total)} из ${total}` : "0 контактов"}</span>
         <span className={styles.paginationLinks}>
-          <Link className={page === 0 ? styles.disabled : ""} href={page ? pageHref(page - 1) : pageHref(0)}>Назад</Link>
-          <Link className={page >= lastPage ? styles.disabled : ""} href={page < lastPage ? pageHref(page + 1) : pageHref(page)}>Дальше</Link>
+          <Link className={`btn-ghost ${page === 0 ? styles.disabled : ""}`} href={page ? pageHref(page - 1) : pageHref(0)}>Назад</Link>
+          <Link className={`btn-ghost ${page >= lastPage ? styles.disabled : ""}`} href={page < lastPage ? pageHref(page + 1) : pageHref(page)}>Дальше</Link>
         </span>
       </nav>
     </section>

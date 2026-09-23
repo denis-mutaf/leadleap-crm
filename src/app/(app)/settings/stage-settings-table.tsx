@@ -81,10 +81,10 @@ export function StageTable({ rows, canEdit }: { rows: Row[]; canEdit: boolean })
     busyRef.current = false; setBusy(false);
   }
   return <>
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={reorder}>
+    <DndContext id="crm-stage-settings" sensors={sensors} collisionDetection={closestCenter} onDragEnd={reorder}>
       <table className={styles.table}><thead><tr><th aria-label="Перетаскивание" /><th>Этап</th><th>Вид</th><th>Требовать следующий шаг</th><th>Требовать квалификацию</th><th className={styles.countHead}>Сделок</th><th aria-label="Действия" /></tr></thead><tbody>
         <SortableContext items={openRows.map((row) => row.id)} strategy={verticalListSortingStrategy}>{openRows.map((row) => <StageRow key={row.id} row={row} canEdit={canEdit} menu={menu} setMenu={setMenu} onEdit={(item) => { setEditing(item); setDraft(item.name); }} onToggle={toggle} allStages={items} />)}</SortableContext>
-        {openRows.length > 0 && <tr><td colSpan={7}><div className={styles.dropPlaceholder} /></td></tr>}
+        {closedRows.length > 0 && <tr className={styles.groupDivider}><td colSpan={7}>Закрытые этапы</td></tr>}
         {closedRows.map((row) => <StageRow key={row.id} row={row} canEdit={canEdit} menu={menu} setMenu={setMenu} onEdit={(item) => { setEditing(item); setDraft(item.name); }} onToggle={toggle} allStages={items} />)}
       </tbody></table>
     </DndContext>

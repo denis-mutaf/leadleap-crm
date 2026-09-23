@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import {
@@ -171,20 +172,20 @@ export default async function ContactPage({
         </aside>
         <main className={styles.recordRight}>
           <div className={styles.dealsHeader}><span>Сделки</span><span className={styles.countBadge}>{dealRows.data?.length ?? 0}</span></div>
-          <div className={styles.dealList}>
-            {(dealRows.data ?? []).map((deal) => (
-              <Link href={`/deals/${deal.id}`} className={styles.dealCard} key={deal.id}>
+          <div className={`${styles.dealList} motion-list`}>
+            {(dealRows.data ?? []).map((deal, index) => (
+              <Link href={`/deals/${deal.id}`} className={styles.dealCard} key={deal.id} style={{ "--i": index } as CSSProperties}>
                 <span className={`${styles.statusDot} ${styles[`status${deal.status}`] ?? ""}`} />
                 <span className={styles.dealMain}><strong>{deal.title || deal.object_text || "Сделка без названия"}</strong><span>{statusLabels[deal.status] ?? deal.status} · {stageMap.get(deal.stage_id) ?? "Без этапа"}</span></span>
                 <span className={styles.dealMeta}>{deal.owner_id ? ownerMap.get(deal.owner_id) : "Без ответственного"}</span>
                 <span className={styles.dealMeta}>{formatDate(deal.created_at)}</span>
               </Link>
             ))}
-            {!dealRows.data?.length && <EmptyState title="Сделок пока нет" description="Создайте сделку, чтобы вести переговоры и этапы клиента." action={<Link className={styles.primaryButton} href="/deals">Новая сделка</Link>} />}
+            {!dealRows.data?.length && <EmptyState title="Сделок пока нет" description="Создайте сделку, чтобы вести переговоры и этапы клиента." action={<Link className={`${styles.primaryButton} btn btn-primary`} href="/deals">Новая сделка</Link>} />}
           </div>
           <div className={styles.feedHeader}><span>Лента</span><span className={styles.feedHint}>{feed.length ? countWord(feed.length, "запись", "записи", "записей") : "Примечания и звонки"}</span></div>
-          <div className={styles.feed}>
-            {groupedFeed.map(([day, items]) => <div className={styles.feedGroup} key={day}><p className={styles.feedDate}>{day}</p>{items.map((item) => <div className={styles.feedRow} key={item.id}>{item.kind === "call" ? <Phone size={15} /> : <StickyNote size={15} />}<span>{item.kind === "call" ? `${item.direction === "in" ? "Входящий" : "Исходящий"} звонок${item.duration ? ` · ${Math.round(item.duration / 60)} мин` : ""}` : item.body || "Примечание без текста"}<small>{item.kind === "call" ? `${item.body || "без записи"} · ${formatTime(item.at)}` : formatTime(item.at)}</small></span></div>)}</div>)}
+          <div className={`${styles.feed} motion-list`}>
+            {groupedFeed.map(([day, items], index) => <div className={styles.feedGroup} key={day} style={{ "--i": index } as CSSProperties}><p className={styles.feedDate}>{day}</p>{items.map((item) => <div className={styles.feedRow} key={item.id}>{item.kind === "call" ? <Phone size={15} /> : <StickyNote size={15} />}<span>{item.kind === "call" ? `${item.direction === "in" ? "Входящий" : "Исходящий"} звонок${item.duration ? ` · ${Math.round(item.duration / 60)} мин` : ""}` : item.body || "Примечание без текста"}<small>{item.kind === "call" ? `${item.body || "без записи"} · ${formatTime(item.at)}` : formatTime(item.at)}</small></span></div>)}</div>)}
             {!feed.length && <EmptyLine>Записей пока нет — заметки и звонки этого контакта появятся здесь.</EmptyLine>}
           </div>
           {!conversations.data?.length && <div className={styles.channelNotice}><MessageCircle size={15} /> Переписка появится, когда подключим WhatsApp.</div>}

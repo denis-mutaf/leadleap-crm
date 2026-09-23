@@ -1,12 +1,16 @@
+/* Поля фильтра задач — пилюли, поиск — .input. */
+
 .searchForm {
   height: var(--h-control);
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 0 6px 0 8px;
-  border: 1px solid var(--input);
-  border-radius: var(--radius);
+  padding: 0 6px 0 12px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--sidebar);
   color: var(--muted-foreground);
+  transition: background-color var(--motion-fast) var(--ease);
 }
 
 .searchForm input {
@@ -16,7 +20,11 @@
   background: transparent;
   color: var(--foreground);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-body);
+}
+
+.searchForm input::placeholder {
+  color: var(--muted-foreground);
 }
 
 .total {
@@ -26,50 +34,83 @@
 
 .filterField,
 .periodField {
-  height: var(--h-control-sm);
+  height: var(--h-control);
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 0 7px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--muted-foreground);
-  font-size: 13px;
+  gap: 6px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--module-card);
+  box-shadow: var(--shadow-pill);
+  color: var(--secondary-text);
+  font-size: var(--text-body);
+  flex: 1 1 auto;
+  min-width: 140px;
+  max-width: 220px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    box-shadow var(--motion) var(--ease),
+    transform var(--motion-fast) var(--ease);
+}
+
+.filterField:hover,
+.periodField:hover {
+  background: var(--card);
+  box-shadow: var(--shadow-pill-hover);
+}
+
+.filterField:active,
+.periodField:active {
+  transform: scale(var(--press-scale));
 }
 
 .filterField select,
 .periodField input {
-  min-width: 150px;
-  max-width: 180px;
-  height: var(--h-control-sm);
+  min-width: 0;
+  width: 100%;
+  max-width: none;
+  flex: 1 1 auto;
+  height: var(--h-control);
   border: 0;
   outline: 0;
   background: transparent;
   color: var(--foreground);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-body);
 }
 
 .periodField {
   gap: 2px;
+  max-width: 250px;
 }
 
 .periodField input {
-  max-width: 112px;
+  max-width: 96px;
 }
 
 .clear {
-  width: var(--h-control-sm);
-  height: var(--h-control-sm);
+  width: var(--h-control);
+  height: var(--h-control);
   display: inline-grid;
   place-items: center;
+  border-radius: var(--radius-control);
   color: var(--muted-foreground);
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
 }
 
 .clear:hover,
 .clear:focus-visible {
-  border-radius: var(--radius);
   background: var(--accent);
   color: var(--foreground);
   outline: 0;
+}
+
+.clear:active {
+  transform: scale(var(--press-scale));
 }

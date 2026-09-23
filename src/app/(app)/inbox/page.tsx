@@ -222,7 +222,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Search
         </Form>
       </div>
       <div className="inbox-grid">
-        <aside className="inbox-list" aria-label="Диалоги">
+        <aside className="inbox-list motion-list" aria-label="Диалоги">
           {data.conversations.length === 0 ? (
             <EmptyState
               icon={<MessageCircle size={18} />}
@@ -242,7 +242,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Search
               }
             />
           ) : (
-            data.conversations.map((conversation) => {
+            data.conversations.map((conversation, index) => {
               const name = title(conversation, conversation.contact ?? undefined);
               const wait = unanswered(conversation) ? waiting(conversation.last_incoming_at) : null;
               return (
@@ -252,6 +252,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Search
                   } ${unread(conversation) ? "unread" : ""}`}
                   href={link({ conversation: conversation.id })}
                   key={conversation.id}
+                  style={{ "--i": index } as import("react").CSSProperties}
                 >
                   <span className="inbox-avatar-wrap">
                     <span className="inbox-avatar">{name.slice(0, 2).toUpperCase()}</span>

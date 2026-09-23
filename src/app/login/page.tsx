@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 
 function humanError(message: string): string {
@@ -80,10 +81,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-100 px-4">
-      <div className="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-8 shadow-sm">
-        <h1 className="text-xl font-semibold text-zinc-900">Вход в CRM</h1>
-        <p className="mt-1 text-sm text-zinc-500">
+    <div className="flex min-h-screen items-center justify-center px-4" style={{ background: "var(--page)" }}>
+      <div className="module motion-dialog w-full max-w-sm" style={{ borderRadius: 28, padding: 28 }}>
+        <Image src="/brand/logo.svg" alt="ISRAGRUP" width={120} height={28} />
+        <h1 className="mt-4 text-xl font-medium" style={{ color: "var(--foreground)" }}>Вход в CRM</h1>
+        <p className="mt-1 text-sm" style={{ color: "var(--secondary-text)" }}>
           Сотрудников заводит руководитель. Регистрации здесь нет.
         </p>
 
@@ -91,7 +93,8 @@ export default function LoginPage() {
           <div>
             <label
               htmlFor="email"
-              className="mb-1 block text-sm font-medium text-zinc-700"
+              className="mb-1 block text-sm font-medium"
+              style={{ color: "var(--secondary-text)" }}
             >
               Почта
             </label>
@@ -102,7 +105,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
-              className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-blue-600 focus:outline-none disabled:opacity-60"
+              className="input w-full"
               placeholder="manager@example.com"
             />
           </div>
@@ -110,7 +113,8 @@ export default function LoginPage() {
           <div>
             <label
               htmlFor="password"
-              className="mb-1 block text-sm font-medium text-zinc-700"
+              className="mb-1 block text-sm font-medium"
+              style={{ color: "var(--secondary-text)" }}
             >
               Пароль
             </label>
@@ -121,13 +125,13 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
-              className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-blue-600 focus:outline-none disabled:opacity-60"
+              className="input w-full"
               placeholder="••••••••"
             />
           </div>
 
           {error && (
-            <p role="alert" className="text-sm text-red-700">
+            <p role="alert" className="motion-fade-up text-sm" style={{ color: "var(--destructive)" }}>
               {error}
             </p>
           )}
@@ -135,7 +139,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none disabled:opacity-60"
+            className="btn btn-primary w-full"
           >
             {loading ? "Входим…" : "Войти"}
           </button>

@@ -1,6 +1,6 @@
-/* Экран «Звонки»: журнал + панель звонка. Токены из globals.css,
-   геометрия по design/screens/calls.html (шапка 48px, полосы 49/51px,
-   строка 36px, панель 380px). */
+/* Экран «Звонки» на дизайн-системе «Фарфор» (docs/design-system.md).
+   Рецепт «Таблица» §7: модуль radius 24 + плитка radius 20.
+   Плотность: строка 36, контрол 30, чип 26. Только var(--токены). */
 
 .page {
   display: flex;
@@ -16,15 +16,16 @@
   align-items: center;
   gap: 8px;
   padding: 0 var(--px-cell);
-  border-bottom: 1px solid var(--border);
 }
 
 .pageHeader h1 {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--text-title);
+  line-height: var(--text-title-lh);
+  font-weight: 400;
+  letter-spacing: -0.03em;
   margin: 0;
 }
 
@@ -36,32 +37,33 @@
 }
 
 .titleStack .t {
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 20px;
+  font-size: var(--text-title);
+  line-height: var(--text-title-lh);
+  font-weight: 400;
+  letter-spacing: -0.03em;
   white-space: nowrap;
 }
 
 .titleStack .s {
-  font-size: 13px;
-  color: var(--muted-foreground);
+  font-size: var(--text-body);
+  color: var(--secondary-text);
   white-space: nowrap;
 }
 
+/* Счётчик рядом с заголовком — пилюля .pill, не одинокое число у края. */
 .headerCount {
-  margin-left: auto;
-  font-size: 14px;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
+  margin-left: 0;
+  flex: none;
+  align-self: center;
 }
 
 .alert {
   margin: 8px var(--px-cell) 0;
   padding: 8px var(--px-cell);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--muted);
-  font-size: 13px;
+  border-radius: var(--radius-tile);
+  background: var(--module-card);
+  box-shadow: var(--shadow-module);
+  font-size: var(--text-body);
 }
 
 .toolbar {
@@ -71,12 +73,12 @@
   align-items: center;
   gap: 8px;
   padding: 0 var(--px-cell);
-  border-bottom: 1px solid var(--border);
 }
 
+/* Сегменты — язык .view-switch: пилюли 30px, активная белая с тенью. */
 .seg {
   display: inline-flex;
-  gap: 4px;
+  gap: 2px;
   align-items: center;
 }
 
@@ -85,36 +87,48 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 0 10px;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-control);
   background: transparent;
-  color: var(--muted-foreground);
-  font-size: 13px;
+  color: var(--secondary-text);
+  font-size: var(--text-body);
   white-space: nowrap;
   text-decoration: none;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
 }
 
 .segItem:hover {
+  background: var(--ghost);
   color: var(--foreground);
+}
+
+.segItem:active {
+  transform: scale(var(--press-scale));
 }
 
 .segOn {
   composes: segItem;
-  background: var(--accent);
+  background: var(--card);
   color: var(--foreground);
   font-weight: 500;
+  box-shadow: var(--shadow-pill);
 }
 
 .pillAmber {
   display: inline-flex;
   align-items: center;
-  height: 18px;
+  min-width: 20px;
+  height: 20px;
   padding: 0 6px;
   border-radius: 999px;
-  background: var(--warning-soft);
-  color: var(--warning);
-  font-size: 12px;
+  background: var(--muted);
+  color: var(--secondary-text);
+  font-size: var(--text-small);
+  line-height: 20px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -124,10 +138,9 @@
   align-items: center;
   gap: 6px;
   height: var(--h-control);
-  padding: 0 8px;
-  border: 1px solid var(--input);
-  border-radius: var(--radius);
-  background: var(--background);
+  padding: 0 12px;
+  border-radius: var(--radius-control);
+  background: var(--sidebar);
   color: var(--muted-foreground);
 }
 
@@ -135,34 +148,55 @@
   border: 0;
   outline: 0;
   background: transparent;
-  font-size: 13px;
+  font-size: var(--text-body);
   width: 200px;
   color: var(--foreground);
 }
 
 .filterbar {
-  height: var(--h-filters);
+  min-height: var(--h-filters);
   flex: none;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
-  padding: 0 var(--px-cell);
-  border-bottom: 1px solid var(--border);
-  overflow-x: auto;
+  row-gap: 4px;
+  padding: 4px var(--px-cell);
 }
 
+/* Селекты сужаются, итог — flex: none: не помещается — уходит
+   на отдельную строку целиком, но не режется. */
+.filterbar > label.chip {
+  flex: 1 1 auto;
+  min-width: 120px;
+  max-width: 240px;
+}
+
+/* Фильтры — поля-пилюли 30px на --sidebar. */
 .chip {
-  height: var(--h-control-sm);
+  height: var(--h-control);
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 0 8px;
-  border: 1px solid var(--input);
-  border-radius: var(--radius);
-  background: var(--secondary);
-  font-size: 13px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--module-card);
+  box-shadow: var(--shadow-pill);
+  font-size: var(--text-body);
   white-space: nowrap;
   color: var(--foreground);
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
+}
+
+.chip:hover {
+  background: var(--card);
+}
+
+.chip:active {
+  transform: scale(var(--press-scale));
 }
 
 .chip select {
@@ -171,6 +205,8 @@
   font: inherit;
   color: inherit;
   outline: 0;
+  flex: 1;
+  min-width: 0;
   max-width: 140px;
 }
 
@@ -178,20 +214,26 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
-  color: var(--muted-foreground);
+  font-size: var(--text-body);
+  color: var(--secondary-text);
   white-space: nowrap;
   cursor: pointer;
 }
 
 .switchLabel input {
   accent-color: var(--foreground);
+  transition: transform var(--motion-fast) var(--ease);
+}
+
+.switchLabel input:active {
+  transform: scale(0.9);
 }
 
 .totals {
   margin-left: auto;
-  font-size: 13px;
-  color: var(--muted-foreground);
+  flex: none;
+  font-size: var(--text-small);
+  color: var(--secondary-text);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
@@ -201,6 +243,8 @@
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 380px;
+  gap: var(--gap-module);
+  padding: 0 var(--px-cell) var(--px-cell);
 }
 
 .tableCol {
@@ -208,29 +252,37 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
+  border-radius: var(--radius-module);
+  background: var(--module);
+  box-shadow: var(--shadow-inset);
+  padding: 6px;
 }
 
 .tableScroll {
   flex: 1;
   min-height: 0;
   overflow: auto;
+  border-radius: var(--radius-tile);
+  background: var(--module-card);
+  box-shadow: var(--shadow-module);
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  font-size: 13px;
+  font-size: var(--text-body);
 }
 
 .table thead th {
   position: sticky;
   top: 0;
   z-index: 2;
-  background: var(--secondary);
+  background: var(--module-card);
   height: var(--h-row-header);
   font-weight: 500;
-  color: var(--muted-foreground);
+  font-size: var(--text-small);
+  color: var(--secondary-text);
   text-align: left;
   padding: 0 var(--px-cell);
   white-space: nowrap;
@@ -245,27 +297,48 @@
   white-space: nowrap;
 }
 
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* Колонки: контакту — больше места, дата и числа — по содержимому.
+   Ожидание выровнено вправо, как его заголовок; у иконки ссылки нет многоточия. */
+.table thead th:nth-child(3) { width: 24%; }
+.table thead th:nth-child(5),
+.table thead th:nth-child(6) { width: 72px; }
+.table thead th:nth-child(9) { width: 104px; }
+.table tbody td:nth-child(5) { text-align: right; }
+.table tbody td:nth-child(8) { text-overflow: clip; padding: 0; text-align: center; }
+
 .rowLink {
   display: contents;
 }
 
 tr.row td {
-  background: var(--background);
+  background: transparent;
 }
 
 tr.row:hover td {
   background: var(--accent);
 }
 
+tr.row td {
+  transition: background-color var(--motion-fast) var(--ease);
+}
+
 tr.selected td {
-  background: var(--accent);
+  background: var(--surface-select);
 }
 
 tr.selected td:first-child {
-  box-shadow: inset 2px 0 0 0 var(--primary);
+  box-shadow: inset 2px 0 0 0 var(--foreground);
 }
 
 tr.isCallback td:first-child {
+  box-shadow: inset 2px 0 0 0 var(--warning);
+}
+
+tr.selected.isCallback td:first-child {
   box-shadow: inset 2px 0 0 0 var(--warning);
 }
 
@@ -284,6 +357,8 @@ tr.isCallback td:first-child {
   flex-direction: column;
   line-height: 18px;
   min-width: 0;
+  text-decoration: none;
+  color: var(--foreground);
 }
 
 .cellContact .n {
@@ -294,8 +369,8 @@ tr.isCallback td:first-child {
 }
 
 .cellContact .p {
-  font-size: 13px;
-  color: var(--muted-foreground);
+  font-size: var(--text-body);
+  color: var(--secondary-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -304,11 +379,11 @@ tr.isCallback td:first-child {
   align-items: center;
   gap: 6px;
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--text-body);
 }
 
 .nobody {
-  font-size: 13px;
+  font-size: var(--text-body);
   color: var(--warning);
   white-space: nowrap;
 }
@@ -319,50 +394,51 @@ tr.isCallback td:first-child {
 }
 
 .dim {
-  color: var(--muted-foreground);
+  color: var(--secondary-text);
   font-variant-numeric: tabular-nums;
 }
 
+/* Результат звонка — метка-пилюля 22px парами --hue-*-bg/--hue-*-tx. */
 .res {
   height: 22px;
   display: inline-flex;
   align-items: center;
   padding: 0 8px;
-  border-radius: 4px;
-  font-size: 12px;
+  border-radius: 999px;
+  font-size: var(--text-small);
   line-height: 22px;
   white-space: nowrap;
 }
 
 .resOk {
   composes: res;
-  background: var(--muted);
-  color: var(--muted-foreground);
+  background: var(--hue-green-bg);
+  color: var(--hue-green-tx);
 }
 
 .resMissed {
   composes: res;
-  background: color-mix(in srgb, var(--destructive) 10%, #ffffff);
-  color: var(--destructive);
+  background: var(--hue-red-bg);
+  color: var(--hue-red-tx);
 }
 
 .resFail {
   composes: res;
-  background: var(--warning-soft);
-  color: var(--warning);
+  background: var(--hue-amber-bg);
+  color: var(--hue-amber-tx);
 }
 
 .resBusy {
   composes: res;
-  background: var(--muted);
-  color: var(--muted-foreground);
+  background: var(--hue-grey-bg);
+  color: var(--hue-grey-tx);
 }
 
 .resNote {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: var(--text-small);
   color: var(--warning);
   white-space: nowrap;
 }
@@ -378,6 +454,13 @@ tr.isCallback td:first-child {
 .dealLink {
   color: var(--muted-foreground);
   display: inline-flex;
+  transition:
+    color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
+}
+
+.dealLink:hover {
+  transform: scale(1.06);
 }
 
 tr.row:hover .dealLink {
@@ -385,15 +468,13 @@ tr.row:hover .dealLink {
 }
 
 .pagination {
-  height: var(--h-toolbar);
   flex: none;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 var(--px-cell);
-  border-top: 1px solid var(--border);
-  font-size: 13px;
-  color: var(--muted-foreground);
+  padding: 8px 6px 2px;
+  font-size: var(--text-body);
+  color: var(--secondary-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -404,16 +485,27 @@ tr.row:hover .dealLink {
 }
 
 .pageBtn {
-  height: var(--h-control);
+  height: var(--h-control-sm);
   display: inline-flex;
   align-items: center;
-  padding: 0 10px;
-  border: 1px solid var(--input);
-  border-radius: var(--radius);
-  background: var(--background);
-  font-size: 13px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--ghost);
+  font-size: var(--text-body);
   text-decoration: none;
   color: var(--foreground);
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
+}
+
+.pageBtn:hover {
+  background: var(--ghost-hover);
+}
+
+.pageBtn:active {
+  transform: scale(var(--press-scale));
 }
 
 .pageBtnDisabled {
@@ -422,24 +514,26 @@ tr.row:hover .dealLink {
   pointer-events: none;
 }
 
-/* Панель звонка */
+/* Панель звонка — модуль с плитками. */
 .panel {
-  border-left: 1px solid var(--border);
-  background: var(--background);
+  border-radius: var(--radius-module);
+  background: var(--module);
+  box-shadow: var(--shadow-inset);
   min-height: 0;
   display: flex;
   flex-direction: column;
   min-width: 0;
+  padding: 6px;
+  gap: 8px;
 }
 
 .panelHead {
-  height: var(--h-toolbar);
+  min-height: var(--h-toolbar);
   flex: none;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 var(--px-cell);
-  border-bottom: 1px solid var(--border);
+  padding: 4px 8px;
 }
 
 .panelWho {
@@ -450,7 +544,7 @@ tr.row:hover .dealLink {
 .panelWho .n {
   font-size: 14px;
   line-height: 20px;
-  font-weight: 600;
+  font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -458,9 +552,9 @@ tr.row:hover .dealLink {
 }
 
 .panelWho .s {
-  font-size: 13px;
+  font-size: var(--text-body);
   line-height: 18px;
-  color: var(--muted-foreground);
+  color: var(--secondary-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -472,54 +566,99 @@ tr.row:hover .dealLink {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
+/* Пустое состояние панели — как .empty-state из kit: иконка-кружок,
+   текст вторичным 13px, без белой плитки внутри модуля. */
+/* Панель тянется на высоту журнала — подсказка держится у верха, а не в центре за экраном. */
 .panelEmpty {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  color: var(--muted-foreground);
-  font-size: 13px;
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 160px 24px 40px;
   text-align: center;
-  padding: 32px 24px;
+  color: var(--secondary-text);
+  font-size: var(--text-body);
+  line-height: 18px;
+  background: transparent;
+}
+
+.panelEmpty > svg {
+  width: 40px;
+  height: 40px;
+  padding: 10px;
+  margin-bottom: 4px;
+  box-sizing: border-box;
+  flex: none;
+  border-radius: 999px;
+  background: var(--module-card);
+  color: var(--secondary-text);
+  box-shadow: var(--shadow-pill);
+}
+
+.panelEmpty.empty-state p {
+  margin: 0;
+  max-width: 240px;
 }
 
 .iconBtn {
-  width: 28px;
-  height: 28px;
+  width: var(--h-control);
+  height: var(--h-control);
   flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--input);
-  border-radius: var(--radius);
-  background: var(--background);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--module-card);
+  box-shadow: var(--shadow-pill);
   color: var(--foreground);
   cursor: pointer;
   text-decoration: none;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    box-shadow var(--motion) var(--ease),
+    transform var(--motion-fast) var(--ease);
 }
 
 .iconBtn:hover {
-  background: var(--accent);
+  background: var(--card);
+  box-shadow: var(--shadow-pill-hover);
+}
+
+.iconBtn:active {
+  transform: scale(var(--press-scale));
 }
 
 .iconBtn:disabled {
   opacity: 0.5;
   cursor: default;
+  transform: none;
 }
 
-/* Плеер */
+.iconBtn svg {
+  transition: transform var(--motion) var(--ease);
+}
+
+.iconBtn:hover svg {
+  transform: scale(1.06);
+}
+
+/* Плеер — плитка; полоса прогресса графитом на --muted. */
 .player {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  border-radius: var(--radius-tile);
+  background: var(--module-card);
+  box-shadow: var(--shadow-module);
+  padding: 12px;
 }
 
 .playerLoading {
@@ -527,6 +666,10 @@ tr.row:hover .dealLink {
   align-items: center;
   gap: 12px;
   min-height: 56px;
+  border-radius: var(--radius-tile);
+  background: var(--module-card);
+  box-shadow: var(--shadow-module);
+  padding: 12px;
 }
 
 .playerRow1 {
@@ -540,18 +683,25 @@ tr.row:hover .dealLink {
   height: 32px;
   flex: none;
   border-radius: 50%;
-  border: none;
+  border: 0;
   background: var(--primary);
-  color: #ffffff;
+  color: var(--primary-foreground);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   padding: 0;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
 }
 
 .play:hover {
-  filter: brightness(0.94);
+  background: var(--primary-hover);
+}
+
+.play:active {
+  transform: scale(var(--press-scale));
 }
 
 .track {
@@ -565,19 +715,19 @@ tr.row:hover .dealLink {
 .times {
   display: flex;
   align-items: baseline;
-  font-size: 13px;
+  font-size: var(--text-body);
   font-variant-numeric: tabular-nums;
 }
 
 .total {
   margin-left: auto;
-  color: var(--muted-foreground);
+  color: var(--secondary-text);
 }
 
 .bar {
   height: 4px;
   border-radius: 2px;
-  background: var(--input);
+  background: var(--muted);
   position: relative;
   cursor: pointer;
 }
@@ -599,30 +749,44 @@ tr.row:hover .dealLink {
 
 .speedSeg {
   display: inline-flex;
-  gap: 4px;
+  gap: 2px;
 }
 
 .speedSeg button {
   height: var(--h-control-sm);
-  padding: 0 8px;
+  padding: 0 10px;
   border: 0;
-  border-radius: var(--radius);
+  border-radius: var(--radius-control);
   background: transparent;
-  color: var(--muted-foreground);
-  font-size: 13px;
+  color: var(--secondary-text);
+  font-size: var(--text-body);
   cursor: pointer;
   font-variant-numeric: tabular-nums;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
+}
+
+.speedSeg button:hover {
+  background: var(--ghost);
+  color: var(--foreground);
+}
+
+.speedSeg button:active {
+  transform: scale(var(--press-scale));
 }
 
 .speedOn {
-  background: var(--accent);
+  background: var(--card);
   color: var(--foreground);
   font-weight: 500;
+  box-shadow: var(--shadow-pill);
 }
 
 .recHint {
-  font-size: 13px;
-  color: var(--muted-foreground);
+  font-size: var(--text-body);
+  color: var(--secondary-text);
   margin: 0;
 }
 
@@ -632,47 +796,62 @@ tr.row:hover .dealLink {
   gap: 8px;
   min-height: 56px;
   padding: 8px var(--px-cell);
-  background: var(--muted);
-  border-radius: var(--radius);
-  font-size: 13px;
-  color: var(--muted-foreground);
+  background: var(--module-card);
+  box-shadow: var(--shadow-module);
+  border-radius: var(--radius-tile);
+  font-size: var(--text-body);
+  color: var(--secondary-text);
 }
 
-/* Вкладки */
+/* Вкладки — сегмент .view-switch: плавное переключение фоном. */
 .tabsWrap {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
+  border-radius: var(--radius-tile);
+  background: var(--module-card);
+  box-shadow: var(--shadow-module);
+  padding: 12px;
 }
 
 .tabs {
   display: flex;
-  gap: 4px;
+  gap: 2px;
 }
 
 .tab {
-  height: var(--h-control-sm);
+  height: var(--h-control);
   display: inline-flex;
   align-items: center;
-  padding: 0 10px;
+  padding: 0 12px;
   border: 0;
-  border-radius: var(--radius);
+  border-radius: var(--radius-control);
   background: transparent;
-  color: var(--muted-foreground);
-  font-size: 13px;
+  color: var(--secondary-text);
+  font-size: var(--text-body);
   white-space: nowrap;
   cursor: pointer;
+  transition:
+    background-color var(--motion) var(--ease),
+    color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
 }
 
 .tab:hover {
+  background: var(--ghost);
   color: var(--foreground);
+}
+
+.tab:active {
+  transform: scale(var(--press-scale));
 }
 
 .tabOn {
   composes: tab;
-  background: var(--accent);
+  background: var(--card);
   color: var(--foreground);
   font-weight: 500;
+  box-shadow: var(--shadow-pill);
 }
 
 .transcriptEmpty {
@@ -682,7 +861,7 @@ tr.row:hover .dealLink {
   gap: 8px;
   padding: 32px 24px;
   text-align: center;
-  color: var(--muted-foreground);
+  color: var(--secondary-text);
 }
 
 .transcriptEmpty strong {
@@ -692,7 +871,7 @@ tr.row:hover .dealLink {
 }
 
 .transcriptEmpty p {
-  font-size: 13px;
+  font-size: var(--text-body);
   line-height: 18px;
   margin: 0;
 }
@@ -705,14 +884,14 @@ tr.row:hover .dealLink {
 }
 
 .transcriptMeta {
-  font-size: 13px;
-  color: var(--muted-foreground);
+  font-size: var(--text-body);
+  color: var(--secondary-text);
   font-variant-numeric: tabular-nums;
   margin: 0;
 }
 
-/* Чат расшифровки по говорящим: компактные реплики разными
-   мягкими поверхностями и выравниванием, без новых иконок. */
+/* Чат расшифровки: реплики плитками без вложенности в плитку —
+   фоном --muted/--accent внутри плитки вкладок. */
 .chat {
   display: flex;
   flex-direction: column;
@@ -726,8 +905,8 @@ tr.row:hover .dealLink {
   gap: 2px;
   max-width: 92%;
   padding: 6px 10px;
-  border-radius: var(--radius);
-  font-size: 13px;
+  border-radius: 14px;
+  font-size: var(--text-body);
   line-height: 18px;
 }
 
@@ -744,9 +923,9 @@ tr.row:hover .dealLink {
 }
 
 .chatHead {
-  font-size: 12px;
+  font-size: var(--text-small);
   line-height: 16px;
-  color: var(--muted-foreground);
+  color: var(--secondary-text);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -771,11 +950,11 @@ tr.row:hover .dealLink {
   align-items: center;
   gap: 6px;
   height: var(--h-control);
-  padding: 0 8px;
-  border: 1px solid var(--input);
-  border-radius: var(--radius);
+  padding: 0 12px;
+  border-radius: var(--radius-control);
+  background: var(--sidebar);
   color: var(--muted-foreground);
-  font-size: 13px;
+  font-size: var(--text-body);
   opacity: 0.6;
 }
 
@@ -789,7 +968,7 @@ tr.row:hover .dealLink {
   gap: 8px;
   padding: 6px 0;
   border-bottom: 1px solid var(--border);
-  font-size: 13px;
+  font-size: var(--text-body);
 }
 
 .field:last-child {
@@ -799,7 +978,7 @@ tr.row:hover .dealLink {
 .fieldK {
   width: 140px;
   flex: none;
-  color: var(--muted-foreground);
+  color: var(--secondary-text);
 }
 
 .fieldV {
@@ -823,9 +1002,15 @@ tr.row:hover .dealLink {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--text-body);
   text-decoration: none;
   color: var(--foreground);
+  border-radius: 10px;
+  transition: background-color var(--motion-fast) var(--ease);
+}
+
+.linkRow:hover {
+  background: var(--accent);
 }
 
 .linkRow:hover .linkText {
@@ -840,13 +1025,13 @@ tr.row:hover .dealLink {
 }
 
 .linksEmpty {
-  font-size: 13px;
-  color: var(--muted-foreground);
+  font-size: var(--text-body);
+  color: var(--secondary-text);
   margin: 0;
 }
 
 .noDeal p {
-  font-size: 13px;
+  font-size: var(--text-body);
   color: var(--warning);
   margin: 8px 0 4px;
 }
@@ -856,12 +1041,13 @@ tr.row:hover .dealLink {
   height: 20px;
   flex: none;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--foreground);
+  color: var(--card);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .dealDot {
@@ -872,33 +1058,34 @@ tr.row:hover .dealLink {
   flex: none;
 }
 
-/* Заметка */
+/* Заметка — плитка внизу панели. */
 .note {
   flex: none;
-  border-top: 1px solid var(--border);
-  background: var(--background);
-  padding: 12px var(--px-cell);
+  border-radius: var(--radius-tile);
+  background: var(--module-card);
+  box-shadow: var(--shadow-module);
+  padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
 .noteTitle {
-  font-size: 13px;
+  font-size: var(--text-body);
   line-height: 18px;
-  color: var(--muted-foreground);
+  color: var(--secondary-text);
 }
 
 .noteText {
-  font-size: 13px;
+  font-size: var(--text-body);
   line-height: 18px;
   margin: 0;
 }
 
 .noteMeta {
-  font-size: 13px;
+  font-size: var(--text-body);
   line-height: 18px;
-  color: var(--muted-foreground);
+  color: var(--secondary-text);
   margin: 0;
 }
 
@@ -907,19 +1094,31 @@ tr.row:hover .dealLink {
   border: 0;
   background: transparent;
   padding: 4px 0;
-  font-size: 13px;
+  font-size: var(--text-body);
   color: var(--info);
   cursor: pointer;
   text-decoration: none;
 }
 
 .noteField {
-  border: 1px solid var(--input);
-  border-radius: var(--radius);
-  padding: 8px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: var(--sidebar);
+  padding: 8px 12px;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-body);
   resize: vertical;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    border-color var(--motion-fast) var(--ease),
+    box-shadow var(--motion) var(--ease);
+}
+
+.noteField:focus {
+  outline: none;
+  border-color: var(--foreground);
+  background: var(--card);
+  box-shadow: var(--shadow-pill);
 }
 
 .noteActions {
@@ -928,29 +1127,39 @@ tr.row:hover .dealLink {
   align-items: center;
 }
 
+/* Единственная лаймовая кнопка панели — «Сохранить» / «Расшифровать». */
 .primaryBtn {
   height: var(--h-control);
-  padding: 0 12px;
-  border: 1px solid var(--primary);
-  border-radius: var(--radius);
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-control);
   background: var(--primary);
-  color: #ffffff;
-  font-size: 13px;
+  color: var(--primary-foreground);
+  font-size: var(--text-body);
+  font-weight: 500;
   cursor: pointer;
+  box-shadow: var(--shadow-pill);
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
+}
+
+.primaryBtn:hover {
+  background: var(--primary-hover);
+}
+
+.primaryBtn:active {
+  transform: scale(var(--press-scale));
 }
 
 .primaryBtn:disabled {
   opacity: 0.6;
   cursor: default;
+  transform: none;
 }
 
 @media (max-width: 1100px) {
   .work {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .panel {
-    border-left: 0;
-    border-top: 1px solid var(--border);
   }
 }

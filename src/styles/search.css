@@ -1,30 +1,43 @@
-/* Global search: intentionally scoped to the shell search component. */
+/* Глобальный поиск — всплывающее радиуса 24, поле-пилюля, появление вуали и панели. */
 
 .global-search-trigger {
-  height: 28px;
+  height: var(--h-control);
   display: flex;
   align-items: center;
   gap: 7px;
   width: 100%;
-  padding: 0 8px;
+  padding: 0 12px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   background: transparent;
-  color: var(--muted-foreground);
+  color: var(--secondary-text);
   cursor: pointer;
   font: inherit;
+  font-size: var(--text-body);
   text-align: left;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
 }
 
-.global-search-trigger:hover { background: var(--accent); color: var(--foreground); }
+.global-search-trigger:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+.global-search-trigger:active {
+  transform: scale(var(--press-scale));
+}
 
 .global-search-trigger kbd,
 .global-search-field kbd,
 .global-search-footer kbd {
   padding: 1px 5px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--muted-foreground);
+  border: 0;
+  border-radius: 6px;
+  background: var(--muted);
+  color: var(--secondary-text);
   font-size: 10px;
 }
 
@@ -36,64 +49,151 @@
   z-index: 20;
   display: flex;
   justify-content: center;
+  align-items: flex-start;
   padding-top: 120px;
-  background: rgb(36 37 41 / 22%);
+  background: var(--scrim);
 }
 
 .global-search-panel {
   width: min(640px, calc(100vw - 24px));
   max-height: min(640px, calc(var(--vh-shell) - 150px));
+  height: fit-content;
+  flex: none;
   overflow: hidden;
-  border-radius: var(--radius);
-  background: var(--background);
-  box-shadow: 0 18px 48px rgb(36 37 41 / 22%);
+  border: 0;
+  border-radius: var(--radius-dialog);
+  background: var(--popover);
+  box-shadow: var(--shadow-overlay);
+  display: flex;
+  flex-direction: column;
 }
 
 .global-search-field {
-  height: 48px;
+  height: 52px;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 12px;
+  padding: 0 12px 0 16px;
   border-bottom: 1px solid var(--border);
+  color: var(--muted-foreground);
 }
 
-.global-search-field input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: var(--foreground); font: inherit; font-size: 14px; }
+.global-search-field input {
+  min-width: 0;
+  flex: 1;
+  height: var(--h-control);
+  border: 0;
+  outline: 0;
+  border-radius: var(--radius-control);
+  background: var(--sidebar);
+  padding: 0 12px;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 14px;
+}
 
-.global-search-field button { display: none; border: 0; background: transparent; color: var(--muted-foreground); }
+.global-search-field input::placeholder {
+  color: var(--muted-foreground);
+}
 
-.global-search-results { max-height: 510px; overflow: auto; padding: 4px 0; }
+.global-search-field button {
+  display: none;
+  border: 0;
+  background: transparent;
+  color: var(--muted-foreground);
+}
 
-.global-search-group { height: 26px; display: flex; align-items: center; gap: 6px; padding: 0 12px; color: var(--muted-foreground); font-size: 13px; }
+.global-search-results { max-height: 510px; overflow: auto; padding: 6px; }
 
-.global-search-row { width: 100%; height: 36px; display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 0 12px; border: 0; background: transparent; color: var(--foreground); cursor: pointer; font: inherit; text-align: left; }
+.global-search-group {
+  height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  color: var(--secondary-text);
+  font-size: var(--text-small);
+  font-weight: 500;
+}
 
-.global-search-row:hover,
-.global-search-row.is-selected { background: var(--accent); }
+.global-search-count {
+  min-width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--muted);
+  color: var(--secondary-text);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.global-search-row {
+  width: 100%;
+  height: var(--h-row);
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--foreground);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-body);
+  text-align: left;
+  transition: background-color var(--motion-fast) var(--ease);
+}
+
+.global-search-row:hover { background: var(--accent); }
+
+.global-search-row.is-selected {
+  background: var(--surface-select);
+}
 
 .global-search-row span,
 .global-search-row small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.global-search-row small { color: var(--muted-foreground); font-size: 12px; }
+.global-search-row small { color: var(--secondary-text); font-size: var(--text-small); }
+
+.global-search-row mark {
+  border-radius: 4px;
+  background: var(--surface-select);
+  color: inherit;
+}
 
 .global-search-state,
-.global-search-error { margin: 0; padding: 18px 12px; color: var(--muted-foreground); font-size: 13px; }
+.global-search-error {
+  margin: 0;
+  padding: 14px 16px;
+  color: var(--secondary-text);
+  font-size: var(--text-body);
+  animation: fade-up var(--motion-slow) var(--ease) both;
+}
 
 .global-search-error { color: var(--destructive); }
 
-.global-search-footer { height: 36px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 12px; background: var(--secondary); color: var(--muted-foreground); font-size: 11px; }
+.global-search-footer {
+  height: 36px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 12px;
+  border-top: 1px solid var(--border);
+  background: transparent;
+  color: var(--secondary-text);
+  font-size: 11px;
+}
 
 .global-search-footer span:first-child { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 
 @media (max-width: 640px) {
   .global-search-overlay { padding-top: 12px; }
-}
-
-@media (max-width: 640px) {
   .global-search-footer span:last-child { display: none; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .global-search-overlay,
-  .global-search-panel { transition: none; animation: none; }
 }

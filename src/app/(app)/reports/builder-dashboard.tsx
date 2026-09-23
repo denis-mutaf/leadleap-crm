@@ -8,6 +8,7 @@ import {
   Shield,
   Timer,
 } from "lucide-react";
+import type { CSSProperties } from "react";
 import styles from "./builder-dashboard.module.css";
 
 export type Amount = { sum: number; knownCount: number; totalCount: number };
@@ -127,40 +128,40 @@ export function BuilderDashboard({ data }: { data: BuilderDashboardData }) {
       </div>
       <div className={styles.content}>
         <section aria-label="Ключевые числа">
-          <div className={styles.metrics}>
-            <article className={styles.metric}>
+          <div className={`${styles.metrics} motion-list`}>
+            <article className={styles.metric} style={{ "--i": 0 } as CSSProperties}>
               <span className={styles.metricLabel}>
                 <Icon>
                   <Handshake size={14} />
                 </Icon>
                 Резерваций
               </span>
-              <strong className={styles.metricValue}>
+              <strong className={`${styles.metricValue} num-dots`}>
                 {nf.format(data.metrics.reservations)}
               </strong>
             </article>
-            <article className={styles.metric}>
+            <article className={styles.metric} style={{ "--i": 1 } as CSSProperties}>
               <span className={styles.metricLabel}>
                 <Icon>
                   <Banknote size={14} />
                 </Icon>
                 Сумма резерваций
               </span>
-              <strong className={styles.metricValue}>
+              <strong className={`${styles.metricValue} num-dots`}>
                 {amountLabel(data.metrics.reservationAmount)}
               </strong>
               {reservationPartial && (
                 <span className={styles.partial}>{reservationPartial}</span>
               )}
             </article>
-            <article className={styles.metric}>
+            <article className={styles.metric} style={{ "--i": 2 } as CSSProperties}>
               <span className={styles.metricLabel}>
                 <Icon>
                   <FileText size={14} />
                 </Icon>
                 Договоров
               </span>
-              <strong className={styles.metricValue}>
+              <strong className={`${styles.metricValue} num-dots`}>
                 {nf.format(data.metrics.contracts)} ·{" "}
                 {amountLabel(data.metrics.contractAmount)}
               </strong>
@@ -168,14 +169,14 @@ export function BuilderDashboard({ data }: { data: BuilderDashboardData }) {
                 <span className={styles.partial}>{contractPartial}</span>
               )}
             </article>
-            <article className={styles.metric}>
+            <article className={styles.metric} style={{ "--i": 3 } as CSSProperties}>
               <span className={styles.metricLabel}>
                 <Icon>
                   <Timer size={14} />
                 </Icon>
                 От обращения до резервации
               </span>
-              <strong className={styles.metricValue}>
+              <strong className={`${styles.metricValue} num-dots`}>
                 {data.metrics.daysToReservation == null
                   ? "—"
                   : `${nf.format(data.metrics.daysToReservation)} дн.`}
@@ -245,8 +246,12 @@ export function BuilderDashboard({ data }: { data: BuilderDashboardData }) {
             Где сейчас покупатели
           </h2>
           {data.stageBars.length ? (
-            data.stageBars.map((stage) => (
-              <div className={styles.barRow} key={stage.name}>
+            data.stageBars.map((stage, index) => (
+              <div
+                className={styles.barRow}
+                key={stage.name}
+                style={{ "--i": index } as CSSProperties}
+              >
                 <span className={styles.barName}>{stage.name}</span>
                 <div
                   className={styles.barTrack}

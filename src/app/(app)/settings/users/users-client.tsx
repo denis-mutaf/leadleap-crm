@@ -132,7 +132,7 @@ export default function UsersClient({
         </div>
         {canEdit && (
           <button
-            className={styles.primary}
+            className="btn btn-primary"
             ref={inviteButtonRef}
             onClick={() => setInviteOpen(true)}
           >
@@ -285,7 +285,7 @@ export default function UsersClient({
               <button type="button" onClick={() => setInviteOpen(false)}>
                 Отмена
               </button>
-              <button className={styles.primary} disabled={busy === "invite"}>
+              <button className="btn btn-primary" disabled={busy === "invite"}>
                 {busy === "invite" ? "Отправка…" : "Отправить приглашение"}
               </button>
             </div>

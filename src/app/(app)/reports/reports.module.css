@@ -1,3 +1,6 @@
+/* Полосы этапов отчёта: строка 30px, трек компонента StageIndicator,
+   число поверх, конверсия справа. Рост полосы — transform: scaleX. */
+
 .frow {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr) 96px;
@@ -8,7 +11,7 @@
 
 .fname {
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--text-body);
   line-height: 18px;
   overflow-wrap: anywhere;
 }
@@ -18,12 +21,27 @@
   min-width: 0;
 }
 
+/* Заливка трека растёт слева при первом показе (только transform). */
+.trackWrap > span:first-child > span {
+  transform-origin: left;
+  animation: frow-fill-grow var(--motion-slow) var(--ease) both;
+}
+
+@keyframes frow-fill-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
 .num {
   position: absolute;
   left: 8px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 13px;
+  font-size: var(--text-body);
   line-height: 18px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -31,7 +49,7 @@
 }
 
 .conv {
-  font-size: 13px;
+  font-size: var(--text-body);
   line-height: 18px;
   color: var(--secondary-text);
   font-variant-numeric: tabular-nums;
@@ -43,5 +61,11 @@
   .frow {
     grid-template-columns: 140px minmax(0, 1fr) 64px;
     gap: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trackWrap > span:first-child > span {
+    animation: none;
   }
 }

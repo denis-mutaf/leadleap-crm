@@ -1,3 +1,5 @@
+/* Оверлей входящего звонка — всплывающее по рецепту, кнопки пилюлями, появление .motion-panel. */
+
 .card {
   position: fixed;
   right: 20px;
@@ -5,190 +7,255 @@
   z-index: 50;
   width: 360px;
   overflow: hidden;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-drag, 0 12px 24px -6px rgb(0 0 0 / 7%), 0 4px 8px -2px rgb(0 0 0 / 3%));
-  animation: incoming-enter var(--motion, 180ms) var(--ease, cubic-bezier(.2, 0, 0, 1)) both;
+  background: var(--module-card);
+  border: 0;
+  border-radius: var(--radius-dialog);
+  box-shadow: var(--shadow-overlay);
 }
+
 .header {
-  min-height: 49px;
+  min-height: 52px;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 12px;
+  padding: 0 8px 0 16px;
   border-bottom: 1px solid var(--border);
-  background: var(--secondary);
-  font-size: 13px;
-  color: var(--muted-foreground);
+  background: transparent;
+  font-size: var(--text-body);
+  color: var(--secondary-text);
 }
+
 .header span,
 .header time {
   display: flex;
   align-items: center;
   gap: 6px;
 }
+
 .header time {
   margin-left: auto;
   font-variant-numeric: tabular-nums;
 }
+
 .header button {
+  width: var(--h-control);
+  height: var(--h-control);
+  display: grid;
+  place-items: center;
   border: 0;
+  border-radius: var(--radius-control);
   background: transparent;
   color: inherit;
-  padding: 5px;
   cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    transform var(--motion) var(--ease);
 }
+
+.header button:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+.header button:active {
+  transform: scale(var(--press-scale));
+}
+
 .collapsed .header button:first-of-type {
   transform: rotate(180deg);
 }
+
 .person,
 .deal,
 .touches {
-  padding: 8px 16px;
+  padding: 12px 16px;
 }
+
 .person strong {
   display: block;
   font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
 }
+
 .person small,
 .quiet,
 .deal p,
 .touches p {
   display: block;
   margin: 4px 0 0;
-  color: var(--muted-foreground);
-  font-size: 13px;
+  color: var(--secondary-text);
+  font-size: var(--text-body);
 }
+
 .chips {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
 }
+
 .chips span {
   min-height: var(--h-control-sm);
   display: inline-flex;
   align-items: center;
-  padding: 0 7px;
-  border-radius: 99px;
+  padding: 0 10px;
+  border-radius: 999px;
   background: var(--muted);
-  font-size: 12px;
+  color: var(--foreground);
+  font-size: var(--text-small);
 }
+
 .deal {
   border-top: 1px solid var(--border);
 }
+
 .touches {
   border-top: 1px solid var(--border);
 }
+
 .touches p {
   margin: 0;
   min-height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   padding: 7px 0;
   border-bottom: 1px solid var(--border);
 }
-.touches time {
-  float: right;
+
+.touches p:last-child {
+  border-bottom: 0;
 }
+
+.touches time {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
 .overdue {
   padding: 9px 16px;
   color: var(--destructive);
-  background: color-mix(in srgb, var(--destructive) 10%, transparent);
-  font-size: 13px;
+  background: var(--hue-red-bg);
+  font-size: var(--text-body);
 }
+
 .card textarea {
   width: calc(100% - 32px);
   margin: 12px 16px;
-  padding: 8px;
+  padding: 8px 12px;
   resize: vertical;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--background);
-  color: inherit;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: var(--sidebar);
+  color: var(--foreground);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-body);
 }
+
 .noteBox {
   padding: 12px 16px;
 }
+
 .noteBox button {
+  height: var(--h-control);
   display: inline-flex;
   align-items: center;
   gap: 5px;
   margin-top: 7px;
-  padding: 6px 8px;
+  padding: 0 12px;
   border: 0;
+  border-radius: var(--radius-control);
   color: var(--info);
   background: transparent;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--text-small);
   cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
 }
+
+.noteBox button:hover:not(:disabled) {
+  background: var(--accent);
+}
+
+.noteBox button:active:not(:disabled) {
+  transform: scale(var(--press-scale));
+}
+
 .noteBox button:disabled {
   cursor: default;
   opacity: 0.5;
 }
+
 .error {
   margin: 0;
   padding: 0 16px 10px;
   color: var(--destructive);
-  font-size: 12px;
+  font-size: var(--text-small);
+  animation: fade-up var(--motion-slow) var(--ease) both;
 }
+
 .card footer {
-  min-height: 49px;
+  min-height: 52px;
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 8px;
   padding: 10px 12px;
   border-top: 1px solid var(--border);
 }
+
 .card footer button,
 .card footer a {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--radius-control);
   min-height: var(--h-control);
-  padding: 0 9px;
-  background: transparent;
-  color: var(--muted-foreground);
+  padding: 0 14px;
+  background: var(--ghost);
+  color: var(--foreground);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--text-small);
   text-decoration: none;
   cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
 }
-.card footer a:last-child {
-  background: var(--primary);
-  color: white;
+
+.card footer button:hover,
+.card footer a:hover {
+  background: var(--ghost-hover);
 }
+
+.card footer button:active,
+.card footer a:active {
+  transform: scale(var(--press-scale));
+}
+
 .card footer .primaryAction {
   background: var(--primary);
   color: var(--primary-foreground);
+  font-weight: 500;
 }
+
+.card footer .primaryAction:hover {
+  background: var(--primary-hover);
+}
+
 .quiet {
   padding: 0 16px 12px;
 }
-@keyframes incoming-enter {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.99);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
+
 @media (max-width: 600px) {
   .card {
     right: 8px;
     bottom: 8px;
     left: 8px;
     width: auto;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .card * {
-    transition: none !important;
-    animation: none !important;
   }
 }

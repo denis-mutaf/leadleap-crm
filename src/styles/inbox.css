@@ -1,3 +1,5 @@
+/* Инбокс — «Фарфор»: три колонки-модуля на фарфоре, выбранный диалог — белая плитка с тенью. */
+
 .inbox-page {
   min-height: var(--vh-shell);
   color: var(--foreground);
@@ -5,12 +7,13 @@
 
 .inbox-header,
 .inbox-toolbar {
-  min-height: 48px;
+  min-height: var(--h-header);
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 0 20px;
-  border-bottom: 1px solid var(--border);
+  padding: 0 var(--px-cell);
+  border-bottom: 0;
+  background: transparent;
 }
 
 .inbox-header {
@@ -22,15 +25,26 @@
   align-items: center;
   gap: 8px;
   margin: 0;
-  font-size: 20px;
-  font-weight: 600;
+  font-size: var(--text-title);
+  line-height: var(--text-title-lh);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+}
+
+.inbox-header h1 svg {
+  color: var(--muted-foreground);
 }
 
 .inbox-header h1 span,
 .inbox-eyebrow,
 .inbox-readonly,
 .inbox-muted {
-  color: var(--muted-foreground);
+  color: var(--secondary-text);
+}
+
+.inbox-header h1 span {
+  font-size: var(--text-small);
+  font-variant-numeric: tabular-nums;
 }
 
 .inbox-eyebrow {
@@ -41,45 +55,52 @@
 }
 
 .inbox-readonly {
-  font-size: 12px;
+  font-size: var(--text-small);
 }
 
 .inbox-alert {
-  margin: 12px 20px 0;
+  margin: 4px 0 0;
   padding: 10px 12px;
-  border: 1px solid #f3d5a5;
-  border-radius: var(--radius);
-  background: #fffaf0;
-  color: #8a5a12;
-  font-size: 13px;
+  border: 0;
+  border-radius: var(--radius-tile);
+  background: var(--warning-soft);
+  color: var(--warning);
+  font-size: var(--text-body);
+  animation: fade-up var(--motion-slow) var(--ease) both;
 }
 
 .inbox-toolbar {
-  min-height: 49px;
+  min-height: var(--h-toolbar);
 }
 
 .inbox-toolbar-title {
-  font-size: 13px;
+  font-size: var(--text-body);
   font-weight: 500;
 }
 
-/* Высота сетки жёсткая, а не минимальная: иначе лента сообщений растягивает
-   страницу на четыре экрана и поле ответа уезжает за нижний край — его просто
-   не находят. Прокручиваются списки внутри себя. */
-
+/* Сетка: три модуля на фарфоре с зазором. */
 .inbox-grid {
   display: grid;
   grid-template-columns: minmax(260px, 320px) minmax(360px, 1fr) 300px;
   grid-template-rows: minmax(0, 1fr);
-  height: calc(var(--vh-shell) - 98px);
+  gap: var(--gap-module);
+  height: calc(var(--vh-shell) - 108px);
   min-height: 480px;
   overflow: hidden;
+  padding: 0 0 12px;
 }
 
 .inbox-list {
   min-height: 0;
   overflow-y: auto;
-  border-right: 1px solid var(--border);
+  border: 0;
+  border-radius: var(--radius-module);
+  background: var(--module);
+  box-shadow: var(--shadow-inset);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .inbox-context {
@@ -88,32 +109,45 @@
 }
 
 .inbox-context {
-  padding: 20px;
-  border-left: 1px solid var(--border);
-  background: var(--secondary);
-  font-size: 13px;
+  padding: 16px;
+  border: 0;
+  border-radius: var(--radius-module);
+  background: var(--module);
+  box-shadow: var(--shadow-inset);
+  font-size: var(--text-body);
 }
 
 .inbox-context h2 {
-  margin: 0 0 20px;
-  font-size: 13px;
+  margin: 0 0 12px;
+  font-size: var(--text-section);
+  font-weight: 500;
 }
 
+/* Строка диалога — hover без сдвига; выбранная — белая плитка с тенью. */
 .inbox-row {
+  position: relative;
   min-height: 64px;
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
+  border: 0;
+  border-radius: var(--radius-tile);
+  background: transparent;
   color: inherit;
   text-decoration: none;
+  transition: background-color var(--motion-fast) var(--ease);
 }
 
 .inbox-row:hover,
-.inbox-row:focus-visible,
-.inbox-row.selected {
+.inbox-row:focus-visible {
   background: var(--accent);
+  outline: none;
+}
+
+.inbox-row.selected {
+  background: var(--card);
+  box-shadow: var(--shadow-module);
   outline: none;
 }
 
@@ -124,10 +158,10 @@
   place-items: center;
   flex: none;
   border-radius: 50%;
-  background: #e8ebf4;
-  color: #56617c;
+  background: var(--foreground);
+  color: var(--card);
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .inbox-avatar-wrap {
@@ -135,9 +169,6 @@
   flex: none;
   display: block;
 }
-
-/* Значок канала висит на аватаре, а не в строке текста: так он попадает в
-   первый взгляд и не съедает место под именем. */
 
 .inbox-channel-badge {
   position: absolute;
@@ -147,9 +178,9 @@
   height: 15px;
   display: grid;
   place-items: center;
-  border: 1.5px solid var(--background);
+  border: 1.5px solid var(--module);
   border-radius: 50%;
-  background: var(--background);
+  background: var(--module-card);
   color: var(--muted-foreground);
 }
 
@@ -165,16 +196,16 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
-  font-weight: 450;
+  font-size: var(--text-body);
+  font-weight: 500;
 }
 
 .inbox-row-main small,
 .inbox-thread-header p,
 .inbox-message small,
 .inbox-deal small {
-  color: var(--muted-foreground);
-  font-size: 12px;
+  color: var(--secondary-text);
+  font-size: var(--text-small);
 }
 
 .inbox-unread {
@@ -184,11 +215,16 @@
   background: var(--primary);
 }
 
+/* Переписка — средний модуль. */
 .inbox-thread {
   display: flex;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  border-radius: var(--radius-module);
+  background: var(--module);
+  box-shadow: var(--shadow-inset);
+  overflow: hidden;
 }
 
 .inbox-thread-header {
@@ -209,6 +245,7 @@
   margin: 0;
   overflow: hidden;
   font-size: 14px;
+  font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -220,36 +257,46 @@
 .inbox-messages {
   flex: 1;
   min-height: 0;
-  padding: 20px;
+  padding: 16px;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
+/* Входящие — плитка модуля; исходящие — светлый лаймовый тон, текст основной. */
 .inbox-message {
   max-width: 560px;
-  margin: 0 0 12px;
-  padding: 9px 11px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  margin: 0 0 4px;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: var(--radius-tile);
+  background: var(--module-card);
+  box-shadow: var(--shadow-module);
+  animation: fade-up var(--motion-slow) var(--ease) both;
 }
 
 .inbox-message p {
   margin: 0 0 5px;
-  font-size: 13px;
+  font-size: var(--text-body);
   line-height: 1.45;
 }
 
-/* Свой ответ отличается от чужого вопроса цветом, а не только отступом:
-   при беглом просмотре ленты отступ теряется. */
-
 .inbox-message.out {
   margin-left: auto;
-  border-color: #dde6fa;
-  background: #eff4fe;
+  background: var(--surface-select);
+  color: var(--foreground);
+}
+
+.inbox-message.out small {
+  color: var(--secondary-text);
+  opacity: 1;
 }
 
 .inbox-count,
 .inbox-muted {
-  font-size: 12px;
+  color: var(--secondary-text);
+  font-size: var(--text-small);
   text-align: center;
 }
 
@@ -262,7 +309,7 @@
   flex-direction: column;
   gap: 8px;
   padding: 28px;
-  color: var(--muted-foreground);
+  color: var(--secondary-text);
   text-align: center;
 }
 
@@ -270,13 +317,14 @@
 .inbox-thread-empty h2 {
   color: var(--foreground);
   font-size: 14px;
+  font-weight: 500;
 }
 
 .inbox-empty span,
 .inbox-thread-empty p {
   max-width: 240px;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-body);
   line-height: 1.45;
 }
 
@@ -292,10 +340,11 @@
 
 .inbox-warning {
   padding: 12px;
-  border: 1px solid #f3d5a5;
-  border-radius: var(--radius);
-  background: #fffaf0;
-  color: #8a5a12;
+  border: 0;
+  border-radius: var(--radius-tile);
+  background: var(--warning-soft);
+  color: var(--warning);
+  animation: fade-up var(--motion-slow) var(--ease) both;
 }
 
 .inbox-deal {
@@ -308,7 +357,7 @@
 }
 
 .inbox-deal span {
-  color: var(--muted-foreground);
+  color: var(--secondary-text);
   font-size: 11px;
   text-transform: uppercase;
 }
@@ -321,11 +370,33 @@
 
 .inbox-pagination {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 12px 14px;
-  color: var(--muted-foreground);
-  font-size: 12px;
+  padding: 10px 8px 4px;
+  color: var(--secondary-text);
+  font-size: var(--text-small);
+}
+
+.inbox-pagination a {
+  height: var(--h-control-sm);
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: var(--radius-control);
+  background: var(--ghost);
+  color: var(--foreground);
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
+}
+
+.inbox-pagination a:hover {
+  background: var(--ghost-hover);
+}
+
+.inbox-pagination a:active {
+  transform: scale(var(--press-scale));
 }
 
 .inbox-row-pending {
@@ -349,31 +420,19 @@
   visibility: hidden;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .inbox-row-pending { animation: none; }
-}
-
-/* Инбокс: ожидание ответа, ответ из CRM */
-
-.inbox-row {
-  position: relative;
-}
-
-/* Неотвеченное не должно требовать вчитывания: полоса слева видна боковым
-   зрением, её хватает, чтобы понять, где мы молчим. */
-
 .inbox-row.waiting::before {
   content: "";
   position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
+  top: 8px;
+  bottom: 8px;
+  left: 2px;
   width: 2px;
+  border-radius: 2px;
   background: var(--warning);
 }
 
 .inbox-row.unread .inbox-row-main strong {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .inbox-row-top {
@@ -390,14 +449,18 @@
 
 .inbox-row-top small {
   flex: none;
-  color: var(--muted-foreground);
+  color: var(--secondary-text);
   font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }
 
 .inbox-wait {
   flex: none;
   align-self: flex-start;
-  padding: 2px 6px;
+  height: var(--h-control-sm);
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
   border-radius: 999px;
   background: var(--warning-soft);
   color: var(--warning);
@@ -406,13 +469,19 @@
 }
 
 .inbox-waiting-total {
+  height: var(--h-control-sm);
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--warning-soft);
   color: var(--warning);
-  font-size: 12px;
+  font-size: var(--text-small);
 }
 
 .inbox-day {
-  margin: 18px 0 10px;
-  color: var(--muted-foreground);
+  margin: 10px 0 2px;
+  color: var(--secondary-text);
   font-size: 11px;
   text-align: center;
 }
@@ -428,18 +497,26 @@
 .inbox-thread-actions button {
   height: var(--h-control);
   white-space: nowrap;
-  padding: 0 10px;
-  border: 1px solid var(--input);
-  border-radius: var(--radius);
-  background: var(--card);
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--module-card);
+  box-shadow: var(--shadow-pill);
   color: var(--foreground);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--text-small);
   cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
 }
 
 .inbox-thread-actions button:hover:not(:disabled) {
-  background: var(--accent);
+  background: var(--card);
+}
+
+.inbox-thread-actions button:active:not(:disabled) {
+  transform: scale(var(--press-scale));
 }
 
 .inbox-thread-actions button:disabled {
@@ -449,11 +526,13 @@
 
 .inbox-thread-actions-error {
   color: var(--destructive);
-  font-size: 12px;
+  font-size: var(--text-small);
+  animation: fade-up var(--motion-slow) var(--ease) both;
 }
 
+/* Композер — поле-пилюля и одна лаймовая отправка. */
 .inbox-composer {
-  padding: 12px 18px 16px;
+  padding: 12px 16px 14px;
   border-top: 1px solid var(--border);
 }
 
@@ -461,10 +540,11 @@
   display: flex;
   align-items: flex-end;
   gap: 8px;
-  padding: 8px;
-  border: 1px solid var(--input);
-  border-radius: var(--radius);
-  background: var(--card);
+  padding: 6px 6px 6px 14px;
+  border: 0;
+  border-radius: var(--radius-tile);
+  background: var(--module-card);
+  box-shadow: var(--shadow-module);
 }
 
 .inbox-composer-box textarea {
@@ -475,9 +555,13 @@
   background: transparent;
   color: var(--foreground);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-body);
   line-height: 1.45;
   resize: none;
+}
+
+.inbox-composer-box textarea::placeholder {
+  color: var(--muted-foreground);
 }
 
 .inbox-composer-box button {
@@ -486,14 +570,26 @@
   align-items: center;
   gap: 6px;
   flex: none;
-  padding: 0 12px;
+  padding: 0 14px;
   border: 0;
-  border-radius: var(--radius);
+  border-radius: var(--radius-control);
   background: var(--primary);
   color: var(--primary-foreground);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--text-small);
+  font-weight: 500;
   cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
+}
+
+.inbox-composer-box button:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.inbox-composer-box button:active:not(:disabled) {
+  transform: scale(var(--press-scale));
 }
 
 .inbox-composer-box button:disabled {
@@ -504,18 +600,16 @@
 .inbox-composer-error {
   margin: 0 0 8px;
   color: var(--destructive);
-  font-size: 12px;
+  font-size: var(--text-small);
+  animation: fade-up var(--motion-slow) var(--ease) both;
 }
-
-/* Причина, по которой ответить нельзя, стоит на месте поля ввода: иначе
-   менеджер ищет исчезнувшую кнопку. */
 
 .inbox-composer-blocked {
   margin: 0;
   padding: 12px 18px 16px;
   border-top: 1px solid var(--border);
-  color: var(--muted-foreground);
-  font-size: 12px;
+  color: var(--secondary-text);
+  font-size: var(--text-small);
   line-height: 1.5;
 }
 
@@ -523,9 +617,6 @@
   .inbox-grid {
       grid-template-columns: 260px minmax(0, 1fr);
     }
-}
-
-@media (max-width: 900px) {
   .inbox-context {
       display: none;
     }
@@ -537,40 +628,17 @@
       height: auto;
       overflow: visible;
     }
-}
-
-@media (max-width: 620px) {
   .inbox-list {
       border-right: 0;
     }
-}
-
-@media (max-width: 620px) {
   .inbox-thread {
       min-height: 420px;
-      border-top: 1px solid var(--border);
+      border-top: 0;
+      margin-top: var(--gap-module);
     }
-}
-
-@media (max-width: 620px) {
   .inbox-header,
   .inbox-toolbar {
       padding-left: 12px;
       padding-right: 12px;
     }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .inbox-row {
-      transition: none;
-    }
-}
-
-.inbox-avatar { background: #262626; }
-
-.inbox-header,
-.inbox-toolbar { border-bottom: 0; background: transparent; }
-
-.inbox-header h1 {
-  font-size: 26px; line-height: 32px; font-weight: 400; letter-spacing: -0.03em;
 }

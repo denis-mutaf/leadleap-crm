@@ -1,63 +1,159 @@
-.gate-scrim { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 16px; background: rgba(28,31,38,.28); }
+/* Диалоги сделок: рецепт «Диалог» — docs/design-system.md §7.
+   Вуаль --scrim, окно --module-card радиус 24, заголовок 18/500,
+   внизу справа ghost + primary, поля — пилюли, выбор тегов — меню. */
 
-.gate-scrim { animation: gate-fade-in 140ms ease-out; }
+/* ===== Гейты этапа: квалификация, отказ, следующий шаг ===== */
 
-.gate-dialog { animation: gate-dialog-in 160ms ease-out; }
+.gate-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: var(--scrim);
+}
 
 .gate-dialog {
   width: min(440px, 100%);
   max-height: calc(var(--vh-shell) - 32px);
   overflow: auto;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 0;
+  border-radius: var(--radius-dialog);
+  background: var(--module-card);
+  box-shadow: var(--shadow-overlay);
+  padding: 20px;
+}
+
+.gate-dialog header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 0 12px;
+}
+
+.gate-dialog h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.gate-dialog p {
+  margin: 6px 0 0;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+
+.gate-close {
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  font-size: 20px;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
+}
+
+.gate-close:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+.gate-close:active {
+  transform: scale(var(--press-scale));
+}
+
+.gate-dialog label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 0 0;
+  color: var(--secondary-text);
+  font-size: 13px;
+}
+
+.gate-dialog textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+/* Квалификация: две пилюли выбора, выбранная — лаймовый тон. */
+.qual-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 18px 0 4px;
+}
+
+.qual-options button {
+  min-height: var(--h-control);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--module-card);
+  box-shadow: var(--shadow-pill);
+  color: var(--foreground);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease),
+    box-shadow var(--motion) var(--ease);
+}
+
+.qual-options button:hover {
   background: var(--card);
-  box-shadow: 0 18px 48px rgba(28, 31, 38, .2);
 }
 
-.gate-dialog header { display: flex; justify-content: space-between; gap: 16px; padding: 20px; border-bottom: 1px solid var(--border); }
-
-.gate-dialog h2 { margin: 0; font-size: 18px; font-weight: 600; }
-
-.gate-dialog p { margin: 6px 0 0; color: var(--muted-foreground); font-size: 13px; }
-
-.gate-close { border: 0; background: transparent; color: var(--muted-foreground); cursor: pointer; font-size: 20px; }
-
-.gate-dialog label { display:flex; flex-direction:column; gap:6px; padding:10px 20px 0; color:var(--muted-foreground); font-size:13px; }
-
-.gate-dialog input,
-.gate-dialog select,
-.gate-dialog textarea { min-height:32px; padding:6px 8px; border:1px solid var(--input); border-radius:var(--radius); background:var(--background); color:var(--foreground); font:inherit; }
-
-.gate-dialog textarea { min-height:72px; resize:vertical; }
-
-.qual-options { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:18px 20px 4px; }
-
-.qual-options button { min-height:64px; border:1px solid var(--border); border-radius:6px; background:var(--background); color:var(--foreground); font:inherit; cursor:pointer; }
-
-.qual-options button.selected { border-color: var(--foreground); background:var(--accent); }
-
-.gate-dialog footer { display:flex; justify-content:flex-end; gap:8px; margin-top:18px; padding:14px 20px; border-top:1px solid var(--border); background:var(--secondary); }
-
-.gate-primary { height:28px; padding:0 10px; border:1px solid var(--primary); border-radius:var(--radius); background:var(--primary); color:white; font:inherit; font-size:13px; cursor:pointer; }
-
-.gate-primary:disabled { opacity:.5; cursor:not-allowed; }
-
-@media (max-width:600px) {
-  .gate-dialog footer { flex-direction:column-reverse; }
+.qual-options button:active {
+  transform: scale(var(--press-scale));
 }
 
-@media (max-width:600px) {
-  .gate-dialog footer button { width:100%; justify-content:center; }
+.qual-options button.selected {
+  background: var(--surface-select);
+  box-shadow: var(--shadow-pill);
 }
 
-@media (max-width:600px) {
-  .qual-options { grid-template-columns:1fr; }
+.gate-dialog footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 14px 0 0;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .gate-scrim,
-  .gate-dialog { animation: none; }
+.gate-primary {
+  height: var(--h-control);
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
 }
+
+.gate-primary:hover {
+  background: var(--primary-hover);
+}
+
+.gate-primary:active {
+  transform: scale(var(--press-scale));
+}
+
+.gate-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ===== Создание сделки ===== */
 
 .create-deal-overlay {
   position: fixed;
@@ -65,20 +161,17 @@
   z-index: 50;
   display: grid;
   place-items: center;
-  background: rgba(0, 0, 0, 0.1);
+  background: var(--scrim);
   overflow: auto;
-  animation: create-deal-fade-in 120ms ease-out;
 }
 
 .create-deal-modal {
   width: min(440px, calc(100vw - 32px));
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--popover);
-  color: var(--popover-foreground);
-  box-shadow:
-    0 8px 16px -4px rgba(0, 0, 0, 0.04),
-    0 2px 4px -1px rgba(0, 0, 0, 0.02);
+  border: 0;
+  border-radius: var(--radius-dialog);
+  background: var(--module-card);
+  color: var(--foreground);
+  box-shadow: var(--shadow-overlay);
 }
 
 .create-deal-modal-wide {
@@ -87,7 +180,6 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  animation: create-deal-rise-in 140ms ease-out;
 }
 
 .create-deal-modal-wide form {
@@ -107,13 +199,12 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 18px 20px 14px;
-  border-bottom: 1px solid var(--border);
+  padding: 20px 20px 12px;
 }
 
 .create-deal-header h2 {
   margin: 0;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 500;
 }
 
@@ -130,15 +221,23 @@
   width: 28px;
   height: 28px;
   border: 0;
-  border-radius: var(--radius);
+  border-radius: var(--radius-control);
   background: transparent;
   color: var(--muted-foreground);
   cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
 }
 
 .create-deal-close:hover {
   background: var(--accent);
   color: var(--foreground);
+}
+
+.create-deal-close:active {
+  transform: scale(var(--press-scale));
 }
 
 .create-deal-fields {
@@ -150,40 +249,23 @@
 .create-deal-fields label {
   display: grid;
   gap: 6px;
-  color: #606164;
+  color: var(--secondary-text);
   font-size: 13px;
 }
 
-.create-deal-fields input,
-.create-deal-fields select,
-.create-deal-fields textarea {
-  width: 100%;
-  border: 1px solid var(--input);
-  border-radius: var(--radius);
-  background: var(--background);
-  color: var(--foreground);
-  font: inherit;
-  font-size: 14px;
-  outline: none;
-}
-
+/* Поля — нативные пилюли из слоя base; здесь только плотность. */
 .create-deal-fields input,
 .create-deal-fields select {
   height: var(--h-control);
-  padding: 0 9px;
+  width: 100%;
+  font-size: 13px;
 }
 
 .create-deal-fields textarea {
+  width: 100%;
   min-height: 70px;
-  padding: 7px 9px;
   resize: vertical;
-}
-
-.create-deal-fields input:focus,
-.create-deal-fields select:focus,
-.create-deal-fields textarea:focus {
-  border-color: var(--ring);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 18%, transparent);
+  font-size: 13px;
 }
 
 .create-deal-grid {
@@ -197,24 +279,24 @@
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  padding: 12px 20px;
-  border-top: 1px solid var(--border);
+  padding: 12px 20px 20px;
 }
 
 .create-deal-submit {
   background: var(--primary);
-  border-color: var(--primary-border);
   color: var(--primary-foreground);
+  font-weight: 500;
 }
 
 .create-deal-submit:hover {
-  background: color-mix(in srgb, var(--primary) 90%, black);
+  background: var(--primary-hover);
 }
 
 .create-deal-error {
   margin: -4px 20px 12px;
   color: var(--destructive);
   font-size: 13px;
+  animation: fade-up var(--motion-slow) var(--ease) both;
 }
 
 .create-deal-fields fieldset {
@@ -222,13 +304,15 @@
   gap: 8px;
   margin: 0;
   padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: 0;
+  border-radius: var(--radius-tile);
+  background: var(--module);
+  box-shadow: var(--shadow-inset);
 }
 
 .create-deal-fields legend {
   padding: 0 4px;
-  color: #606164;
+  color: var(--secondary-text);
   font-size: 13px;
 }
 
@@ -243,11 +327,16 @@
   grid-template-columns: auto 1fr;
   align-items: center;
   gap: 6px;
+  color: var(--foreground);
 }
 
 .create-deal-checks input {
   width: 14px;
   height: 14px;
+}
+
+.create-deal-checks input:active {
+  transform: scale(0.9);
 }
 
 .create-deal-tag-picker {
@@ -259,7 +348,7 @@
 
 .create-deal-field-label {
   padding-top: 6px;
-  color: #606164;
+  color: var(--secondary-text);
   font-size: 13px;
 }
 
@@ -281,35 +370,51 @@
   font-size: 13px;
 }
 
+/* Выбранная метка — .tag: пилюля 22px. */
 .create-deal-chip {
-  min-height: 24px;
-  padding: 2px 7px;
-  border: 1px solid #d9e2fb;
-  border-radius: 4px;
-  background: #eaf0fd;
-  color: #2f55b5;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--muted);
+  color: var(--secondary-text);
   font: inherit;
   font-size: 12px;
   cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
+}
+
+.create-deal-chip:hover {
+  background: var(--ghost-hover);
+  color: var(--foreground);
+}
+
+.create-deal-chip:active {
+  transform: scale(var(--press-scale));
 }
 
 .create-deal-add-tag {
   height: var(--h-control-sm);
 }
 
+/* Выбор тегов — меню по рецепту поповера. */
 .create-deal-tag-menu {
   position: absolute;
   z-index: 2;
   top: calc(100% + 6px);
   left: 0;
   width: min(280px, 100%);
-  padding: 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  padding: 6px;
+  border: 0;
+  border-radius: var(--radius-popover);
   background: var(--popover);
-  box-shadow:
-    0 8px 16px -4px rgba(0, 0, 0, 0.04),
-    0 2px 4px -1px rgba(0, 0, 0, 0.02);
+  box-shadow: var(--shadow-overlay);
+  transform-origin: top left;
+  animation: popover-in var(--motion) var(--ease) both;
 }
 
 .create-deal-tag-menu > input {
@@ -331,33 +436,39 @@
   justify-content: space-between;
   padding: 0 8px;
   border: 0;
-  border-radius: 4px;
+  border-radius: 10px;
   background: transparent;
   color: var(--foreground);
   font: inherit;
   font-size: 13px;
   text-align: left;
   cursor: pointer;
+  transition: background-color var(--motion-fast) var(--ease);
 }
 
 .create-deal-tag-option:hover,
 .create-deal-tag-option[aria-pressed="true"] {
-  background: var(--accent);
+  background: var(--surface-select);
 }
 
+/* Подсказка появляется мягко. */
 .create-deal-hint {
   margin: -7px 0 -2px;
   color: var(--muted-foreground);
   font-size: 13px;
+  animation: fade-up var(--motion-slow) var(--ease) both;
 }
+
+/* ===== Проверка дублей: предупреждение мягким тоном ===== */
 
 .duplicate-list {
   display: grid;
   gap: 8px;
   padding: 10px;
-  border: 1px solid #f0d59a;
-  border-radius: var(--radius);
-  background: #fffaf0;
+  border: 0;
+  border-radius: var(--radius-tile);
+  background: var(--warning-soft);
+  box-shadow: var(--shadow-module);
 }
 
 .duplicate-card {
@@ -366,7 +477,7 @@
   justify-content: space-between;
   gap: 10px;
   padding-top: 8px;
-  border-top: 1px solid #f0d59a;
+  border-top: 1px solid var(--warning-ring);
 }
 
 .duplicate-card > div:first-child {
@@ -375,7 +486,7 @@
 }
 
 .duplicate-card span {
-  color: #606164;
+  color: var(--secondary-text);
   font-size: 12px;
 }
 
@@ -393,9 +504,9 @@
 @media (min-width: 641px) {
   .create-deal-fields > label,
   .create-deal-fields > .create-deal-grid > label {
-      grid-template-columns: 140px minmax(0, 1fr);
-      align-items: center;
-    }
+    grid-template-columns: 140px minmax(0, 1fr);
+    align-items: center;
+  }
 }
 
 @media (min-width: 641px) {
@@ -404,54 +515,76 @@
   .create-deal-fields > label > select,
   .create-deal-fields > .create-deal-grid > label > input,
   .create-deal-fields > .create-deal-grid > label > select {
-      grid-column: 2;
-    }
+    grid-column: 2;
+  }
 }
 
 @media (min-width: 641px) {
   .create-deal-fields > .create-deal-grid {
-      grid-template-columns: 1fr;
-    }
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
   .create-deal-tag-picker {
-      grid-template-columns: 1fr;
-      gap: 6px;
-    }
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
 }
 
 @media (max-width: 640px) {
   .create-deal-field-label {
-      padding-top: 0;
-    }
+    padding-top: 0;
+  }
 }
 
 @media (max-width: 640px) {
   .create-deal-grid {
-      grid-template-columns: 1fr;
-    }
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
   .duplicate-card {
-      align-items: flex-start;
-      flex-direction: column;
-    }
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 
 @media (max-width: 640px) {
   .duplicate-actions {
-      justify-content: flex-start;
-    }
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 600px) {
+  .gate-dialog footer {
+    flex-direction: column-reverse;
+  }
+}
+
+@media (max-width: 600px) {
+  .gate-dialog footer button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 600px) {
+  .qual-options {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .gate-scrim,
+  .gate-dialog,
   .create-deal-overlay,
   .create-deal-modal-wide,
-  .create-deal-overlay *,
-  .create-deal-modal * {
-      transition: none;
-      animation: none;
-    }
+  .create-deal-tag-menu,
+  .create-deal-error,
+  .create-deal-hint {
+    transition: none;
+    animation: none;
+  }
 }

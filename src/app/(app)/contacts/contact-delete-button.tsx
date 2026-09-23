@@ -116,7 +116,7 @@ export default function ContactDeleteButton({
         <MoreHorizontal size={16} />
       </button>
       {menuOpen && !confirmOpen && (
-        <div className={styles.deletePopover} role="menu">
+        <div className={`${styles.deletePopover} motion-popover`} role="menu">
           <button
             type="button"
             role="menuitem"
@@ -132,7 +132,7 @@ export default function ContactDeleteButton({
       )}
       {confirmOpen && (
         <div
-          className={styles.mergeScrim}
+          className={`${styles.mergeScrim} motion-veil`}
           role="presentation"
           onMouseDown={(event) =>
             event.target === event.currentTarget &&
@@ -142,7 +142,7 @@ export default function ContactDeleteButton({
         >
           <section
             ref={dialogRef}
-            className={styles.deleteModal}
+            className={`${styles.deleteModal} motion-dialog`}
             role="dialog"
             aria-modal="true"
             aria-labelledby="delete-contact-title"

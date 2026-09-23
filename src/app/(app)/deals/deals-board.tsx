@@ -26,9 +26,10 @@ import {
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch, type SetStateAction } from "react";
 import { StageIndicator } from "@/components/crm/stage-indicator";
 import { monthlyAmount, shortAmount } from "@/lib/amo-amount";
+import { DateField } from "@/components/crm/date-field";
 import { createClient } from "@/lib/supabase/client";
 import { startRouteProgress } from "../route-progress";
 
@@ -225,19 +226,19 @@ function PresentationalCard({
   );
 }
 
-function DraggableCard({ deal, onOpen }: { deal: BoardCard; onOpen: OpenDeal }) {
+function DraggableCard({ deal, onOpen, index = 0 }: { deal: BoardCard; onOpen: OpenDeal; index?: number }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: deal.id });
   return (
-    <div ref={setNodeRef} {...listeners} {...attributes} className={isDragging ? "deal-card-dragging" : ""}>
+    <div ref={setNodeRef} {...listeners} {...attributes} className={isDragging ? "deal-card-dragging" : ""} style={{ "--i": index } as CSSProperties}>
       <PresentationalCard deal={deal} onOpen={onOpen} />
     </div>
   );
 }
 
-function KettleCard({ deal, onOpen, onClaim }: { deal: BoardCard; onOpen: OpenDeal; onClaim: () => void }) {
+function KettleCard({ deal, onOpen, onClaim, index = 0 }: { deal: BoardCard; onOpen: OpenDeal; onClaim: () => void; index?: number }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: deal.id });
   return (
-    <article ref={setNodeRef} {...listeners} {...attributes} className={`kettle-card ${isDragging ? "deal-card-dragging" : ""}`} onClick={(event) => onOpen(event)} onAuxClick={(event) => { if (event.button === 1) { event.preventDefault(); onOpen(event); } }}>
+    <article ref={setNodeRef} {...listeners} {...attributes} className={`kettle-card ${isDragging ? "deal-card-dragging" : ""}`} style={{ "--i": index } as CSSProperties} onClick={(event) => onOpen(event)} onAuxClick={(event) => { if (event.button === 1) { event.preventDefault(); onOpen(event); } }}>
       <div className="kettle-meta">{deal.source_name && channelIcon(deal.source_name)} {deal.source_name && <span>{deal.source_name} · </span>}{time(deal.updated_at)}</div>
       <strong>{deal.contact_name || deal.phone}</strong>
       {(deal.title || deal.object_text) && <p>{deal.title || deal.object_text}</p>}
@@ -276,8 +277,8 @@ function BoardColumn({
         {!column.kettle && <div className="column-menu-wrap"><button className="column-more" type="button" aria-label={`Меню колонки ${column.title}`} onClick={() => setMenuOpen((open) => !open)}><MoreHorizontal size={15} /></button>{menuOpen && <div className="column-menu"><button type="button" onClick={() => { setHidden(true); setMenuOpen(false); }}>Скрыть колонку</button></div>}</div>}
       </div>
       {column.sum !== null && column.sum > 0 && <div className="column-sum">€ {new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(column.sum)}</div>}
-      <div className="column-track">
-      {column.deals.map((deal) => column.kettle ? <KettleCard key={deal.id} deal={deal} onOpen={(event) => onOpen(deal.id, event)} onClaim={() => onClaim(deal.id)} /> : <DraggableCard key={deal.id} deal={deal} onOpen={(event) => onOpen(deal.id, event)} />)}
+      <div className="column-track motion-list">
+      {column.deals.map((deal, index) => column.kettle ? <KettleCard key={deal.id} deal={deal} index={index} onOpen={(event) => onOpen(deal.id, event)} onClaim={() => onClaim(deal.id)} /> : <DraggableCard key={deal.id} deal={deal} index={index} onOpen={(event) => onOpen(deal.id, event)} />)}
       {column.deals.length === 0 && <div className="empty-column">Нет сделок</div>}
       <button className="column-add-button" type="button" onClick={onCreate}><Plus size={14} /> Сделка</button>
       </div>
@@ -288,7 +289,7 @@ function BoardColumn({
 function LostColumn({ column, stages, expanded, onToggle, onOpen, onCreate }: { column: BoardColumn; stages: { id: string; kind: "open" | "won" | "lost"; position: number }[]; expanded: boolean; onToggle: () => void; onOpen: (id: string, event?: OpenEvent) => void; onCreate: () => void }) {
   const { setNodeRef, isOver } = useDroppable({ id: "lost" });
   if (!expanded) return <button ref={setNodeRef} className={`closed-column ${isOver ? "drop-target" : ""}`} type="button" onClick={onToggle} aria-label={`Развернуть Отказ: ${column.total}`}><ChevronRight size={14} /><StageIndicator variant="dot" stage={{ id: column.id, kind: "lost", position: column.position ?? 0 }} stages={stages} /><span className="closed-column-label">Отказ</span><span className="pill">{column.total}</span></button>;
-  return <section ref={setNodeRef} className={`kanban-column lost-expanded ${isOver ? "drop-target" : ""}`}><div className="column-head"><button className="column-collapse" type="button" onClick={onToggle} aria-label="Свернуть Отказ"><ChevronDown size={14} /></button><StageIndicator stage={{ id: column.id, kind: "lost", position: column.position ?? 0 }} stages={stages} name={column.title} /><span className="pill">{column.total}</span></div><div className="column-track">{column.deals.map((deal) => <DraggableCard key={deal.id} deal={deal} onOpen={(event) => onOpen(deal.id, event)} />)}{column.deals.length === 0 && <div className="empty-column">Нет отказов</div>}<button className="column-add-button" type="button" onClick={onCreate}><Plus size={14} /> Сделка</button></div></section>;
+  return <section ref={setNodeRef} className={`kanban-column lost-expanded ${isOver ? "drop-target" : ""}`}><div className="column-head"><button className="column-collapse" type="button" onClick={onToggle} aria-label="Свернуть Отказ"><ChevronDown size={14} /></button><StageIndicator stage={{ id: column.id, kind: "lost", position: column.position ?? 0 }} stages={stages} name={column.title} /><span className="pill">{column.total}</span></div><div className="column-track motion-list">{column.deals.map((deal, index) => <DraggableCard key={deal.id} deal={deal} index={index} onOpen={(event) => onOpen(deal.id, event)} />)}{column.deals.length === 0 && <div className="empty-column">Нет отказов</div>}<button className="column-add-button" type="button" onClick={onCreate}><Plus size={14} /> Сделка</button></div></section>;
 }
 
 function GateDialog({ gate, form, setForm, props, pending, onCancel, onSubmit }: { gate: Gate; form: GateForm; setForm: Dispatch<SetStateAction<GateForm>>; props: Props; pending: boolean; onCancel: () => void; onSubmit: () => void }) {
@@ -300,7 +301,7 @@ function GateDialog({ gate, form, setForm, props, pending, onCancel, onSubmit }:
   ) : (
     <>
       {gate.needsQualification && <div className="qual-options"><button type="button" className={form.qualification === "КВАЛ" ? "selected" : ""} onClick={() => setForm({ ...form, qualification: "КВАЛ" })}>Квалифицирован</button><button type="button" className={form.qualification === "неквал" ? "selected" : ""} onClick={() => setForm({ ...form, qualification: "неквал" })}>Не квалифицирован</button></div>}
-      {gate.needsTask && <><label>Тип задачи<select value={form.taskTypeId} onChange={(event) => setForm({ ...form, taskTypeId: event.target.value })}>{props.taskTypes.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}</select></label><label>Что сделать<input value={form.taskTitle} onChange={(event) => setForm({ ...form, taskTitle: event.target.value })} /></label><label>Дата и время<input type="datetime-local" value={form.taskDueAt} onChange={(event) => setForm({ ...form, taskDueAt: event.target.value })} /></label><label>Исполнитель<select value={form.taskAssigneeId} onChange={(event) => setForm({ ...form, taskAssigneeId: event.target.value })}>{props.activeAssignees.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label></>}
+      {gate.needsTask && <><label>Тип задачи<select value={form.taskTypeId} onChange={(event) => setForm({ ...form, taskTypeId: event.target.value })}>{props.taskTypes.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}</select></label><label>Что сделать<input value={form.taskTitle} onChange={(event) => setForm({ ...form, taskTitle: event.target.value })} /></label><label>Дата и время<DateField type="datetime-local" value={form.taskDueAt} onChange={(taskDueAt) => setForm({ ...form, taskDueAt })} aria-label="Дата и время задачи" placeholder="Когда" /></label><label>Исполнитель<select value={form.taskAssigneeId} onChange={(event) => setForm({ ...form, taskAssigneeId: event.target.value })}>{props.activeAssignees.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label></>}
     </>
   );
   return <div className="gate-scrim motion-veil"><div className="gate-dialog motion-dialog" role="dialog" aria-modal="true"><header><div><h2>{gate.lost ? "Закрыть сделку как отказ" : gate.needsQualification ? "Клиент квалифицирован?" : "Нужен следующий шаг"}</h2><p>{gate.lost ? "Укажите причину — история сделки сохранится." : gate.needsQualification ? "Отмечайте после разговора — это видно всему отделу." : `Сделка не перейдёт в ${gate.target.title}, пока не назначен следующий шаг.`}</p></div><button className="gate-close" type="button" onClick={onCancel} aria-label="Закрыть"><X size={16} /></button></header>{body}<footer><button className="btn" type="button" onClick={onCancel} disabled={pending}>Отмена <kbd>Esc</kbd></button><button className="gate-primary" type="button" onClick={onSubmit} disabled={pending}>{gate.lost ? "Закрыть как отказ" : gate.needsTask ? "Поставить задачу и перевести" : "Перевести"} <kbd>↵</kbd></button></footer></div></div>;

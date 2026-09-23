@@ -183,7 +183,7 @@ export default function ContactMergeButton({ current }: Props) {
     <>
       <button
         ref={triggerRef}
-        className={styles.mergeButton}
+        className={`${styles.mergeButton} btn`}
         type="button"
         onClick={() => {
           setOpen(true);
@@ -194,7 +194,7 @@ export default function ContactMergeButton({ current }: Props) {
       </button>
       {open && (
         <div
-          className={styles.mergeScrim}
+          className={`${styles.mergeScrim} motion-veil`}
           role="presentation"
           onMouseDown={(e) =>
             e.target === e.currentTarget && !pendingRef.current && close()
@@ -202,7 +202,7 @@ export default function ContactMergeButton({ current }: Props) {
         >
           <section
             ref={dialogRef}
-            className={styles.mergeModal}
+            className={`${styles.mergeModal} motion-dialog`}
             role="dialog"
             aria-modal="true"
             aria-labelledby="merge-title"

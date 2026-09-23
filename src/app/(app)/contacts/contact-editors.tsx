@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Check, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { DateField } from "@/components/crm/date-field";
 import { createClient } from "@/lib/supabase/client";
 import styles from "./contacts.module.css";
 
@@ -295,9 +296,9 @@ export function EditableCustomField({
     ? definition.options.map((option) => typeof option === "string" ? { value: option, label: option } : option && typeof option === "object" && "value" in option ? { value: String(option.value), label: String((option as { label?: unknown }).label ?? option.value) } : null).filter((option): option is { value: string; label: string } => option !== null)
     : [];
 
-  async function save() {
+  async function save(next = draft) {
     if (saving) return;
-    const value = draft.trim();
+    const value = next.trim();
     setEditing(false);
     setSaving(true);
     const parsed = definition.field_type === "number" && value ? Number(value) : definition.field_type === "checkbox" ? value === "true" : value || null;
@@ -318,8 +319,10 @@ export function EditableCustomField({
           <option value="">— не выбрано —</option>
           {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
         </select>
+      ) : definition.field_type === "date" ? (
+        <DateField className={styles.customInput} value={draft} onChange={(next) => { setDraft(next); void save(next); }} onClose={() => setEditing(false)} defaultOpen clearable aria-label={definition.label} placeholder="—" />
       ) : (
-        <input autoFocus className={styles.customInput} type={definition.field_type === "number" ? "number" : definition.field_type === "date" ? "date" : "text"} value={draft} onChange={(event) => setDraft(event.target.value)} onBlur={() => void save()} onKeyDown={(event) => { if (event.key === "Enter") void save(); if (event.key === "Escape") { setDraft(initial); setEditing(false); } }} />
+        <input autoFocus className={styles.customInput} type={definition.field_type === "number" ? "number" : "text"} value={draft} onChange={(event) => setDraft(event.target.value)} onBlur={() => void save()} onKeyDown={(event) => { if (event.key === "Enter") void save(); if (event.key === "Escape") { setDraft(initial); setEditing(false); } }} />
       ) : (
         <button type="button" className={`${styles.customValue} ${!initial ? styles.emptyValue : ""}`} onClick={() => { setDraft(initial); setEditing(true); }}>
           {initial || "—"}<Pencil size={12} />

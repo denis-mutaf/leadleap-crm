@@ -45,7 +45,7 @@ export async function CallPanel({ callId }: { callId: string }) {
   const DirectionIcon = call.direction === "in" ? PhoneIncoming : PhoneOutgoing;
 
   return (
-    <aside className={styles.panel} aria-label="Звонок">
+    <aside className={`${styles.panel} motion-fade-up`} aria-label="Звонок">
       <div className={styles.panelHead}>
         <DirectionIcon size={16} aria-hidden="true" />
         <span className={styles.panelWho}>

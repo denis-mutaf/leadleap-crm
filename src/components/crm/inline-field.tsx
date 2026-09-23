@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { DateField } from "@/components/crm/date-field";
 import { createClient } from "@/lib/supabase/client";
 
 export type InlineOption = { value: string; label: string };
@@ -138,11 +139,22 @@ export function InlineField({
                 commit(draft);
             }}
           />
+        ) : type === "date" ? (
+          <DateField
+            className="field-input"
+            value={draft}
+            onChange={commit}
+            onClose={() => setEditing(false)}
+            defaultOpen
+            clearable
+            aria-label={label}
+            placeholder={placeholder}
+          />
         ) : (
           <input
             ref={inputRef as React.RefObject<HTMLInputElement>}
             className="field-input"
-            type={type === "number" ? "number" : type === "date" ? "date" : "text"}
+            type={type === "number" ? "number" : "text"}
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             onBlur={(event) => commit(event.target.value)}

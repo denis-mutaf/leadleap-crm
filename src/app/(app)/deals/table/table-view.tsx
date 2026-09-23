@@ -12,7 +12,7 @@ import {
 import Link from "next/link";
 import Form from "next/form";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { StageIndicator } from "@/components/crm/stage-indicator";
 import { stageHueVars, type StageHue } from "@/lib/stage-colors";
 import { createClient } from "@/lib/supabase/client";
@@ -323,7 +323,7 @@ export function DealsTableView(p: Props) {
         </select>
         <input type="hidden" name="sort" value={p.sort} />
         <input type="hidden" name="dir" value={p.direction} />
-        <button type="submit">Применить</button>
+        <button type="submit" className="btn btn-primary">Применить</button>
         {(p.query || p.owner || p.stage) && <Link href="/deals/table">Сбросить</Link>}
         <span className={styles.sortChip} title="Активная сортировка">
           <ArrowDownUp size={12} aria-hidden="true" />
@@ -359,11 +359,12 @@ export function DealsTableView(p: Props) {
                 <th className={styles.menuCell} aria-label="Действия" />
               </tr>
             </thead>
-            <tbody>
-              {p.rows.map((row) => (
+            <tbody className="motion-list">
+              {p.rows.map((row, index) => (
                 <tr
                   key={row.id}
                   className={selected.has(row.id) ? styles.selectedRow : undefined}
+                  style={{ "--i": index } as CSSProperties}
                   tabIndex={0}
                   // Cmd-клик и клик колесом по строке — привычный способ открыть
                   // сделку рядом, не теряя место в таблице. <tr> ссылкой не бывает.
@@ -418,13 +419,13 @@ export function DealsTableView(p: Props) {
         {p.canExport && <button type="button" disabled={pending} onClick={exportCsv}>Выгрузить</button>}
         <button type="button" disabled={pending} aria-label="Снять выделение" onClick={() => setSelected(new Set())}><X size={16} /></button>
       </div>}
-      {action && <div className={styles.dialogBackdrop} role="presentation"><div className={styles.dialog} role="dialog" aria-modal="true" aria-label="Массовое действие">
+      {action && <div className={`${styles.dialogBackdrop} motion-veil`} role="presentation"><div className={`${styles.dialog} motion-dialog`} role="dialog" aria-modal="true" aria-label="Массовое действие">
         <button type="button" className={styles.close} onClick={() => setAction(null)} aria-label="Закрыть"><X size={16} /></button>
         <h2>{action === "stage" ? "Сменить этап" : action === "owner" ? "Назначить ответственного" : "Добавить метку"}</h2>
         <select autoFocus value={choice} onChange={(event) => setChoice(event.target.value)}><option value="">Выберите…</option>{actionOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
         <div className={styles.dialogActions}><button type="button" onClick={() => setAction(null)}>Отмена</button><button type="button" disabled={!choice || pending} onClick={() => void runAction()}>Подтвердить</button></div>
       </div></div>}
-      {deleteRow && <div className={styles.dialogBackdrop} role="presentation"><div className={styles.dialog} role="dialog" aria-modal="true" aria-labelledby="delete-deal-title">
+      {deleteRow && <div className={`${styles.dialogBackdrop} motion-veil`} role="presentation"><div className={`${styles.dialog} motion-dialog`} role="dialog" aria-modal="true" aria-labelledby="delete-deal-title">
         <h2 id="delete-deal-title">Удалить сделку?</h2>
         <p>Сделка «{deleteRow.contact}» будет перемещена в корзину.</p>
         <div className={styles.dialogActions}><button type="button" disabled={deletePending} onClick={() => setDeleteRow(null)}>Отмена</button><button type="button" disabled={deletePending} onClick={() => void deleteDeal()}>Удалить</button></div>

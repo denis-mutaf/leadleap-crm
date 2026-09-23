@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Form from "next/form";
 import { Suspense } from "react";
+import type { CSSProperties } from "react";
 import { redirect } from "next/navigation";
 import {
   ExternalLink,
@@ -226,7 +227,7 @@ export default async function CallsPage({ searchParams }: { searchParams: Promis
           <span className={styles.t}>Звонки</span>
           <span className={styles.s}>Журнал разговоров отдела</span>
         </span>
-        <span className={styles.headerCount}>{total.toLocaleString("ru-RU")}</span>
+        <span className={`${styles.headerCount} pill`}>{total.toLocaleString("ru-RU")}</span>
       </header>
       {errors.length > 0 && (
         <div className={styles.alert} role="alert">
@@ -235,18 +236,18 @@ export default async function CallsPage({ searchParams }: { searchParams: Promis
       )}
 
       <div className={styles.toolbar}>
-        <span className={styles.seg} role="tablist" aria-label="Быстрый фильтр звонков">
+        <span className={`${styles.seg} view-switch`} role="tablist" aria-label="Быстрый фильтр звонков">
           {SEGS.map((tab) => (
             <Link
               key={tab.key}
               role="tab"
               aria-selected={seg === tab.key}
-              className={seg === tab.key ? styles.segOn : styles.segItem}
+              className={`${seg === tab.key ? styles.segOn : styles.segItem} ${seg === tab.key ? "view-switch-active" : ""}`}
               href={link({ seg: tab.key, page: 1, call: null })}
             >
               {tab.label}
               {tab.key === "nocallback" && (noCallback.count ?? 0) > 0 && (
-                <span className={styles.pillAmber}>{noCallback.count}</span>
+                <span className={`${styles.pillAmber} pill`}>{noCallback.count}</span>
               )}
             </Link>
           ))}
@@ -339,8 +340,8 @@ export default async function CallsPage({ searchParams }: { searchParams: Promis
                     <th>Дата</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {calls.map((call) => {
+                <tbody className="motion-list">
+                  {calls.map((call, index) => {
                     const phone = callPhone(call);
                     const name = displayName(call, phone);
                     const result = callResult(call);
@@ -349,6 +350,7 @@ export default async function CallsPage({ searchParams }: { searchParams: Promis
                     return (
                       <tr
                         key={call.id}
+                        style={{ "--i": index } as CSSProperties}
                         className={`${styles.row} ${selectedId === call.id ? styles.selected : ""} ${callback ? styles.isCallback : ""}`}
                       >
                         <td>
@@ -460,7 +462,7 @@ export default async function CallsPage({ searchParams }: { searchParams: Promis
           </Suspense>
         ) : (
           <aside className={styles.panel} aria-label="Звонок">
-            <div className={styles.panelEmpty}>
+            <div className={`${styles.panelEmpty} empty-state`}>
               <Phone size={20} aria-hidden="true" />
               <p>Выберите звонок из журнала — запись и детали появятся здесь.</p>
             </div>

@@ -5,6 +5,7 @@ import { CheckSquare, Search, X } from "lucide-react";
 import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { EmptyState } from "@/components/crm/empty-state";
+import { DateField } from "@/components/crm/date-field";
 import { AutoSubmitForm } from "../auto-submit-form";
 import { TaskRow } from "./task-row";
 import styles from "./tasks.module.css";
@@ -386,13 +387,13 @@ export default async function TasksPage({
         </label>
         <label className={styles.periodField}>
           <span>Период</span>
-          <input type="date" name="from" defaultValue={fromDate} aria-label="Дата от" />
-          <input type="date" name="to" defaultValue={toDate} aria-label="Дата до" />
+          <DateField name="from" defaultValue={fromDate} aria-label="Дата от" placeholder="с" autoSubmit clearable />
+          <DateField name="to" defaultValue={toDate} aria-label="Дата до" placeholder="по" autoSubmit clearable />
         </label>
         <input type="hidden" name="q" value={query} />
         <Link className={styles.clear} href="/tasks" aria-label="Сбросить фильтры"><X size={14} /></Link>
         <span className="header-spacer" />
-        <span className="task-counter danger">
+        <span className={`task-counter ${overdueTotal > 0 ? "is-hot" : "danger"}`}>
           <i />
           Просрочено {overdueTotal}
         </span>
@@ -405,9 +406,9 @@ export default async function TasksPage({
           Завтра {tomorrowTotal}
         </span>
       </AutoSubmitForm>
-      <main className="task-list">
-        {groups.map((group) => (
-          <section className="task-group" key={group.key}>
+      <main className="task-list motion-list">
+        {groups.map((group, index) => (
+          <section className="task-group" key={group.key} style={{ "--i": index } as import("react").CSSProperties}>
             <div
               className={`task-group-header ${group.tone === "danger" ? "is-danger" : ""}`}
             >

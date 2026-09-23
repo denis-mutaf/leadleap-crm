@@ -1,8 +1,12 @@
+/* Дашборд застройщика на дизайн-системе «Фарфор» (docs/design-system.md).
+   Метрики — рецепт §7: модуль radius 24, значение .num-dots, первая —
+   --hero-gradient. Фильтр периода и экспорт — пилюли. Только var(--токены). */
+
 .dashboard {
   min-height: 100%;
   color: var(--foreground);
-  background: var(--background);
 }
+
 .header,
 .toolbar {
   min-height: var(--h-header);
@@ -10,19 +14,24 @@
   align-items: center;
   gap: 8px;
   padding: 0 16px;
-  border-bottom: 1px solid var(--border);
 }
+
 .header {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: var(--text-title);
+  line-height: var(--text-title-lh);
+  font-weight: 400;
+  letter-spacing: -0.03em;
 }
+
 .headerIcon,
 .mutedIcon {
   color: var(--muted-foreground);
 }
+
 .spacer {
   flex: 1;
 }
+
 .avatar {
   display: inline-flex;
   align-items: center;
@@ -30,133 +39,202 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: var(--accent);
-  color: var(--muted-foreground);
-  font-size: 12px;
-  font-weight: 600;
+  background: var(--foreground);
+  color: var(--card);
+  font-size: var(--text-small);
+  font-weight: 500;
 }
+
 .toolbar {
   min-height: var(--h-toolbar);
 }
+
+/* Фильтр периода — сегмент-пилюля, активный белый с тенью. */
 .periods {
   display: inline-flex;
   gap: 2px;
   padding: 2px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--secondary);
+  border-radius: var(--radius-control);
 }
+
 .period {
-  min-height: 24px;
-  padding: 0 9px;
+  min-height: var(--h-control);
+  padding: 0 12px;
   border: 0;
-  border-radius: calc(var(--radius) - 1px);
+  border-radius: var(--radius-control);
   background: transparent;
-  color: var(--foreground);
+  color: var(--secondary-text);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-body);
   cursor: pointer;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
+  transition:
+    background-color var(--motion) var(--ease),
+    color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
 }
+
 .period:hover,
-.period:focus-visible,
-.periodActive {
-  background: var(--accent);
+.period:focus-visible {
+  background: var(--ghost);
+  color: var(--foreground);
   outline: none;
 }
+
+.period:active {
+  transform: scale(var(--press-scale));
+}
+
+.periodActive {
+  background: var(--card);
+  color: var(--foreground);
+  font-weight: 500;
+  box-shadow: var(--shadow-pill);
+}
+
 .quiet {
-  color: var(--muted-foreground);
-  font-size: 13px;
+  color: var(--secondary-text);
+  font-size: var(--text-body);
   white-space: nowrap;
 }
+
 .export {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 28px;
-  padding: 0 9px;
-  border: 1px solid var(--input);
-  border-radius: var(--radius);
+  min-height: var(--h-control);
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-control);
   color: var(--foreground);
-  background: var(--secondary);
-  font-size: 13px;
+  background: var(--module-card);
+  box-shadow: var(--shadow-pill);
+  font-size: var(--text-body);
   text-decoration: none;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    box-shadow var(--motion) var(--ease),
+    transform var(--motion-fast) var(--ease);
 }
+
 .export:hover,
 .export:focus-visible {
-  background: var(--accent);
-  outline: 2px solid var(--ring);
-  outline-offset: 1px;
+  background: var(--card);
+  box-shadow: var(--shadow-pill-hover);
+  outline: none;
 }
+
+.export:active {
+  transform: scale(var(--press-scale));
+}
+
+.export svg {
+  transition: transform var(--motion) var(--ease);
+}
+
+.export:hover svg {
+  transform: scale(1.06);
+}
+
 .content {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--gap-module);
   padding: 16px 12px 24px;
 }
+
 .sectionTitle {
   margin: 0 0 8px;
-  font-size: 14px;
+  font-size: var(--text-section);
   line-height: 20px;
-  font-weight: 600;
+  font-weight: 500;
 }
+
 .metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--gap-module);
 }
+
 .metric {
   min-width: 0;
-  min-height: 76px;
+  min-height: 108px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 4px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--card);
+  padding: 16px 18px;
+  border: 0;
+  border-radius: var(--radius-module);
+  background: var(--module);
+  box-shadow: var(--shadow-module);
 }
+
+/* Первая метрика ряда — главная, с градиентом героя. */
+.metrics > .metric:first-child {
+  color: var(--primary-foreground);
+  background: var(--hero-gradient);
+}
+
+.metrics > .metric:first-child .metricLabel {
+  color: var(--primary-foreground);
+}
+
+.metrics > .metric:first-child .mutedIcon {
+  color: var(--primary-foreground);
+}
+
 .metricLabel {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--muted-foreground);
-  font-size: 13px;
+  color: var(--secondary-text);
+  font-size: var(--text-body);
   line-height: 18px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 .metricValue {
-  font-size: 18px;
-  line-height: 24px;
-  font-weight: 600;
+  font-size: 30px;
+  line-height: 36px;
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 .metricHint,
 .partial {
-  color: var(--muted-foreground);
-  font-size: 12px;
+  color: var(--secondary-text);
+  font-size: var(--text-small);
   line-height: 16px;
 }
+
 .tableWrap {
   overflow-x: auto;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-module);
+  background: var(--module);
+  box-shadow: var(--shadow-inset);
+  padding: 6px;
 }
+
 .table {
   width: 100%;
   min-width: 820px;
   border-collapse: collapse;
   table-layout: fixed;
-  font-size: 13px;
+  font-size: var(--text-body);
+  border-radius: var(--radius-tile);
+  background: var(--module-card);
+  box-shadow: var(--shadow-module);
+  overflow: hidden;
 }
+
 .table th,
 .table td {
   height: var(--h-row);
@@ -165,32 +243,49 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
+
 .table th {
   height: var(--h-row-header);
-  color: var(--muted-foreground);
-  font-size: 12px;
+  color: var(--secondary-text);
+  background: var(--module-card);
+  font-size: var(--text-small);
   font-weight: 500;
   text-align: left;
 }
+
+.table tbody tr {
+  transition: background-color var(--motion-fast) var(--ease);
+}
+
+.table tbody tr:hover {
+  background: var(--accent);
+}
+
 .table tr:last-child td {
   border-bottom: 0;
 }
-.right {
-  text-align: right !important;
+
+.table th.right,
+.table td.right {
+  text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
 .empty {
   padding: 24px 12px;
-  color: var(--muted-foreground);
+  color: var(--secondary-text);
   text-align: center;
 }
+
 .tableNote {
   margin: 6px 0 0;
-  color: var(--muted-foreground);
-  font-size: 12px;
+  color: var(--secondary-text);
+  font-size: var(--text-small);
   line-height: 16px;
 }
+
 .barRow {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
@@ -198,89 +293,129 @@
   gap: 12px;
   min-height: 30px;
 }
+
 .barName {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: var(--text-body);
 }
+
+/* Полоса: трек --muted, заливка графит; рост — transform: scaleX. */
 .barTrack {
   height: 20px;
   position: relative;
   overflow: hidden;
-  border-radius: var(--radius);
-  background: var(--accent);
-  transition: width 350ms ease;
+  border-radius: var(--radius-control);
+  background: var(--muted);
 }
+
+.barTrack::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--foreground);
+  transform-origin: left;
+  animation: builder-bar-grow var(--motion-slow) var(--ease) both;
+}
+
+@keyframes builder-bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
 .barNumber {
   position: absolute;
   left: 8px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 13px;
+  font-size: var(--text-body);
   line-height: 18px;
   font-variant-numeric: tabular-nums;
+  color: var(--card);
+  z-index: 1;
 }
+
 .insight,
 .notice {
   display: flex;
   align-items: flex-start;
   gap: 8px;
   padding: 12px;
-  border-radius: var(--radius);
-  background: var(--muted);
-  font-size: 13px;
+  border-radius: var(--radius-tile);
+  background: var(--module-card);
+  box-shadow: var(--shadow-module);
+  font-size: var(--text-body);
   line-height: 18px;
 }
+
 .insight p,
 .notice p {
   margin: 0;
 }
+
 .insight svg {
   color: var(--warning);
   flex: 0 0 auto;
 }
+
 .notice svg {
   color: var(--muted-foreground);
   flex: 0 0 auto;
 }
+
 .tag {
   display: inline-flex;
   max-width: 100%;
-  padding: 2px 6px;
-  border-radius: var(--radius);
-  background: var(--accent);
-  color: var(--muted-foreground);
+  height: 22px;
+  align-items: center;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--muted);
+  color: var(--secondary-text);
+  font-size: var(--text-small);
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 @media (max-width: 760px) {
   .metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
   .barRow {
     grid-template-columns: 145px minmax(0, 1fr);
   }
 }
+
 @media (max-width: 480px) {
   .header,
   .toolbar {
     padding-left: 12px;
     padding-right: 12px;
   }
+
   .content {
     padding-left: 8px;
     padding-right: 8px;
   }
+
   .quiet {
     display: none;
   }
+
   .metrics {
     gap: 8px;
   }
+
   .metric {
-    padding: 8px;
+    padding: 12px 14px;
   }
+
   .metricLabel {
     align-items: flex-start;
     min-height: 36px;
@@ -288,20 +423,24 @@
     white-space: normal;
     overflow-wrap: anywhere;
   }
+
   .metricLabel .mutedIcon {
     flex: 0 0 auto;
     margin-top: 2px;
   }
+
   .metricValue {
     font-size: 16px;
   }
+
   .barRow {
     grid-template-columns: 112px minmax(0, 1fr);
     gap: 8px;
   }
 }
+
 @media (prefers-reduced-motion: reduce) {
-  .barTrack {
-    transition: none;
+  .barTrack::before {
+    animation: none;
   }
 }

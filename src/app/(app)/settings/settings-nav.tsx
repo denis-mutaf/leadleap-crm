@@ -37,12 +37,12 @@ export function SettingsNav() {
   return (
     <nav className={styles.sections} aria-label="Разделы настроек">
       {groups.map((group) => (
-        <div className={styles.group} key={group.label}>
+        <div className={`${styles.group} motion-list`} key={group.label}>
           <p>{group.label}</p>
-          {group.items.map(([href, label]) => {
+          {group.items.map(([href, label], i) => {
             const active = href === "/settings" ? pathname === href : pathname.startsWith(href);
             return (
-              <Link className={active ? styles.isActive : undefined} href={href} key={href} aria-current={active ? "page" : undefined}>
+              <Link className={active ? styles.isActive : undefined} style={{ "--i": i } as React.CSSProperties} href={href} key={href} aria-current={active ? "page" : undefined}>
                 {label}
               </Link>
             );

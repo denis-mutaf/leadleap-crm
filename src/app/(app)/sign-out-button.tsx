@@ -26,7 +26,7 @@ export function SignOutButton() {
       type="button"
       onClick={handleSignOut}
       disabled={pending}
-      className="mt-2 text-sm text-zinc-500 hover:text-zinc-800"
+      className="btn-ghost mt-2"
     >
       {pending ? "Выходим…" : "Выйти"}
     </button>

@@ -1,3 +1,5 @@
+/* Задачи — «Фарфор»: шапка 26/400, фильтр-бар пилюлями, группы-модули, строки 36. */
+
 .tasks-page {
   min-height: var(--vh-shell);
   color: var(--foreground);
@@ -6,83 +8,153 @@
 .tasks-header,
 .tasks-toolbar,
 .tasks-filterbar {
-  min-height: 48px;
+  min-height: var(--h-header);
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--border);
+  padding: 0 var(--px-cell);
+  border-bottom: 0;
+  background: transparent;
 }
 
 .tasks-header h1 {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 16px;
-  font-weight: 600;
+  margin: 0;
+  font-size: var(--text-title);
+  line-height: var(--text-title-lh);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+}
+
+.tasks-header h1 svg {
+  color: var(--muted-foreground);
 }
 
 .tasks-total {
-  color: var(--muted-foreground);
-  font-size: 12px;
+  color: var(--secondary-text);
+  font-size: var(--text-small);
+  white-space: nowrap;
 }
 
 .tasks-toolbar {
-  min-height: 49px;
+  min-height: var(--h-toolbar);
 }
 
+/* Кнопки тулбара — пилюли по примитивам. */
 .task-icon-button,
 .task-primary-button {
-  height: 28px;
+  height: var(--h-control);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  border-radius: 6px;
-  border: 1px solid var(--input);
-  background: var(--secondary);
-  color: var(--foreground);
-  padding: 0 9px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-control);
+  font: inherit;
+  font-size: var(--text-body);
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    box-shadow var(--motion) var(--ease),
+    transform var(--motion-fast) var(--ease);
 }
 
 .task-icon-button {
-  width: 28px;
+  width: var(--h-control);
   padding: 0;
+  background: var(--module-card);
+  color: var(--foreground);
+  box-shadow: var(--shadow-pill);
+}
+
+.task-icon-button:hover {
+  background: var(--card);
+  box-shadow: var(--shadow-pill-hover);
+}
+
+.task-icon-button:active,
+.task-primary-button:active {
+  transform: scale(var(--press-scale));
+}
+
+.task-icon-button svg {
+  transition: transform var(--motion) var(--ease);
+}
+
+.task-icon-button:hover svg {
+  transform: scale(1.06);
 }
 
 .task-primary-button {
-  border-color: var(--primary-border);
   background: var(--primary);
   color: var(--primary-foreground);
+  font-weight: 500;
+  box-shadow: var(--shadow-pill);
+}
+
+.task-primary-button:hover {
+  background: var(--primary-hover);
+  box-shadow: var(--shadow-pill-hover);
 }
 
 .task-primary-button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
+  transform: none;
 }
 
 .tasks-filterbar {
-  min-height: 51px;
-  font-size: 13px;
+  min-height: var(--h-filters);
+  font-size: var(--text-body);
+  flex-wrap: nowrap;
+  row-gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
 
+/* Счётчики — пилюли-модули как над воронкой. */
 .task-counter {
+  height: var(--h-control);
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  color: var(--muted-foreground);
+  gap: 6px;
+  padding: 0 12px;
+  border-radius: var(--radius-control);
+  background: var(--module-card);
+  color: var(--foreground);
+  box-shadow: var(--shadow-pill);
+  font-size: var(--text-body);
+  font-variant-numeric: tabular-nums;
+  flex: none;
   white-space: nowrap;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
 }
 
 .task-counter i {
   width: 6px;
   height: 6px;
+  flex: none;
   border-radius: 50%;
-  background: #9b9b9b;
+  background: var(--muted-foreground);
+}
+
+/* Просрочено с числом > 0 — единственный смысловой градиент. */
+.task-counter.is-hot {
+  background: var(--overdue-gradient);
+  color: var(--card);
+}
+
+.task-counter.is-hot i {
+  background: var(--card);
 }
 
 .task-counter.danger {
-  color: var(--destructive);
+  color: var(--foreground);
 }
 
 .task-counter.danger i {
@@ -90,30 +162,38 @@
 }
 
 .task-counter.blue {
-  color: var(--info);
+  color: var(--foreground);
 }
 
 .task-counter.blue i {
-  background: var(--primary);
+  background: var(--info);
 }
 
 .task-list {
-  padding-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-module);
+  padding: 4px 0 24px;
 }
 
+/* Группа — модуль из рецепта «Список с группами». */
 .task-group {
-  margin-top: 16px;
+  margin-top: 0;
+  border-radius: var(--radius-module);
+  background: var(--module);
+  box-shadow: var(--shadow-inset);
+  padding: 0 6px 6px;
 }
 
 .task-group-header {
-  height: 36px;
+  min-height: var(--h-row);
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 16px;
-  background: var(--muted);
-  color: var(--muted-foreground);
-  font-size: 13px;
+  padding: 10px 14px 8px;
+  background: transparent;
+  color: var(--foreground);
+  font-size: var(--text-section);
   font-weight: 500;
 }
 
@@ -123,47 +203,83 @@
 
 .task-group-header b {
   min-width: 20px;
-  padding: 2px 6px;
-  border-radius: 10px;
-  background: var(--background);
-  text-align: center;
-  font-size: 11px;
-  font-weight: 500;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--muted);
+  color: var(--secondary-text);
+  font-size: var(--text-small);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.task-row-wrap {
+  border-radius: var(--radius-tile);
+  background: var(--module-card);
+  box-shadow: var(--shadow-module);
+  overflow: hidden;
 }
 
 .task-row {
-  min-height: 36px;
+  min-height: var(--h-row);
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 16px;
+  padding: 0 var(--px-cell);
   border-bottom: 1px solid var(--border);
-  font-size: 14px;
+  font-size: var(--text-body);
+  transition: background-color var(--motion-fast) var(--ease);
+}
+
+.task-row-wrap:last-child .task-row:last-child,
+.task-row-wrap .task-row:last-child {
+  border-bottom: 0;
 }
 
 .task-row:hover {
   background: var(--accent);
 }
 
+/* Чекбокс-кружок: нажатие проседает, отметка плавная. */
 .task-check {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   display: grid;
   place-items: center;
   flex: none;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
   color: var(--muted-foreground);
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
+}
+
+.task-check:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+.task-check:active {
+  transform: scale(0.9);
 }
 
 .task-check.is-complete {
-  border-radius: 50%;
   background: var(--success);
-  color: #fff;
+  color: var(--card);
 }
 
 .task-type {
   width: 18px;
+  flex: none;
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: var(--text-small);
 }
 
 .task-main {
@@ -178,18 +294,24 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 450;
+  font-weight: 500;
+  transition: color var(--motion) var(--ease);
 }
 
 .task-main span {
-  color: var(--muted-foreground);
-  font-size: 13px;
+  color: var(--secondary-text);
+  font-size: var(--text-body);
   white-space: nowrap;
 }
 
 .task-main a {
   color: var(--info);
   text-decoration: none;
+  transition: color var(--motion-fast) var(--ease);
+}
+
+.task-main a:hover {
+  color: var(--foreground);
 }
 
 .task-main em {
@@ -200,8 +322,10 @@
 
 .task-due {
   min-width: 110px;
-  color: var(--muted-foreground);
-  font-size: 13px;
+  flex: none;
+  color: var(--secondary-text);
+  font-size: var(--text-body);
+  font-variant-numeric: tabular-nums;
   text-align: right;
 }
 
@@ -214,11 +338,12 @@
   height: 20px;
   display: grid;
   place-items: center;
+  flex: none;
   border-radius: 50%;
-  background: #e8ebf4;
-  color: #56617c;
+  background: var(--foreground);
+  color: var(--card);
   font-size: 9px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .task-row.is-done .task-main strong {
@@ -227,75 +352,60 @@
 }
 
 .task-result {
-  min-height: 36px;
+  min-height: var(--h-row);
   display: flex;
   align-items: center;
   gap: 8px;
-  padding-left: 64px;
-  background: var(--secondary);
-  color: var(--muted-foreground);
-  font-size: 13px;
+  padding: 6px var(--px-cell) 6px 42px;
+  background: transparent;
+  color: var(--secondary-text);
+  font-size: var(--text-body);
+  border-top: 1px solid var(--border);
 }
 
 .tasks-empty {
   padding: 48px 16px;
-  color: var(--muted-foreground);
+  color: var(--secondary-text);
   text-align: center;
 }
 
 .tasks-pagination {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  display: flex;
   align-items: center;
+  justify-content: center;
   gap: 16px;
-  padding: 16px;
-  color: var(--muted-foreground);
-  font-size: 13px;
-  text-align: center;
+  padding: 4px 0 0;
+  color: var(--secondary-text);
+  font-size: var(--text-body);
 }
 
 .tasks-pagination a {
-  color: var(--info);
+  height: var(--h-control-sm);
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: var(--radius-control);
+  background: var(--ghost);
+  color: var(--foreground);
+  font-size: var(--text-small);
   text-decoration: none;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
 }
 
-.tasks-pagination a:last-child {
-  text-align: right;
+.tasks-pagination a:hover {
+  background: var(--ghost-hover);
 }
 
-@media (max-width: 700px) {
-  .tasks-filterbar { overflow-x: auto; white-space: nowrap; }
-}
-
-@media (max-width: 700px) {
-  .task-main span { display: none; }
-}
-
-@media (max-width: 700px) {
-  .task-due { min-width: 72px; }
-}
-
-@media (max-width: 700px) {
-  .tasks-header,
-  .tasks-toolbar,
-  .tasks-filterbar,
-  .task-row { padding-left: 10px; padding-right: 10px; }
-}
-
-@media (max-width: 700px) {
-  .task-row { min-height: 56px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .task-row {
-      transition: none;
-    }
+.tasks-pagination a:active {
+  transform: scale(var(--press-scale));
 }
 
 .task-state {
   margin-left: auto;
   font-size: 11px;
-  color: var(--muted-foreground);
+  color: var(--secondary-text);
   white-space: nowrap;
 }
 
@@ -311,60 +421,145 @@
   color: var(--success);
 }
 
-/* Task completion dialog */
+.task-state.overdue {
+  margin-left: 6px;
+  color: var(--warning);
+  font-size: 11px;
+  white-space: nowrap;
+}
 
+/* Диалог завершения — рецепт «Диалог и поповер». */
 .task-completion-dialog {
   width: min(440px, calc(100vw - 32px));
+  padding: 20px;
+  border: 0;
+  border-radius: var(--radius-dialog);
+  background: var(--module-card);
+  box-shadow: var(--shadow-overlay);
+  color: var(--foreground);
+  animation: crm-dialog-in var(--motion-slow) var(--ease) both;
+}
+
+.task-completion-dialog::backdrop {
+  background: var(--scrim);
+  animation: crm-veil-in var(--motion) var(--ease) both;
+}
+
+.task-completion-dialog form {
   padding: 0;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 20px 60px rgb(36 37 41 / 18%);
+}
+
+.task-completion-dialog header,
+.task-completion-dialog footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-completion-dialog header {
+  justify-content: space-between;
+  margin-bottom: 18px;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.task-completion-dialog header button {
+  display: grid;
+  place-items: center;
+  width: var(--h-control);
+  height: var(--h-control);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
+}
+
+.task-completion-dialog header button:hover {
+  background: var(--accent);
   color: var(--foreground);
 }
 
-.task-completion-dialog::backdrop { background: rgb(36 37 41 / 28%); }
-
-.task-completion-dialog form { padding: 16px; }
-
-.task-completion-dialog header,
-.task-completion-dialog footer { display: flex; align-items: center; gap: 8px; }
-
-.task-completion-dialog header { justify-content: space-between; margin-bottom: 18px; }
-
-.task-completion-dialog header button { display: grid; place-items: center; border: 0; background: transparent; color: var(--muted-foreground); cursor: pointer; }
-
-.task-completion-dialog label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 500; }
-
-.task-completion-dialog textarea { width: 100%; min-height: 108px; resize: vertical; padding: 9px; border: 1px solid var(--input); border-radius: 6px; font: inherit; font-size: 13px; outline-color: var(--ring); }
-
-.task-completion-dialog footer { justify-content: flex-end; margin-top: 16px; }
-
-.task-completion-dialog footer button { min-height: 28px; padding: 0 10px; border: 1px solid var(--input); border-radius: 6px; background: var(--secondary); cursor: pointer; }
-
-.task-completion-dialog footer .task-primary-button { border-color: var(--primary-border); background: var(--primary); color: var(--primary-foreground); }
-
-.task-completion-dialog button:disabled { cursor: not-allowed; opacity: .6; }
-
-.task-completion-error { margin: 8px 0 0; color: var(--destructive); font-size: 12px; }
-
-.task-state.overdue { margin-left: 6px; color: var(--warning); font-size: 11px; white-space: nowrap; }
-
-.task-avatar { background: #262626; }
-
-.tasks-header,
-.tasks-toolbar,
-.tasks-filterbar { border-bottom: 0; background: transparent; }
-
-.tasks-header h1 {
-  font-size: 26px; line-height: 32px; font-weight: 400; letter-spacing: -0.03em;
+.task-completion-dialog header button:active {
+  transform: scale(var(--press-scale));
 }
 
-.task-icon-button {
-  border-radius: 999px !important;
+.task-completion-dialog label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: var(--text-body);
+  font-weight: 500;
 }
 
-.task-primary-button {
-  border: 0 !important; background: var(--primary) !important; color: var(--primary-foreground) !important; font-weight: 500;
+.task-completion-dialog textarea {
+  width: 100%;
+  min-height: 108px;
+  resize: vertical;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: var(--sidebar);
+  font: inherit;
+  font-size: var(--text-body);
 }
 
-.task-primary-button:hover { background: #cde82a !important; }
+.task-completion-dialog footer {
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.task-completion-dialog footer button {
+  min-height: var(--h-control);
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--ghost);
+  color: var(--foreground);
+  font: inherit;
+  font-size: var(--text-body);
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
+}
+
+.task-completion-dialog footer button:hover {
+  background: var(--ghost-hover);
+}
+
+.task-completion-dialog footer button:active {
+  transform: scale(var(--press-scale));
+}
+
+.task-completion-dialog footer .task-primary-button {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 500;
+  box-shadow: none;
+}
+
+.task-completion-dialog button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.task-completion-error {
+  margin: 8px 0 0;
+  color: var(--destructive);
+  font-size: var(--text-small);
+  animation: fade-up var(--motion-slow) var(--ease) both;
+}
+
+@media (max-width: 700px) {
+  .tasks-filterbar { overflow-x: auto; white-space: nowrap; }
+  .task-main span { display: none; }
+  .task-due { min-width: 72px; }
+  .tasks-header,
+  .tasks-toolbar,
+  .tasks-filterbar,
+  .task-row { padding-left: 10px; padding-right: 10px; }
+  .task-row { min-height: 56px; }
+}

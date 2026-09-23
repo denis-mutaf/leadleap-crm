@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Doto, Inter_Tight, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { TooltipLayer } from "@/components/crm/tooltip-layer";
 
 // Интерфейс русский (ТЗ, раздел 2) — кириллица обязательна в подмножестве.
 const interTight = Inter_Tight({
@@ -32,7 +33,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       lang="ru"
       className={`${interTight.variable} ${doto.variable} ${mono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <TooltipLayer />
+      </body>
     </html>
   );
 }

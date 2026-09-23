@@ -1,3 +1,6 @@
+/* Контакты: список — рецепт «Таблица» §7, карточка — рецепт «Карточка записи»,
+   объединение и удаление — рецепт «Диалог». Правила — docs/design-system.md. */
+
 .contactsPage,
 .contactRecord {
   height: var(--vh-shell);
@@ -5,10 +8,13 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  gap: var(--gap-module);
+  padding: 0 12px 12px;
   color: var(--foreground);
-  background: var(--background);
+  background: transparent;
 }
 
+/* Шапка экрана: крупный тонкий заголовок, без линий. */
 .pageHeader,
 .recordHeader {
   height: var(--h-header);
@@ -16,96 +22,130 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 var(--px-cell);
-  border-bottom: 1px solid var(--border);
+  padding: 0 4px;
+  border-bottom: 0;
+  background: transparent;
 }
+.pageHeader > :first-child,
+.breadcrumbs > span:first-child { font-size: var(--text-title); line-height: var(--text-title-lh); font-weight: 400; letter-spacing: -0.03em; }
 .breadcrumbs { display: flex; align-items: baseline; gap: 10px; font-size: 14px; }
-.muted, .secondaryCell, .feedHint, .dealMeta { color: var(--secondary-text, var(--muted-foreground)); font-size: 13px; }
-.headerCount, .countBadge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: var(--h-control-sm); padding: 0 6px; border-radius: 4px; background: var(--muted); color: var(--secondary-text, var(--muted-foreground)); font-size: 12px; font-variant-numeric: tabular-nums; }
+.muted, .secondaryCell, .feedHint, .dealMeta { color: var(--secondary-text); font-size: 13px; }
+.headerCount, .countBadge { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--radius-control); background: var(--ghost); color: var(--secondary-text); font-size: 12px; font-variant-numeric: tabular-nums; }
 .headerCount { margin-left: 2px; }
 .headerSpacer { margin-left: auto; }
 
+/* Тулбар — полоса пилюль без линий. */
 .listToolbar,
 .recordToolbar {
-  height: var(--h-toolbar);
   min-height: var(--h-toolbar);
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 var(--px-cell);
-  border-bottom: 1px solid var(--border);
+  padding: 0;
+  border-bottom: 0;
+  background: transparent;
 }
-.searchForm { height: var(--h-control); display: flex; align-items: center; gap: 7px; min-width: 310px; border: 1px solid var(--input); border-radius: var(--radius); padding: 0 8px; color: var(--muted-foreground); }
+.searchForm { height: var(--h-control); display: flex; align-items: center; gap: 7px; min-width: 310px; border: 0; border-radius: var(--radius-control); padding: 0 6px 0 12px; background: var(--sidebar); color: var(--muted-foreground); transition: background-color var(--motion-fast) var(--ease), box-shadow var(--motion) var(--ease); }
+.searchForm:focus-within { background: var(--card); box-shadow: 0 0 0 3px var(--ghost); }
 .searchForm input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: var(--foreground); font: inherit; font-size: 13px; }
-.searchForm button, .sortSubmit button { height: var(--h-control); border: 0; background: transparent; color: var(--info); cursor: pointer; font: inherit; font-size: 13px; }
-.sortControl { display: inline-flex; align-items: center; gap: 6px; color: var(--secondary-text, var(--muted-foreground)); font-size: 13px; }
-.sortControl select { height: var(--h-control); border: 1px solid var(--input); border-radius: var(--radius); background: var(--secondary); color: var(--foreground); padding: 0 8px; font: inherit; font-size: 13px; }
+.searchForm input::placeholder { color: var(--muted-foreground); }
+.searchForm button, .sortSubmit button { height: var(--h-control-sm); display: inline-flex; align-items: center; padding: 0 12px; border: 0; border-radius: var(--radius-control); background: var(--module-card); color: var(--foreground); cursor: pointer; font: inherit; font-size: 13px; box-shadow: var(--shadow-pill); transition: background-color var(--motion-fast) var(--ease), box-shadow var(--motion) var(--ease), transform var(--motion-fast) var(--ease); }
+.searchForm button:hover, .sortSubmit button:hover { background: var(--card); box-shadow: var(--shadow-pill-hover); }
+.searchForm button:active, .sortSubmit button:active { transform: scale(var(--press-scale)); }
+.sortControl { display: inline-flex; align-items: center; gap: 6px; height: var(--h-control); padding: 0 6px 0 12px; border-radius: var(--radius-control); background: var(--ghost); color: var(--secondary-text); font-size: 13px; transition: background-color var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease); }
+.sortControl:hover { background: var(--ghost-hover); color: var(--foreground); }
+.sortControl select { height: var(--h-control-sm); border: 0; border-radius: var(--radius-control); background: var(--module-card); color: var(--foreground); padding: 0 8px; font: inherit; font-size: 13px; cursor: pointer; box-shadow: var(--shadow-pill); }
+.sortControl svg { transition: transform var(--motion) var(--ease); }
+.sortControl:hover svg { transform: scale(1.06); }
 .sortSubmit { margin-left: auto; }
-.contactsTable { min-height: 0; flex: 1; overflow: auto; }
-.contactsRow { display: grid; grid-template-columns: minmax(220px, 2fr) minmax(150px, 1.35fr) 72px minmax(150px, 1.2fr) 100px 26px; min-height: var(--h-row); align-items: center; gap: 8px; padding: 0 var(--px-cell); border-bottom: 1px solid var(--border); color: var(--foreground); text-decoration: none; font-size: 14px; }
+
+/* Таблица: модуль, внутри плитка со строками 36. Пагинация — пилюли под модулем. */
+.contactsTable { min-height: 0; flex: 1; overflow: auto; border-radius: var(--radius-module); background: var(--module); box-shadow: var(--shadow-inset); padding: 6px; }
+.contactsRow { display: grid; grid-template-columns: minmax(220px, 2fr) minmax(150px, 1.35fr) 72px minmax(150px, 1.2fr) 100px 26px; min-height: var(--h-row); align-items: center; gap: 8px; padding: 0 var(--px-cell); border-radius: 12px; color: var(--foreground); text-decoration: none; font-size: 14px; font-variant-numeric: tabular-nums; transition: background-color var(--motion-fast) var(--ease); }
+a.contactsRow { border-bottom: 1px solid var(--border); border-radius: 0; }
+a.contactsRow:first-of-type { border-top-left-radius: 12px; border-top-right-radius: 12px; }
+a.contactsRow:last-of-type { border-bottom: 0; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
 .contactsRow:hover { background: var(--accent); }
-.contactsHead { min-height: var(--h-row-header); background: var(--muted); color: var(--secondary-text, var(--muted-foreground)); font-size: 13px; }
-.contactsHead:hover { background: var(--muted); }
+.contactsHead { min-height: var(--h-row-header); background: transparent; color: var(--secondary-text); font-size: 12px; font-weight: 500; }
+.contactsHead:hover { background: transparent; }
 .contactName { min-width: 0; display: flex; align-items: center; gap: 8px; font-weight: 500; }
-.contactAvatar { width: var(--h-control); height: var(--h-control); flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--accent); color: var(--info); font-size: 11px; font-weight: 600; }
+.contactAvatar { width: var(--h-control-sm); height: var(--h-control-sm); flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--foreground); color: var(--card); font-size: 11px; font-weight: 500; }
 .avatarLarge { width: 32px; height: 32px; }
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dealCount { color: var(--secondary-text, var(--muted-foreground)); font-variant-numeric: tabular-nums; }
-.rowArrow { color: var(--muted-foreground); text-align: right; }
-.pagination { height: var(--h-toolbar); min-height: var(--h-toolbar); display: flex; align-items: center; justify-content: space-between; padding: 0 var(--px-cell); color: var(--muted-foreground); font-size: 13px; }
-.paginationLinks { display: flex; gap: 14px; }
-.pagination a { color: var(--foreground); text-decoration: none; }
-.disabled { pointer-events: none; color: var(--muted-foreground) !important; opacity: .55; }
+.dealCount { color: var(--secondary-text); font-variant-numeric: tabular-nums; }
+.rowArrow { color: var(--muted-foreground); text-align: right; transition: transform var(--motion) var(--ease), color var(--motion-fast) var(--ease); }
+a.contactsRow:hover .rowArrow { color: var(--foreground); transform: translateX(2px); }
+.pagination { min-height: var(--h-control); display: flex; align-items: center; justify-content: space-between; padding: 0 4px; color: var(--secondary-text); font-size: 13px; }
+.paginationLinks { display: flex; gap: 8px; }
+.pagination a { display: inline-flex; align-items: center; height: var(--h-control-sm); padding: 0 12px; border-radius: var(--radius-control); background: var(--ghost); color: var(--foreground); text-decoration: none; transition: background-color var(--motion-fast) var(--ease), transform var(--motion-fast) var(--ease); }
+.pagination a:hover { background: var(--ghost-hover); }
+.pagination a:active { transform: scale(var(--press-scale)); }
+.disabled { pointer-events: none; opacity: .55; }
 
-.recordHeader { padding: 0 16px; }
-.recordBack { display: inline-flex; align-items: center; gap: 6px; color: var(--secondary-text, var(--muted-foreground)); text-decoration: none; }
-.recordBack:hover { background: var(--accent); border-radius: 4px; }
+/* Карточка контакта — как карточка сделки. */
+.recordHeader { padding: 0 4px; }
+.recordHeader > .truncate { font-size: var(--text-title); line-height: var(--text-title-lh); font-weight: 400; letter-spacing: -0.03em; }
+.recordBack { display: inline-flex; align-items: center; gap: 6px; min-height: var(--h-control); padding: 0 12px; margin-left: -12px; border-radius: var(--radius-control); color: var(--secondary-text); text-decoration: none; transition: background-color var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease), transform var(--motion-fast) var(--ease); }
+.recordBack:hover { background: var(--ghost); color: var(--foreground); }
+.recordBack:active { transform: scale(var(--press-scale)); }
 .recordSeparator { color: var(--muted-foreground); }
-.recordToolbar { padding: 0 16px; }
-.recordToolbar strong { font-size: 14px; font-weight: 600; }
-.recordType { display: inline-flex; align-items: center; height: var(--h-control-sm); padding: 0 7px; border: 1px solid var(--border); border-radius: 4px; color: var(--secondary-text, var(--muted-foreground)); font-size: 12px; }
-.toolbarButton, .primaryButton { height: var(--h-control); display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--input); border-radius: var(--radius); background: var(--secondary); padding: 0 9px; color: var(--foreground); cursor: pointer; text-decoration: none; font: inherit; font-size: 13px; }
+.recordToolbar { padding: 0; }
+.recordToolbar strong { font-size: var(--text-section); font-weight: 500; }
+.recordType { display: inline-flex; align-items: center; height: var(--h-control-sm); padding: 0 10px; border: 0; border-radius: var(--radius-control); background: var(--ghost); color: var(--secondary-text); font-size: 12px; }
+.toolbarButton, .primaryButton { height: var(--h-control); display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: var(--radius-control); background: var(--module-card); padding: 0 14px; color: var(--foreground); cursor: pointer; text-decoration: none; font: inherit; font-size: 13px; box-shadow: var(--shadow-pill); transition: background-color var(--motion-fast) var(--ease), box-shadow var(--motion) var(--ease), transform var(--motion-fast) var(--ease); }
+.toolbarButton:hover, .primaryButton:hover { background: var(--card); box-shadow: var(--shadow-pill-hover); }
+.toolbarButton:active, .primaryButton:active { transform: scale(var(--press-scale)); }
+.toolbarButton svg, .primaryButton svg { transition: transform var(--motion) var(--ease); }
+.toolbarButton:hover svg { transform: scale(1.06); }
 .toolbarButton[aria-disabled="true"] { pointer-events: none; color: var(--muted-foreground); opacity: .65; }
-.primaryButton { border-color: var(--primary-border); background: var(--primary); color: var(--primary-foreground); }
-.iconButton { width: var(--h-control); height: var(--h-control); display: inline-flex; align-items: center; justify-content: center; flex: none; border: 1px solid transparent; border-radius: var(--radius); background: transparent; color: var(--secondary-text, var(--muted-foreground)); cursor: pointer; text-decoration: none; font: inherit; }
+.primaryButton { background: var(--primary); color: var(--primary-foreground); font-weight: 500; }
+.primaryButton:hover { background: var(--primary-hover); }
+.iconButton { width: var(--h-control); height: var(--h-control); display: inline-flex; align-items: center; justify-content: center; flex: none; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--secondary-text); cursor: pointer; text-decoration: none; font: inherit; transition: background-color var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease), transform var(--motion-fast) var(--ease); }
 .iconButton:hover, .toolbarButton:hover { background: var(--accent); color: var(--foreground); }
+.iconButton:active { transform: scale(var(--press-scale)); }
 .iconButton:disabled { cursor: wait; opacity: .5; }
-.recordBody { min-height: 0; flex: 1; display: grid; grid-template-columns: 360px minmax(0, 1fr); overflow: hidden; }
-.recordLeft { min-height: 0; overflow: auto; padding: 12px 0; background: var(--secondary); border-right: 1px solid var(--border); }
+.recordBody { min-height: 0; flex: 1; display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: var(--gap-module); overflow: hidden; }
+.recordLeft { min-height: 0; overflow: auto; padding: 12px 0; border: 0; border-radius: var(--radius-module); background: var(--module); box-shadow: var(--shadow-inset); }
 .recordLeft section { padding: 0 16px; }
 .recordLeft section + section { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
-.groupHead { display: flex; align-items: center; gap: 6px; margin: 0 0 4px; color: var(--secondary-text, var(--muted-foreground)); font-size: 13px; line-height: 18px; font-weight: 500; }
+.groupHead { display: flex; align-items: center; gap: 6px; margin: 0 0 4px; color: var(--secondary-text); font-size: 13px; line-height: 18px; font-weight: 500; }
 .collectionField { display: grid; grid-template-columns: 140px minmax(0, 1fr); align-items: start; gap: 8px; min-height: var(--h-control); padding: 3px 0; }
-.collectionField > span, .customField > span { color: var(--secondary-text, var(--muted-foreground)); font-size: 13px; line-height: 20px; }
+.collectionField > span, .customField > span { color: var(--secondary-text); font-size: 13px; line-height: 20px; }
 .collection { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .collectionRow, .addRow { min-width: 0; display: flex; align-items: center; gap: 4px; }
-.collectionValue { min-width: 0; flex: 1; display: flex; align-items: center; gap: 6px; border: 1px solid transparent; border-radius: var(--radius); background: transparent; padding: 2px 4px; color: var(--foreground); cursor: pointer; text-align: left; font: inherit; font-size: 14px; overflow-wrap: anywhere; }
+.collectionValue { min-width: 0; flex: 1; display: flex; align-items: center; gap: 6px; border: 0; border-radius: 10px; background: transparent; padding: 2px 8px; margin-left: -8px; color: var(--foreground); cursor: pointer; text-align: left; font: inherit; font-size: 14px; overflow-wrap: anywhere; transition: background-color var(--motion-fast) var(--ease); }
 .collectionValue:hover { background: var(--accent); }
 .primaryValue { font-weight: 500; }
-.primaryLabel { flex: none; color: var(--secondary-text, var(--muted-foreground)); font-size: 12px; font-weight: 400; }
+.primaryLabel { flex: none; color: var(--secondary-text); font-size: 12px; font-weight: 400; }
 .emptyValue { color: var(--muted-foreground); }
-.addButton { display: inline-flex; align-items: center; gap: 5px; width: fit-content; min-height: var(--h-control); border: 0; background: transparent; padding: 0 4px; color: var(--info); cursor: pointer; font: inherit; font-size: 13px; }
-.addButton:hover { background: var(--accent); border-radius: var(--radius); }
-.compactInput, .customInput { width: 100%; height: var(--h-control); min-width: 0; border: 1px solid var(--primary); border-radius: var(--radius); background: var(--background); padding: 0 6px; color: var(--foreground); outline: 0; font: inherit; font-size: 13px; }
+.addButton { display: inline-flex; align-items: center; gap: 5px; width: fit-content; min-height: var(--h-control); border: 0; background: transparent; padding: 0 8px; margin-left: -8px; border-radius: 10px; color: var(--info); cursor: pointer; font: inherit; font-size: 13px; transition: background-color var(--motion-fast) var(--ease), transform var(--motion-fast) var(--ease); }
+.addButton:hover { background: var(--accent); }
+.addButton:active { transform: scale(var(--press-scale)); }
+.compactInput, .customInput { width: 100%; height: var(--h-control); min-width: 0; border: 1px solid transparent; border-radius: var(--radius-control); background: var(--sidebar); padding: 0 12px; color: var(--foreground); outline: 0; font: inherit; font-size: 13px; transition: background-color var(--motion-fast) var(--ease), border-color var(--motion-fast) var(--ease), box-shadow var(--motion) var(--ease); }
+.compactInput:focus, .customInput:focus { border-color: var(--foreground); background: var(--card); box-shadow: 0 0 0 3px var(--ghost); }
 .customField { display: grid; grid-template-columns: 140px minmax(0, 1fr); align-items: start; gap: 8px; min-height: var(--h-control); padding: 3px 0; }
-.customValue { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 5px; width: 100%; min-height: 22px; border: 1px solid transparent; border-radius: var(--radius); background: transparent; padding: 2px 4px; color: var(--foreground); cursor: text; text-align: left; font: inherit; font-size: 14px; overflow-wrap: anywhere; }
+.customValue { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 5px; width: 100%; min-height: 22px; border: 0; border-radius: 10px; background: transparent; padding: 2px 8px; margin-left: -8px; color: var(--foreground); cursor: text; text-align: left; font: inherit; font-size: 14px; overflow-wrap: anywhere; transition: background-color var(--motion-fast) var(--ease); }
 .customValue:hover { background: var(--accent); }
 .customValue svg { flex: none; color: var(--muted-foreground); }
 .saving { opacity: .65; }
 .tagEditor { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 .tagList { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
-.tag { height: var(--h-control-sm); display: inline-flex; align-items: center; gap: 4px; border-radius: 4px; background: var(--muted); padding: 0 6px; color: var(--secondary-text, var(--muted-foreground)); font-size: 12px; }
-.tag button { display: inline-flex; border: 0; background: transparent; padding: 0; color: inherit; cursor: pointer; }
-.tagPicker { position: absolute; z-index: 3; top: calc(100% - 2px); left: 0; display: grid; min-width: 160px; gap: 2px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--background); padding: 4px; box-shadow: 0 8px 16px -4px rgb(0 0 0 / 4%), 0 2px 4px -1px rgb(0 0 0 / 2%); }
-.tagPicker button { border: 0; border-radius: 4px; background: transparent; padding: 5px 7px; color: var(--foreground); cursor: pointer; text-align: left; font: inherit; font-size: 13px; }
+.tag { height: var(--h-control-sm); display: inline-flex; align-items: center; gap: 4px; border-radius: var(--radius-control); background: var(--ghost); padding: 0 6px 0 10px; color: var(--foreground); font-size: 12px; }
+.tag button { display: inline-flex; border: 0; background: transparent; padding: 0; color: inherit; cursor: pointer; border-radius: 50%; transition: transform var(--motion-fast) var(--ease); }
+.tag button:hover { transform: scale(1.06); }
+.tag button:active { transform: scale(var(--press-scale)); }
+.tagPicker { position: absolute; z-index: 3; top: calc(100% - 2px); left: 0; display: grid; min-width: 160px; gap: 2px; border: 0; border-radius: var(--radius-popover); background: var(--popover); padding: 6px; box-shadow: var(--shadow-overlay); animation: popover-in var(--motion) var(--ease) both; transform-origin: top left; }
+.tagPicker button { border: 0; border-radius: 10px; background: transparent; padding: 5px 7px; color: var(--foreground); cursor: pointer; text-align: left; font: inherit; font-size: 13px; transition: background-color var(--motion-fast) var(--ease); }
 .tagPicker button:hover { background: var(--accent); }
+.tagPicker button:active { transform: scale(var(--press-scale)); }
 
-.recordRight { min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: auto; padding: 12px 16px; }
-.dealsHeader, .feedHeader { height: var(--h-control); display: flex; align-items: center; gap: 7px; flex: none; font-size: 13px; font-weight: 500; }
-.dealList { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-.dealCard { min-height: 56px; display: grid; grid-template-columns: 10px minmax(220px, 1fr) minmax(130px, .5fr) 86px; align-items: center; gap: 8px; padding: 0 12px; border-bottom: 1px solid var(--border); color: inherit; text-decoration: none; }
+.recordRight { min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: auto; padding: 12px 16px; border: 0; border-radius: var(--radius-module); background: var(--module); box-shadow: var(--shadow-inset); }
+.dealsHeader, .feedHeader { height: var(--h-control); display: flex; align-items: center; gap: 7px; flex: none; font-size: var(--text-section); font-weight: 500; }
+.dealList { display: flex; flex-direction: column; border: 0; border-radius: var(--radius-tile); background: var(--module-card); box-shadow: var(--shadow-module); overflow: hidden; }
+.dealCard { min-height: 56px; display: grid; grid-template-columns: 10px minmax(220px, 1fr) minmax(130px, .5fr) 86px; align-items: center; gap: 8px; padding: 0 12px; border-bottom: 1px solid var(--border); color: inherit; text-decoration: none; transition: background-color var(--motion-fast) var(--ease), transform var(--motion) var(--ease); }
 .dealCard:last-child { border-bottom: 0; }
-.dealCard:hover { background: var(--accent); }
+.dealCard:hover { background: var(--card); transform: translateY(var(--lift)); }
+.dealCard:active { transform: translateY(0) scale(.99); transition-duration: var(--motion-fast); }
 .statusDot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted-foreground); }
 .statusopen { background: var(--primary); }
 .statuswon { background: var(--success); }
@@ -113,77 +153,93 @@
 .statuspostponed { background: var(--muted-foreground); }
 .dealMain { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .dealMain strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 500; }
-.dealMain span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--secondary-text, var(--muted-foreground)); font-size: 13px; }
-.dealMeta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dealMain span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--secondary-text); font-size: 13px; }
+.dealMeta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .feedHeader { margin-top: 12px; border-bottom: 1px solid var(--border); }
-.feedHint { margin-left: auto; font-weight: 400; }
+.feedHint { margin-left: auto; font-size: 13px; font-weight: 400; }
 .feed { min-height: 0; display: flex; flex-direction: column; gap: 16px; padding: 8px 0; }
 .feedGroup { display: flex; flex-direction: column; gap: 2px; }
-.feedDate { margin: 0 0 2px; color: var(--secondary-text, var(--muted-foreground)); font-size: 13px; }
-.feedRow { min-height: var(--h-control); display: flex; align-items: flex-start; gap: 8px; padding: 6px 8px; border-radius: var(--radius); font-size: 14px; }
+.feedDate { margin: 0 0 2px; color: var(--secondary-text); font-size: 13px; }
+.feedRow { min-height: var(--h-control); display: flex; align-items: flex-start; gap: 8px; padding: 6px 8px; border-radius: 12px; font-size: 14px; transition: background-color var(--motion-fast) var(--ease); }
 .feedRow:hover { background: var(--accent); }
 .feedRow > svg { flex: none; margin-top: 2px; color: var(--muted-foreground); }
 .feedRow > span { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.feedRow small { color: var(--secondary-text, var(--muted-foreground)); font-size: 13px; overflow-wrap: anywhere; }
+.feedRow small { color: var(--secondary-text); font-size: 13px; overflow-wrap: anywhere; }
 .channelNotice { display: flex; align-items: center; gap: 7px; margin-top: auto; padding: 10px 8px 0; color: var(--muted-foreground); font-size: 13px; }
 
-.mergeButton { height: var(--h-control); display: inline-flex; align-items: center; border: 1px solid var(--input); border-radius: var(--radius); background: var(--secondary); padding: 0 9px; color: var(--foreground); cursor: pointer; font: inherit; font-size: 13px; }
+.mergeButton { height: var(--h-control); display: inline-flex; align-items: center; border: 0; border-radius: var(--radius-control); background: var(--module-card); padding: 0 14px; color: var(--foreground); cursor: pointer; font: inherit; font-size: 13px; box-shadow: var(--shadow-pill); transition: background-color var(--motion-fast) var(--ease), box-shadow var(--motion) var(--ease), transform var(--motion-fast) var(--ease); }
+.mergeButton:hover { background: var(--card); box-shadow: var(--shadow-pill-hover); }
+.mergeButton:active { transform: scale(var(--press-scale)); }
 .deleteActions { position: relative; display: inline-flex; align-items: center; }
-.deleteMenuButton { width: var(--h-control); height: var(--h-control); display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--input); border-radius: var(--radius); background: var(--secondary); color: var(--secondary-text, var(--muted-foreground)); cursor: pointer; }
-.deletePopover { position: absolute; z-index: 10; top: calc(100% + 4px); right: 0; border: 1px solid var(--border); border-radius: var(--radius); background: var(--background); padding: 4px; box-shadow: 0 8px 16px -4px rgb(0 0 0 / 4%), 0 2px 4px -1px rgb(0 0 0 / 2%); animation: popover-in var(--motion-fast) var(--ease); }
-.deletePopover button { border: 0; border-radius: 4px; background: transparent; padding: 5px 8px; color: var(--destructive); cursor: pointer; font: inherit; font-size: 13px; white-space: nowrap; }
-.deletePopover button:hover { background: var(--accent); }
-.mergeScrim { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; overflow: auto; background: rgb(36 37 41 / 28%); padding: 20px; animation: veil-in var(--motion-fast) var(--ease); }
-.mergeModal, .deleteModal { width: min(720px, 100%); max-height: min(720px, 92vh); overflow: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--background); color: var(--foreground); box-shadow: 0 8px 16px -4px rgb(0 0 0 / 4%), 0 2px 4px -1px rgb(0 0 0 / 2%); animation: dialog-in var(--motion) var(--ease); }
+.deleteMenuButton { width: var(--h-control); height: var(--h-control); display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: var(--radius-control); background: var(--ghost); color: var(--secondary-text); cursor: pointer; transition: background-color var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease), transform var(--motion-fast) var(--ease); }
+.deleteMenuButton:hover { background: var(--ghost-hover); color: var(--foreground); }
+.deleteMenuButton:active { transform: scale(var(--press-scale)); }
+.deletePopover { position: absolute; z-index: 10; top: calc(100% + 4px); right: 0; border: 0; border-radius: var(--radius-popover); background: var(--popover); padding: 6px; box-shadow: var(--shadow-overlay); transform-origin: top right; }
+.deletePopover button { border: 0; border-radius: 10px; background: transparent; padding: 5px 8px; color: var(--destructive); cursor: pointer; font: inherit; font-size: 13px; white-space: nowrap; transition: background-color var(--motion-fast) var(--ease); }
+.deletePopover button:hover { background: var(--hue-red-bg); }
+/* Объединение и удаление — рецепт «Диалог»: вуаль, окно-плитка 24. */
+.mergeScrim { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; overflow: auto; background: var(--scrim); padding: 20px; }
+.mergeModal, .deleteModal { width: min(720px, 100%); max-height: min(720px, 92vh); overflow: auto; border: 0; border-radius: var(--radius-dialog); background: var(--module-card); color: var(--foreground); box-shadow: var(--shadow-overlay); }
 .deleteModal { width: min(460px, 100%); }
 .mergeHeader, .mergeFooter { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
-.mergeHeader h2 { margin: 0; font-size: 15px; font-weight: 600; }
-.mergeHeader button { margin-left: auto; border: 0; background: transparent; color: var(--muted-foreground); cursor: pointer; }
+.mergeHeader h2 { margin: 0; font-size: 18px; font-weight: 500; }
+.mergeHeader button { margin-left: auto; width: var(--h-control); height: var(--h-control); display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--muted-foreground); cursor: pointer; transition: background-color var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease), transform var(--motion-fast) var(--ease); }
+.mergeHeader button:hover { background: var(--ghost); color: var(--foreground); }
+.mergeHeader button:active { transform: scale(var(--press-scale)); }
 .mergeSearchArea, .mergeIntro, .mergeHint, .nameChoice { margin: 0; padding: 12px 16px; font-size: 13px; }
-.mergeSearchArea p { margin: 0 0 8px; color: var(--muted-foreground); }
-.mergeSearch { height: var(--h-control); display: flex; align-items: center; gap: 7px; border: 1px solid var(--input); border-radius: var(--radius); padding: 0 8px; }
+.mergeSearchArea p { margin: 0 0 8px; color: var(--secondary-text); }
+.mergeSearch { height: var(--h-control); display: flex; align-items: center; gap: 7px; border: 0; border-radius: var(--radius-control); background: var(--sidebar); padding: 0 12px; color: var(--muted-foreground); transition: background-color var(--motion-fast) var(--ease), box-shadow var(--motion) var(--ease); }
+.mergeSearch:focus-within { background: var(--card); box-shadow: 0 0 0 3px var(--ghost); }
 .mergeSearch input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: inherit; font: inherit; }
 .mergeResults { display: grid; gap: 2px; margin-top: 8px; }
-.mergeResults button { display: flex; justify-content: space-between; gap: 10px; border: 1px solid transparent; border-radius: var(--radius); background: transparent; padding: 8px; color: inherit; cursor: pointer; text-align: left; font: inherit; }
+.mergeResults button { display: flex; justify-content: space-between; gap: 10px; border: 1px solid transparent; border-radius: 12px; background: transparent; padding: 8px; color: inherit; cursor: pointer; text-align: left; font: inherit; transition: background-color var(--motion-fast) var(--ease), border-color var(--motion-fast) var(--ease); }
 .mergeResults button:hover { border-color: var(--border); background: var(--accent); }
-.mergeResults span, .mergeCard span, .mergeCard small { color: var(--muted-foreground); font-size: 13px; }
+.mergeResults span, .mergeCard span, .mergeCard small { color: var(--secondary-text); font-size: 13px; }
 .mergeColumns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 0 16px; }
-.mergeCard { display: grid; gap: 6px; border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; cursor: pointer; }
-.mergeCard.selected { border-color: var(--foreground); background: var(--muted); }
-.mergeCard input, .nameChoice input { accent-color: var(--primary); }
+.mergeCard { display: grid; gap: 6px; border: 1px solid var(--border); border-radius: var(--radius-tile); background: var(--card); padding: 10px; cursor: pointer; transition: border-color var(--motion-fast) var(--ease), background-color var(--motion-fast) var(--ease), transform var(--motion) var(--ease); }
+.mergeCard:hover { transform: translateY(var(--lift)); }
+.mergeCard.selected { border-color: var(--foreground); background: var(--surface-select); }
+.mergeCard input, .nameChoice input { accent-color: var(--foreground); }
+.mergeCard input:active, .nameChoice input:active { transform: scale(.9); }
 .candidateHeader { display: flex; align-items: center; gap: 8px; }
 .candidateHeader > span:nth-child(2) { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .candidateHeader strong { font-size: 14px; font-weight: 500; }
 .candidateHeader small { color: var(--muted-foreground); font-size: 13px; }
-.primaryCandidate { margin-left: auto; height: var(--h-control-sm); display: inline-flex; align-items: center; border-radius: 4px; background: var(--muted); padding: 0 6px; color: var(--secondary-text, var(--muted-foreground)); font-size: 12px; white-space: nowrap; }
+.primaryCandidate { margin-left: auto; height: var(--h-control-sm); display: inline-flex; align-items: center; border-radius: var(--radius-control); background: var(--primary); padding: 0 10px; color: var(--primary-foreground); font-size: 12px; white-space: nowrap; }
 .mergeRows { display: grid; margin: 12px 16px 0; border-top: 1px solid var(--border); }
 .mergeRow { display: grid; grid-template-columns: 120px minmax(0, 1fr) minmax(0, 1fr); min-height: var(--h-row); align-items: center; gap: 8px; border-bottom: 1px solid var(--border); font-size: 13px; }
-.mergeLabel { color: var(--secondary-text, var(--muted-foreground)); }
-.mergeValue { min-width: 0; display: flex; align-items: center; gap: 6px; overflow-wrap: anywhere; cursor: pointer; }
-.mergeValue input { accent-color: var(--primary); }
+.mergeLabel { color: var(--secondary-text); }
+.mergeValue { min-width: 0; display: flex; align-items: center; gap: 6px; overflow-wrap: anywhere; cursor: pointer; border-radius: 10px; padding: 2px 4px; transition: background-color var(--motion-fast) var(--ease); }
+.mergeValue:hover { background: var(--accent); }
+.mergeValue input { accent-color: var(--foreground); }
 .mergeValue small { margin-left: auto; color: var(--muted-foreground); font-size: 12px; }
-.sameValue { color: var(--secondary-text, var(--muted-foreground)); }
-.mergeTransfer { display: flex; align-items: center; gap: 8px; margin: 12px 16px 0; border: 1px solid var(--border); border-radius: var(--radius); background: var(--muted); padding: 8px 10px; color: var(--foreground); font-size: 13px; }
+.sameValue { color: var(--secondary-text); }
+.mergeTransfer { display: flex; align-items: center; gap: 8px; margin: 12px 16px 0; border: 0; border-radius: var(--radius-tile); background: var(--ghost); padding: 8px 10px; color: var(--foreground); font-size: 13px; }
 .mergeTransfer small { margin-left: auto; color: var(--muted-foreground); white-space: nowrap; }
 .nameChoice { display: grid; gap: 6px; border: 0; color: inherit; }
-.nameChoice legend { margin-bottom: 2px; font-weight: 600; }
-.mergeConfirmation { display: grid; gap: 3px; margin: 0 16px 8px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--muted); padding: 8px 10px; font-size: 13px; }
+.nameChoice legend { margin-bottom: 2px; font-weight: 500; }
+.mergeConfirmation { display: grid; gap: 3px; margin: 0 16px 8px; border: 0; border-radius: var(--radius-tile); background: var(--ghost); padding: 8px 10px; font-size: 13px; }
 .mergeConfirmation span { color: var(--muted-foreground); font-size: 13px; }
 .mergeHint { color: var(--muted-foreground); }
 .mergeFooter { justify-content: flex-end; border-top: 1px solid var(--border); border-bottom: 0; }
-.mergeFooter button { height: var(--h-control); border: 1px solid var(--input); border-radius: var(--radius); background: var(--secondary); padding: 0 10px; color: inherit; cursor: pointer; font: inherit; font-size: 13px; }
-.mergeFooter button:last-child { border-color: var(--primary-border); background: var(--primary); color: var(--primary-foreground); }
+.mergeFooter button { height: var(--h-control); display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: var(--radius-control); background: var(--ghost); padding: 0 14px; color: inherit; cursor: pointer; font: inherit; font-size: 13px; transition: background-color var(--motion-fast) var(--ease), transform var(--motion-fast) var(--ease); }
+.mergeFooter button:hover { background: var(--ghost-hover); }
+.mergeFooter button:active { transform: scale(var(--press-scale)); }
+.mergeFooter button:last-child { background: var(--primary); color: var(--primary-foreground); font-weight: 500; box-shadow: var(--shadow-pill); }
+.mergeFooter button:last-child:hover { background: var(--primary-hover); box-shadow: var(--shadow-pill-hover); }
 .mergeFooter button:disabled, .mergeHeader button:disabled { cursor: wait; opacity: .6; }
-.mergeError { margin: 0 16px 8px; color: var(--destructive); font-size: 13px; }
+.mergeError { margin: 0 16px 8px; color: var(--destructive); font-size: 13px; animation: fade-up var(--motion-slow) var(--ease) both; }
 .deleteBody { padding: 12px 16px; font-size: 14px; }
 .deleteBody p { margin: 0 0 8px; }
-.deleteConfirm { border-color: var(--destructive) !important; background: var(--destructive) !important; color: var(--primary-foreground) !important; }
+.deleteConfirm { background: var(--destructive); color: var(--card); }
+.deleteConfirm:hover { background: var(--destructive); }
 .kbd { color: var(--muted-foreground); font-size: 11px; }
 .spin { animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes veil-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes dialog-in { from { opacity: 0; transform: translateY(6px) scale(.98); } to { opacity: 1; transform: none; } }
-@keyframes popover-in { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+@keyframes dialog-in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes popover-in { from { opacity: 0; transform: translateY(-4px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
 @media (max-width: 800px) {
   .contactsRow { grid-template-columns: minmax(180px, 2fr) minmax(120px, 1fr) 54px 26px; }
@@ -191,19 +247,20 @@
   .searchForm { min-width: 0; flex: 1; }
   .sortControl span { display: none; }
   .recordBody { display: flex; flex-direction: column; overflow: auto; }
-  .recordLeft { flex: none; overflow: visible; border-right: 0; border-bottom: 1px solid var(--border); }
+  .recordLeft { flex: none; overflow: visible; }
   .recordRight { flex: none; min-height: 520px; overflow: visible; }
 }
 @media (max-width: 600px) {
-  .listToolbar { padding: 0 8px; }
+  .contactsPage, .contactRecord { padding: 0 8px 8px; }
+  .listToolbar { padding: 0; flex-wrap: wrap; }
   .sortSubmit { display: none; }
-  .recordToolbar { overflow-x: auto; white-space: nowrap; padding: 0 8px; }
+  .recordToolbar { overflow-x: auto; white-space: nowrap; padding: 0; }
   .recordToolbar .headerSpacer { min-width: 8px; }
   .recordRight { padding: 10px 8px; }
   .mergeScrim { align-items: start; padding: 10px; }
   .mergeColumns { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .mergeScrim, .mergeModal, .deleteModal, .deletePopover, .spin { animation: none; }
-  .contactsPage *, .contactRecord *, .contactsPage *::before, .contactRecord *::before { transition: none !important; }
+  .mergeScrim, .mergeModal, .deleteModal, .deletePopover, .spin, .mergeError { animation: none; }
+  .contactsPage *, .contactRecord *, .contactsPage *::before, .contactRecord *::before { transition: none; }
 }
