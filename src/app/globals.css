@@ -2672,3 +2672,102 @@ body { letter-spacing: -0.005em; }
   .nav { height: 48px; border-radius: 0; box-shadow: none; }
   .main-shell { height: auto; border-radius: 0; box-shadow: none; overflow: visible; }
 }
+
+/* ===== «Фарфор олл-ин», 23.09.2026 — ветка design/farfor-allin.
+   Язык витрины E2 на всём приложении: каждый контейнер — модуль на фарфоре,
+   пилюли, крупные тонкие заголовки, точечные итоги Doto, лайм — единственный
+   цвет, розовый градиент только на «Просрочено». Проба стиля, не рабочий дефолт. ===== */
+:root {
+  --radius-island: 28px;
+  --gap-island: 12px;
+  --module: #efefef;
+  --module-card: #fafafa;
+  --shadow-module: inset 0 1px 0 #fff, 0 10px 22px -14px rgba(0, 0, 0, 0.18);
+  --shadow-module-hover: inset 0 1px 0 #fff, 0 16px 28px -14px rgba(0, 0, 0, 0.24);
+}
+.avatar, .task-avatar, .inbox-avatar { background: #262626; }
+
+/* навигация: остров-пилюли */
+.nav { border-radius: var(--radius-island); padding: 18px 12px; }
+.nav-item { height: 36px; border-radius: 999px; padding: 0 12px; }
+.nav-item.is-active { box-shadow: inset 0 1px 0 #fff, 0 6px 14px -8px rgba(0, 0, 0, 0.22); }
+
+/* рабочая область без общей подложки: модули стоят прямо на фарфоре */
+.main-shell { background: transparent; box-shadow: none; border-radius: 0; }
+.main-shell > * { background: transparent; }
+.deals-page .page-header, .deals-page .toolbar, .deals-page .filterbar,
+.tasks-header, .tasks-toolbar, .tasks-filterbar,
+.inbox-header, .inbox-toolbar, .record-header { border-bottom: 0; background: transparent; }
+.deals-page .page-header h1, .tasks-header h1, .reports-header h1, .inbox-header h1 {
+  font-size: 26px; line-height: 32px; font-weight: 400; letter-spacing: -0.03em;
+}
+.deals-page .page-header { height: 56px; }
+.main-shell > * > header.page-header > span:first-of-type {
+  font-size: 26px; line-height: 32px; font-weight: 400; letter-spacing: -0.03em;
+}
+
+/* кнопки и поля — пилюли с бликом */
+.btn, .filter-button, .filter-control, .view-switch, .task-icon-button {
+  border-radius: 999px !important;
+}
+.btn { border: 0; background: var(--module-card); box-shadow: inset 0 1px 0 #fff, 0 6px 14px -10px rgba(0, 0, 0, 0.25); }
+.btn:hover { background: #ffffff; }
+.create-deal-trigger, .task-primary-button, .filter-submit {
+  border: 0 !important; background: var(--primary) !important; color: var(--primary-foreground) !important; font-weight: 500;
+}
+.create-deal-trigger:hover, .task-primary-button:hover, .filter-submit:hover { background: #cde82a !important; }
+.btn-ghost { border: 0; border-radius: 999px; background: #e9e9e9; }
+
+/* счётчики над доской — отдельные пилюли-модули, просрочка с градиентом */
+.counter-filters { gap: 8px; }
+.counter-filters a {
+  height: 34px; padding: 0 14px 0 12px; border-radius: 999px; gap: 8px;
+  background: var(--module-card); color: #3a3a3a; box-shadow: var(--shadow-module);
+}
+.counter-filters b { font-family: var(--font-dots); font-weight: 800; font-size: 17px; }
+.counter-filters a.counter-overdue {
+  color: #fff; background: radial-gradient(circle at 30% 40%, #ffb0c6 0%, #f4527a 45%, #e8305e 100%);
+}
+.counter-filters a.counter-overdue i { color: #fff; }
+
+/* доска: каждая колонка — модуль, карточка — фарфоровая плитка */
+.board { background: transparent; gap: 12px; padding: 4px 0 12px; }
+.kanban-column, .kettle {
+  background: var(--module); border-radius: 26px; padding: 6px 8px 8px;
+  box-shadow: inset 0 1px 0 #fff; border-right: 0;
+}
+.kanban-column .column-track, .kettle .column-track { background: transparent; padding: 2px 0; gap: 10px; }
+.kanban-column.drop-target .column-track, .kettle.drop-target .column-track { background: var(--surface-select); border-radius: 20px; padding: 6px; }
+.column-head { padding: 6px 8px 0; color: #3a3a3a; }
+.column-head strong { font-weight: 500; }
+.column-sum {
+  padding: 0 8px; margin-top: -6px; height: 22px;
+  font-family: var(--font-dots); font-weight: 800; font-size: 16px; color: #262626;
+}
+.deal-card {
+  border: 0 !important; border-radius: 20px; padding: 12px 14px;
+  background: var(--module-card); box-shadow: var(--shadow-module);
+}
+.deal-card:hover { box-shadow: var(--shadow-module-hover); }
+.deal-card-warning, .deal-card-overdue { border-left: 0 !important; box-shadow: var(--shadow-module), inset 0 0 0 1.5px #f5c76b; }
+.deal-tags .tag, .tag { border-radius: 999px; }
+.column-add-button, .card-placeholder { border-radius: 999px; }
+
+/* карточка записи: плашки и левая колонка — модули */
+.record-highlight { border: 0 !important; border-radius: 20px; background: var(--module-card); box-shadow: var(--shadow-module); }
+.record-body { gap: 12px; }
+.record-left { border-right: 0; border-radius: 24px; background: var(--module); }
+.record-right, .record-feed { border-radius: 24px; background: var(--module-card); }
+
+/* отчёты и дашборд: метрики точками, первая — главная, с градиентом */
+.report-metric, .report-section {
+  border: 0; border-radius: 24px; background: var(--module); box-shadow: var(--shadow-module);
+}
+.report-metric { min-height: 108px; padding: 16px 18px; }
+.report-metric strong { font-family: var(--font-dots); font-weight: 800; font-size: 30px; line-height: 36px; }
+.report-metrics > .report-metric:first-child {
+  color: #17300f;
+  background: radial-gradient(130% 160% at 15% 15%, #eeff8c 0%, #c6ee4a 35%, #7ccb55 75%, #4fae63 100%);
+}
+.report-metrics > .report-metric:first-child span { color: #2a4a1c; }
+.reports-header { border-bottom: 0; }
