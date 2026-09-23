@@ -1,0 +1,457 @@
+.gate-scrim { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 16px; background: rgba(28,31,38,.28); }
+
+.gate-scrim { animation: gate-fade-in 140ms ease-out; }
+
+.gate-dialog { animation: gate-dialog-in 160ms ease-out; }
+
+.gate-dialog {
+  width: min(440px, 100%);
+  max-height: calc(var(--vh-shell) - 32px);
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  box-shadow: 0 18px 48px rgba(28, 31, 38, .2);
+}
+
+.gate-dialog header { display: flex; justify-content: space-between; gap: 16px; padding: 20px; border-bottom: 1px solid var(--border); }
+
+.gate-dialog h2 { margin: 0; font-size: 18px; font-weight: 600; }
+
+.gate-dialog p { margin: 6px 0 0; color: var(--muted-foreground); font-size: 13px; }
+
+.gate-close { border: 0; background: transparent; color: var(--muted-foreground); cursor: pointer; font-size: 20px; }
+
+.gate-dialog label { display:flex; flex-direction:column; gap:6px; padding:10px 20px 0; color:var(--muted-foreground); font-size:13px; }
+
+.gate-dialog input,
+.gate-dialog select,
+.gate-dialog textarea { min-height:32px; padding:6px 8px; border:1px solid var(--input); border-radius:var(--radius); background:var(--background); color:var(--foreground); font:inherit; }
+
+.gate-dialog textarea { min-height:72px; resize:vertical; }
+
+.qual-options { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:18px 20px 4px; }
+
+.qual-options button { min-height:64px; border:1px solid var(--border); border-radius:6px; background:var(--background); color:var(--foreground); font:inherit; cursor:pointer; }
+
+.qual-options button.selected { border-color: var(--foreground); background:var(--accent); }
+
+.gate-dialog footer { display:flex; justify-content:flex-end; gap:8px; margin-top:18px; padding:14px 20px; border-top:1px solid var(--border); background:var(--secondary); }
+
+.gate-primary { height:28px; padding:0 10px; border:1px solid var(--primary); border-radius:var(--radius); background:var(--primary); color:white; font:inherit; font-size:13px; cursor:pointer; }
+
+.gate-primary:disabled { opacity:.5; cursor:not-allowed; }
+
+@media (max-width:600px) {
+  .gate-dialog footer { flex-direction:column-reverse; }
+}
+
+@media (max-width:600px) {
+  .gate-dialog footer button { width:100%; justify-content:center; }
+}
+
+@media (max-width:600px) {
+  .qual-options { grid-template-columns:1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gate-scrim,
+  .gate-dialog { animation: none; }
+}
+
+.create-deal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.1);
+  overflow: auto;
+  animation: create-deal-fade-in 120ms ease-out;
+}
+
+.create-deal-modal {
+  width: min(440px, calc(100vw - 32px));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow:
+    0 8px 16px -4px rgba(0, 0, 0, 0.04),
+    0 2px 4px -1px rgba(0, 0, 0, 0.02);
+}
+
+.create-deal-modal-wide {
+  width: min(560px, calc(100vw - 32px));
+  max-height: min(720px, calc(var(--vh-shell) - 32px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: create-deal-rise-in 140ms ease-out;
+}
+
+.create-deal-modal-wide form {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.create-deal-scroll {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.create-deal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.create-deal-header h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.create-deal-header p {
+  margin: 5px 0 0;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+
+.create-deal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.create-deal-close:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+.create-deal-fields {
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px;
+}
+
+.create-deal-fields label {
+  display: grid;
+  gap: 6px;
+  color: #606164;
+  font-size: 13px;
+}
+
+.create-deal-fields input,
+.create-deal-fields select,
+.create-deal-fields textarea {
+  width: 100%;
+  border: 1px solid var(--input);
+  border-radius: var(--radius);
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+}
+
+.create-deal-fields input,
+.create-deal-fields select {
+  height: var(--h-control);
+  padding: 0 9px;
+}
+
+.create-deal-fields textarea {
+  min-height: 70px;
+  padding: 7px 9px;
+  resize: vertical;
+}
+
+.create-deal-fields input:focus,
+.create-deal-fields select:focus,
+.create-deal-fields textarea:focus {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 18%, transparent);
+}
+
+.create-deal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.create-deal-footer {
+  flex: none;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+}
+
+.create-deal-submit {
+  background: var(--primary);
+  border-color: var(--primary-border);
+  color: var(--primary-foreground);
+}
+
+.create-deal-submit:hover {
+  background: color-mix(in srgb, var(--primary) 90%, black);
+}
+
+.create-deal-error {
+  margin: -4px 20px 12px;
+  color: var(--destructive);
+  font-size: 13px;
+}
+
+.create-deal-fields fieldset {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.create-deal-fields legend {
+  padding: 0 4px;
+  color: #606164;
+  font-size: 13px;
+}
+
+.create-deal-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+.create-deal-checks label {
+  display: flex;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 6px;
+}
+
+.create-deal-checks input {
+  width: 14px;
+  height: 14px;
+}
+
+.create-deal-tag-picker {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+}
+
+.create-deal-field-label {
+  padding-top: 6px;
+  color: #606164;
+  font-size: 13px;
+}
+
+.create-deal-tag-control {
+  position: relative;
+  min-width: 0;
+}
+
+.create-deal-tag-chips {
+  display: flex;
+  min-height: var(--h-control);
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.create-deal-muted {
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+
+.create-deal-chip {
+  min-height: 24px;
+  padding: 2px 7px;
+  border: 1px solid #d9e2fb;
+  border-radius: 4px;
+  background: #eaf0fd;
+  color: #2f55b5;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.create-deal-add-tag {
+  height: var(--h-control-sm);
+}
+
+.create-deal-tag-menu {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% + 6px);
+  left: 0;
+  width: min(280px, 100%);
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--popover);
+  box-shadow:
+    0 8px 16px -4px rgba(0, 0, 0, 0.04),
+    0 2px 4px -1px rgba(0, 0, 0, 0.02);
+}
+
+.create-deal-tag-menu > input {
+  height: var(--h-control);
+  margin-bottom: 6px;
+  padding: 0 8px;
+}
+
+.create-deal-tag-options {
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.create-deal-tag-option {
+  display: flex;
+  width: 100%;
+  min-height: var(--h-control);
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.create-deal-tag-option:hover,
+.create-deal-tag-option[aria-pressed="true"] {
+  background: var(--accent);
+}
+
+.create-deal-hint {
+  margin: -7px 0 -2px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+
+.duplicate-list {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #f0d59a;
+  border-radius: var(--radius);
+  background: #fffaf0;
+}
+
+.duplicate-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #f0d59a;
+}
+
+.duplicate-card > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.duplicate-card span {
+  color: #606164;
+  font-size: 12px;
+}
+
+.duplicate-card.is-selected {
+  color: var(--info);
+}
+
+.duplicate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+@media (min-width: 641px) {
+  .create-deal-fields > label,
+  .create-deal-fields > .create-deal-grid > label {
+      grid-template-columns: 140px minmax(0, 1fr);
+      align-items: center;
+    }
+}
+
+@media (min-width: 641px) {
+  .create-deal-fields > label > textarea,
+  .create-deal-fields > label > input,
+  .create-deal-fields > label > select,
+  .create-deal-fields > .create-deal-grid > label > input,
+  .create-deal-fields > .create-deal-grid > label > select {
+      grid-column: 2;
+    }
+}
+
+@media (min-width: 641px) {
+  .create-deal-fields > .create-deal-grid {
+      grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+  .create-deal-tag-picker {
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+}
+
+@media (max-width: 640px) {
+  .create-deal-field-label {
+      padding-top: 0;
+    }
+}
+
+@media (max-width: 640px) {
+  .create-deal-grid {
+      grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+  .duplicate-card {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+}
+
+@media (max-width: 640px) {
+  .duplicate-actions {
+      justify-content: flex-start;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .create-deal-overlay,
+  .create-deal-modal-wide,
+  .create-deal-overlay *,
+  .create-deal-modal * {
+      transition: none;
+      animation: none;
+    }
+}

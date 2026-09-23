@@ -1,0 +1,184 @@
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter-tight), system-ui, sans-serif;
+  --font-dots: var(--font-doto), ui-monospace, monospace;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* ===== Тема Attio — снята с продукта app.attio.com, а не с лендинга.
+   Источник: 99 кадров интерфейса из публичной справки attio.com/help, 20.09.2026.
+   Значения замерены по пикселям в research/attio-product-shots/.
+   Расхождения с лендингом, найденные замером и потому обязательные:
+     1) primary — синяя заливка #3b6ce8 с рамкой #3561d0, а не графитовый градиент;
+     2) серые нейтральные (#999, #727272, #606164), без холодной синевы лендинга;
+     3) высота контрола 28px, а не 40px.  ===== */
+
+/* ===== «Фарфор», 23.09.2026. Источник: design/screens/_kit.css.
+   Рабочий режим (F): два острова — сайдбар и рабочая область — на сером фарфоре,
+   плотность Attio. Режим витрины (E2, `.mode-showcase`): дашборд и отчёты —
+   модули, точечные цифры Doto, градиент у главной метрики.
+   Прежние темы: design/archive/attio-2026-09-20/, design/archive/warm-stone-2026-09-23/. ===== */
+
+:root {
+  --page: #e4e4e4; /* фон под островами */
+  --background: #fafafa; /* рабочая область острова */
+  --foreground: #262626;
+  --secondary-text: #666666; /* вторичный текст, 5.4:1 на #fafafa */
+
+  --card: #ffffff;
+  --card-foreground: #262626;
+  --popover: #ffffff;
+  --popover-foreground: #262626;
+
+  --primary: #d9f23b; /* лайм: главное действие, «КВАЛ», выбор */
+  --primary-foreground: #262626; /* на лайме только тёмный текст */
+  --primary-border: #c9e329;
+
+  --secondary: #ffffff;
+  --secondary-foreground: #262626;
+
+  --muted: #efefef;
+  --muted-foreground: #a3a3a3; /* значки и плейсхолдеры, не для чтения */
+
+  --accent: #f0f0f0; /* наведение */
+  --accent-foreground: #262626;
+
+  --info: #6d8cf0; /* «на сегодня», ссылки, информационная точка */
+  --destructive: #e5484d;
+  --success: #30a46c;
+  --warning: #d97706;
+  --warning-soft: #fdf1e0;
+
+  --border: #ebebeb;
+  --input: #e2e2e2;
+  --ring: #262626; /* фокус графитом: лайм на светлом не виден */
+
+  --radius: 6px; /* плотность Attio: контролы внутри таблиц */
+  --radius-control: 10px; /* кнопки, поля, селекты */
+  --radius-island: 20px;
+  --gap-island: 10px;
+  --vh-shell: calc(100vh - 2 * var(--gap-island)); /* высота острова */
+  --shadow-island: inset 0 1px 0 #fff, 0 12px 30px -22px rgba(0, 0, 0, 0.3);
+
+  --chart-1: #6d8cf0;
+  --chart-2: #30a46c;
+  --chart-3: #d97706;
+  --chart-4: #8b5cf6;
+  --chart-5: #ec4899;
+
+  --sidebar: #f2f2f2;
+  --sidebar-foreground: #262626;
+  --sidebar-primary: #262626;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e9e9e9;
+  --sidebar-accent-foreground: #262626;
+  --sidebar-border: #e4e4e4;
+  --sidebar-ring: #262626;
+
+  /* ===== Плотность. Того, чего нет в shadcn и чего не было в токенах с лендинга.
+     Именно она отличает интерфейс Attio от воздушного дефолта shadcn. ===== */
+  --h-header: 48px; /* шапка страницы с названием списка */
+  --h-toolbar: 49px; /* полоса действий под шапкой */
+  --h-filters: 51px; /* полоса сортировки и фильтров */
+  --h-row: 36px; /* строка таблицы */
+  --h-row-header: 39px; /* шапка колонок */
+  --h-control: 28px; /* кнопка, селект, поле ввода */
+  --h-control-sm: 26px; /* чип-фильтр */
+  --px-cell: 12px; /* боковой отступ ячейки */
+
+  /* ===== Поверхности Attio. Замер с канбана 21.09.2026
+     (design/screens/_kit.css, research/attio-product-shots/).
+     #f8f9fa — пустой слот колонки: он же подложка под карточками. ===== */
+  --surface-track: #f2f2f2; /* дорожка колонки канбана, пустой слот */
+  --surface-select: #f3fad0; /* колонка под перенос, выбранная опция: лаймовый тон */
+
+  --radius-card: 12px; /* карточка канбана круглее контролов (замер) */
+
+  /* Мягкая лестница Attio: чёрный 1–7%, расходится, не темнеет. */
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-card-hover: 0 6px 14px -6px rgba(0, 0, 0, 0.14);
+  --shadow-overlay: 0 12px 28px -8px rgba(0, 0, 0, 0.14), 0 2px 6px -2px rgba(0, 0, 0, 0.06);
+  --shadow-drag: 0 18px 32px -12px rgba(0, 0, 0, 0.25), 0 4px 8px -2px rgba(0, 0, 0, 0.05);
+
+  /* Палитра значений статуса. Attio красит каждое значение своим тоном:
+     точка — dot, чип — пара «фон + текст». Замер с recruiting-list.
+     У magenta пары bg/tx в замере нет — только dot; фолбэк там, где нужно. */
+  --hue-blue-dot: #6d8cf0; --hue-blue-bg: #e7eefe; --hue-blue-tx: #315abd;
+  --hue-cyan-dot: #53b6e6; --hue-cyan-bg: #e2f6fe; --hue-cyan-tx: #2f6b84;
+  --hue-green-dot: #5fce86; --hue-green-bg: #e6fbee; --hue-green-tx: #367b56;
+  --hue-olive-dot: #c5b33c; --hue-olive-bg: #f6fbd0; --hue-olive-tx: #56631a;
+  --hue-amber-dot: #e97d35; --hue-amber-bg: #fdf4d0; --hue-amber-tx: #7f5019;
+  --hue-red-dot: #ec615b; --hue-red-bg: #fcecec; --hue-red-tx: #ab342d;
+  --hue-pink-dot: #e0518f; --hue-pink-bg: #fbedf3; --hue-pink-tx: #a92e5d;
+  --hue-violet-dot: #946bf7; --hue-violet-bg: #f4f0fe; --hue-violet-tx: #5c3aaf;
+  --hue-magenta-dot: #cb56e4;
+  --hue-grey-dot: #a3a3a3; --hue-grey-bg: #efefef; --hue-grey-tx: #4a4a4a;
+}
+
+/* =====================================================================
+   Кит продукта: движение, скелетоны, пустые состояния, инлайн-поля.
+   Один источник для всех экранов. Правила — docs/ux-contract.md.
+   ===================================================================== */
+
+:root {
+  --motion-fast: 120ms;
+  --motion: 180ms;
+  --motion-slow: 260ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Pipeline v2: live controls and the dense card from docs/ux-contract.md. */
+
+:root { --shadow-drag: 0 14px 30px rgb(28 31 38 / 18%); }
+
+/* ===== «Фарфор олл-ин», 23.09.2026 — ветка design/farfor-allin.
+   Язык витрины E2 на всём приложении: каждый контейнер — модуль на фарфоре,
+   пилюли, крупные тонкие заголовки, точечные итоги Doto, лайм — единственный
+   цвет, розовый градиент только на «Просрочено». Проба стиля, не рабочий дефолт. ===== */
+
+:root {
+  --radius-island: 28px;
+  --gap-island: 12px;
+  --module: #efefef;
+  --module-card: #fafafa;
+  --shadow-module: inset 0 1px 0 #fff, 0 10px 22px -14px rgba(0, 0, 0, 0.18);
+  --shadow-module-hover: inset 0 1px 0 #fff, 0 16px 28px -14px rgba(0, 0, 0, 0.24);
+}

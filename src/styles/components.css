@@ -1,0 +1,316 @@
+.view-switch {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 13px;
+}
+
+.view-switch span,
+.filter-control {
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--muted-foreground);
+}
+
+.view-switch-active {
+  color: var(--foreground) !important;
+  background: var(--accent);
+  font-weight: 500;
+}
+
+.filter-control {
+  border-style: dashed;
+  border-color: var(--input);
+  background: var(--secondary);
+  color: var(--foreground);
+}
+
+.filter-chip {
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  color: var(--muted-foreground);
+}
+
+.page-header,
+.toolbar,
+.filterbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border);
+  flex: none;
+}
+
+.page-header {
+  height: 48px;
+}
+
+.toolbar {
+  height: 49px;
+}
+
+.filterbar {
+  height: 51px;
+}
+
+.header-spacer {
+  margin-left: auto;
+}
+
+.separator {
+  height: 16px;
+  width: 1px;
+  background: var(--border);
+}
+
+.drop-target {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 6px;
+}
+
+.btn,
+.btn-ghost {
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--input);
+  border-radius: var(--radius);
+  background: var(--secondary);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 13px;
+}
+
+.btn-icon {
+  width: 28px;
+  justify-content: center;
+  padding: 0;
+}
+
+.btn-ghost {
+  height: 26px;
+  padding: 0 8px;
+  border-style: dashed;
+  background: transparent;
+  color: #606164;
+}
+
+.avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #6c5ce7;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+  margin-top: 5px;
+}
+
+.dot-blue {
+  background: var(--primary);
+}
+
+.dot-amber {
+  background: var(--warning);
+}
+
+.dot-red {
+  background: var(--destructive);
+}
+
+.dot-green {
+  background: var(--success);
+}
+
+.dot-grey {
+  background: var(--muted-foreground);
+}
+
+.pill {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--muted);
+  color: #606164;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.tag {
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.tag-select {
+  background: #eaf0fd;
+  color: #2f55b5;
+}
+
+.tag-next {
+  background: #e8f5ee;
+  color: #227a51;
+}
+
+.tag-grey {
+  background: var(--muted);
+  color: #606164;
+}
+
+.toolbar-label {
+  color: #606164;
+  font-size: 13px;
+}
+
+kbd { margin-left:4px; padding:1px 4px; border:1px solid currentColor; border-radius:3px; font-size:10px; opacity:.65; }
+
+.page-header { padding-inline: var(--px-cell); }
+
+.header-notification { position: relative; display: inline-flex; align-items: center; color: var(--muted-foreground); }
+
+.header-notification b { position: absolute; top: -10px; right: -12px; min-width: 19px; height: 18px; padding: 0 4px; border-radius: 4px; background: var(--destructive); color: #fff; font-size: 11px; line-height: 18px; text-align: center; font-weight: 500; }
+
+.toolbar { padding-inline: var(--px-cell); }
+
+/* из экрана сделок: стояли раньше .toolbar .view-switch по каскаду */
+.deals-page .view-switch {
+  color: var(--muted-foreground);
+  font-size: 13px;
+  text-decoration: none;
+  padding: 5px 9px;
+  border-radius: 5px;
+}
+
+.deals-page .view-switch:hover,
+.deals-page .view-switch:focus-visible { background: var(--muted); color: var(--foreground); }
+
+.deals-page .view-switch.active { background: var(--secondary); color: var(--foreground); font-weight: 600; }
+.toolbar .view-switch { display: inline-flex; align-items: center; gap: 6px; height: var(--h-control); padding: 0 9px; border: 1px solid var(--input); border-radius: var(--radius); background: var(--secondary); color: var(--foreground); font: inherit; font-size: 13px; text-decoration: none; cursor: pointer; }
+
+.toolbar .view-switch.active { border-color: var(--input); background: var(--accent); }
+
+.filterbar { position: relative; padding-inline: var(--px-cell); }
+
+.filter-popover { position: relative; }
+
+.filter-popover > summary { list-style: none; }
+
+.filter-popover > summary::-webkit-details-marker { display: none; }
+
+.filter-button { display: inline-flex; align-items: center; gap: 5px; height: var(--h-control-sm); padding: 0 8px; border: 1px dashed var(--input); border-radius: var(--radius); color: var(--muted-foreground); font-size: 13px; cursor: pointer; }
+
+.filter-button:hover,
+.filter-popover[open] .filter-button { background: var(--accent); color: var(--foreground); }
+
+.filter-menu { position: absolute; z-index: 10; top: calc(100% + 6px); left: 0; min-width: 190px; padding: 4px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); box-shadow: 0 10px 24px rgb(28 31 38 / 12%); }
+
+.filter-menu > a,
+.filter-menu > button { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: var(--h-control); padding: 0 8px; border: 0; border-radius: var(--radius); background: transparent; color: var(--foreground); font: inherit; font-size: 13px; text-align: left; text-decoration: none; cursor: pointer; }
+
+.filter-menu > a:hover,
+.filter-menu > a.is-selected,
+.filter-menu > button:hover { background: var(--accent); }
+
+.filter-form { display: grid; gap: 8px; min-width: 260px; padding: 10px; }
+
+.filter-form label { display: grid; gap: 4px; color: var(--muted-foreground); font-size: 12px; }
+
+.filter-form select { width: 100%; height: var(--h-control); border: 1px solid var(--input); border-radius: var(--radius); background: var(--background); color: var(--foreground); font: inherit; font-size: 13px; }
+
+.filter-check { display: flex !important; grid-template-columns: auto 1fr; align-items: center; gap: 7px !important; color: var(--foreground) !important; }
+
+.filter-check input { accent-color: var(--primary); }
+
+.filter-submit { justify-content: center !important; border-color: var(--primary-border) !important; background: var(--primary) !important; color: var(--primary-foreground) !important; }
+
+.filter-help { color: var(--muted-foreground); font-size: 11px; }
+
+.filter-chips { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+
+.filter-chip { display: inline-flex; align-items: center; gap: 4px; height: var(--h-control-sm); padding: 0 7px; border: 1px solid var(--input); border-radius: 999px; background: var(--accent); color: var(--foreground); font-size: 12px; text-decoration: none; }
+
+.filter-chip:hover { border-color: var(--foreground); }
+
+@media (max-width: 640px) {
+  .filterbar { min-height: auto; padding-block: 8px; flex-wrap: wrap; }
+}
+
+@media (max-width: 640px) {
+  .filter-chips { width: 100%; }
+}
+
+@media (max-width: 640px) {
+  .toolbar { overflow: auto; }
+}
+
+@media (max-width: 640px) {
+  .toolbar .view-switch { white-space: nowrap; }
+}
+
+.pill,
+.tag,
+.chip { border-radius: 999px; }
+
+.pill.nbadge { background: var(--destructive); color: #fff; }
+
+.tag-kval { background: var(--primary) !important; color: var(--primary-foreground) !important; }
+
+@media (max-width: 600px) {
+  :root { --gap-island: 0px; --radius-island: 0px; }
+}
+
+.avatar { background: #262626; }
+
+/* кнопки и поля — пилюли с бликом */
+
+.btn,
+.filter-button,
+.filter-control,
+.view-switch {
+  border-radius: 999px !important;
+}
+
+.btn { border: 0; background: var(--module-card); box-shadow: inset 0 1px 0 #fff, 0 6px 14px -10px rgba(0, 0, 0, 0.25); }
+
+.btn:hover { background: #ffffff; }
+
+.filter-submit {
+  border: 0 !important; background: var(--primary) !important; color: var(--primary-foreground) !important; font-weight: 500;
+}
+
+.filter-submit:hover { background: #cde82a !important; }
+
+.btn-ghost { border: 0; border-radius: 999px; background: #e9e9e9; }
+
+.tag { border-radius: 999px; }
