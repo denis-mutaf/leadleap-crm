@@ -463,6 +463,17 @@
   font-weight: 500;
 }
 
+.task-completion-dialog header strong { font-weight: 500; }
+
+/* Поля правки задачи: во всю ширину окна, ритм между группами. */
+.task-completion-dialog form > input,
+.task-completion-dialog form > select {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.task-completion-dialog form > .date-field-wrap { display: flex; margin-bottom: 12px; }
+
 .task-completion-dialog header button {
   display: grid;
   place-items: center;
@@ -562,4 +573,18 @@
   .tasks-filterbar,
   .task-row { padding-left: 10px; padding-right: 10px; }
   .task-row { min-height: 56px; }
+}
+
+/* Карандаш правки — только у строки под курсором или в фокусе, чтобы
+   сотня карандашей не шумела в списке. */
+.task-edit-trigger {
+  opacity: 0;
+  transition: opacity var(--motion-fast) var(--ease);
+}
+
+.task-row:hover .task-edit-trigger,
+.task-edit-trigger:focus-visible { opacity: 1; }
+
+@media (hover: none) {
+  .task-edit-trigger { opacity: 1; }
 }

@@ -3,8 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import { AlertCircle, ArchiveRestore } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import styles from "./trash.module.css";
 import { countWord } from "@/lib/plural";
+import { dbErrorText } from "@/lib/db-errors";
 export type TrashRow = {
   entity: "deals" | "contacts" | "notes" | "tasks";
   id: string;
@@ -108,13 +110,15 @@ export default function TrashClient({
         throw new Error(data.error || "Не удалось восстановить запись");
       setItems((current) => current.filter((item) => item.id !== row.id));
       setConfirm(null);
+      toast.success("Запись восстановлена");
       router.refresh();
     } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Не удалось восстановить запись",
+      const message = dbErrorText(
+        cause,
+        "Не удалось восстановить запись. Попробуйте ещё раз.",
       );
+      setError(message);
+      toast.error(message);
     } finally {
       pendingRef.current = false;
       setPending(null);
@@ -233,6 +237,11 @@ export default function TrashClient({
               Запись «{confirm.label}» будет восстановлена в{" "}
               {labels[confirm.entity].toLowerCase()}.
             </p>
+            {error && (
+              <p className={`${styles.error} motion-fade-up`} role="alert">
+                <AlertCircle size={15} /> {error}
+              </p>
+            )}
             <div>
               <button onClick={() => setConfirm(null)}>Отмена</button>
               <button

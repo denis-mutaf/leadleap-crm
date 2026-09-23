@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { dbErrorText } from "@/lib/db-errors";
 
 // Две кнопки, которых не хватало, чтобы диалог не потерялся: «вернуть в
 // непрочитанные» (прочитал, ответить сейчас не могу) и «взять себе»
@@ -32,7 +33,7 @@ export function ThreadActions({
       const payload = (await response.json().catch(() => null)) as
         | { error?: string }
         | null;
-      setError(payload?.error ?? "Не получилось");
+      setError(dbErrorText(payload?.error, "Не получилось"));
       return;
     }
     router.refresh();

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { dbErrorText } from "@/lib/db-errors";
 import styles from "./contacts.module.css";
 
 type Candidate = {
@@ -95,9 +96,7 @@ export default function ContactMergeButton({ current }: Props) {
           if (id === requestRef.current) setResults(rows);
         } catch (e) {
           if (id === requestRef.current)
-            setError(
-              e instanceof Error ? e.message : "Не удалось найти контакт",
-            );
+            setError(dbErrorText(e, "Не удалось найти контакт"));
         } finally {
           if (id === requestRef.current) setLoading(false);
         }
@@ -171,9 +170,7 @@ export default function ContactMergeButton({ current }: Props) {
       setError(
         e instanceof Error && e.message.includes("custom field")
           ? "Есть конфликт пользовательских полей. Выберите значение вручную перед слиянием."
-          : e instanceof Error
-            ? e.message
-            : "Слияние не выполнено",
+          : dbErrorText(e, "Слияние не выполнено"),
       );
     }
   }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Phone } from "lucide-react";
 import { toast } from "sonner";
+import { dbErrorText } from "@/lib/db-errors";
 import styles from "./calls.module.css";
 
 export function CallbackButton({ callId }: { callId: string }) {
@@ -26,7 +27,7 @@ export function CallbackButton({ callId }: { callId: string }) {
           if (!res.ok) throw new Error(body?.error ?? "АТС не ответила");
           toast.success("Звоним: сначала поднимется ваша трубка");
         } catch (err) {
-          toast.error(err instanceof Error ? err.message : "Не удалось позвонить");
+          toast.error(dbErrorText(err, "Не удалось позвонить"));
         } finally {
           setPending(false);
         }

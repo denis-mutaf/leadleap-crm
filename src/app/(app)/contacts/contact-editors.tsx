@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { DateField } from "@/components/crm/date-field";
 import { createClient } from "@/lib/supabase/client";
+import { dbErrorText } from "@/lib/db-errors";
 import styles from "./contacts.module.css";
 
 type Phone = { id: string; phone: string; is_primary: boolean };
@@ -56,7 +57,7 @@ export function ContactPhones({
       phone,
       is_primary: phones.length === 0,
     });
-    if (result.error) toast.error(`Телефон не добавлен: ${result.error.message}`);
+    if (result.error) toast.error(`Телефон не добавлен: ${dbErrorText(result.error)}`);
     else {
       toast.success("Телефон добавлен");
       setDraft("");
@@ -73,7 +74,7 @@ export function ContactPhones({
       .from("contact_phones")
       .delete()
       .eq("id", phone.id);
-    if (result.error) toast.error(`Телефон не удалён: ${result.error.message}`);
+    if (result.error) toast.error(`Телефон не удалён: ${dbErrorText(result.error)}`);
     else {
       if (phone.is_primary && phones.length > 1) {
         await createClient()
@@ -98,7 +99,7 @@ export function ContactPhones({
     const result = reset.error
       ? reset
       : await db.from("contact_phones").update({ is_primary: true }).eq("id", phone.id);
-    if (result.error) toast.error(`Основной телефон не изменён: ${result.error.message}`);
+    if (result.error) toast.error(`Основной телефон не изменён: ${dbErrorText(result.error)}`);
     else {
       toast.success("Основной телефон изменён");
       router.refresh();
@@ -179,7 +180,7 @@ export function ContactEmails({
     setBusy("add");
     const ordinal = Math.max(-1, ...emails.map((item) => item.ordinal)) + 1;
     const result = await createClient().from("contact_emails").insert({ contact_id: contactId, ordinal, email });
-    if (result.error) toast.error(`Почта не добавлена: ${result.error.message}`);
+    if (result.error) toast.error(`Почта не добавлена: ${dbErrorText(result.error)}`);
     else {
       toast.success("Почта добавлена");
       setDraft("");
@@ -197,7 +198,7 @@ export function ContactEmails({
       .delete()
       .eq("contact_id", contactId)
       .eq("ordinal", email.ordinal);
-    if (result.error) toast.error(`Почта не удалена: ${result.error.message}`);
+    if (result.error) toast.error(`Почта не удалена: ${dbErrorText(result.error)}`);
     else {
       toast.success("Почта удалена");
       router.refresh();
@@ -257,7 +258,7 @@ export function EditableAmoField({
     setSaving(true);
     const result = await createClient().from("contacts").update({ amo_custom_fields: nextFields }).eq("id", contactId);
     setSaving(false);
-    if (result.error) toast.error(`Поле не сохранено: ${result.error.message}`);
+    if (result.error) toast.error(`Поле не сохранено: ${dbErrorText(result.error, "Не удалось сохранить поле")}`);
     else {
       toast.success(`${label} — сохранено`);
       router.refresh();
@@ -304,7 +305,7 @@ export function EditableCustomField({
     const parsed = definition.field_type === "number" && value ? Number(value) : definition.field_type === "checkbox" ? value === "true" : value || null;
     const result = await createClient().from("custom_field_values").upsert({ field_id: definition.id, entity_id: contactId, value: parsed }, { onConflict: "field_id,entity_id" });
     setSaving(false);
-    if (result.error) toast.error(`Поле не сохранено: ${result.error.message}`);
+    if (result.error) toast.error(`Поле не сохранено: ${dbErrorText(result.error, "Не удалось сохранить поле")}`);
     else {
       toast.success(`${definition.label} — сохранено`);
       router.refresh();
@@ -355,14 +356,14 @@ export function ContactTags({
   async function addTag(tagId: string) {
     setBusy(true);
     const result = await createClient().from("contact_tags").insert({ contact_id: contactId, tag_id: tagId });
-    if (result.error) toast.error(`Метка не добавлена: ${result.error.message}`);
+    if (result.error) toast.error(`Метка не добавлена: ${dbErrorText(result.error)}`);
     else router.refresh();
     setBusy(false);
   }
   async function removeTag(tagId: string) {
     setBusy(true);
     const result = await createClient().from("contact_tags").delete().eq("contact_id", contactId).eq("tag_id", tagId);
-    if (result.error) toast.error(`Метка не удалена: ${result.error.message}`);
+    if (result.error) toast.error(`Метка не удалена: ${dbErrorText(result.error)}`);
     else router.refresh();
     setBusy(false);
   }

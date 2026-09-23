@@ -98,7 +98,7 @@ export default function ContactDeleteButton({
       const message = caught instanceof Error ? caught.message : "";
       setError(
         code === "42501" || /active|deal|сделк|permission|прав/i.test(message)
-          ? "Контакт нельзя удалить: есть активная сделка или недостаточно прав."
+          ? "Контакт нельзя удалить: есть связанная сделка (включая корзину) или недостаточно прав."
           : "Не удалось удалить контакт. Попробуйте ещё раз.",
       );
     }
@@ -163,10 +163,10 @@ export default function ContactDeleteButton({
                 Контакт и его телефоны будут скрыты из рабочих списков.
                 Связанные данные сохранятся для восстановления.
               </p>
-              <p className={styles.mergeHint}>
-                Если у контакта есть активная сделка, операция будет отклонена.
-                Восстановление доступно в течение 30 дней.
-              </p>
+                <p className={styles.mergeHint}>
+                  Если у контакта есть сделка — даже в корзине, — операция будет отклонена.
+                  Восстановление доступно в течение 30 дней.
+                </p>
               {error && <p className={styles.mergeError}>{error}</p>}
             </div>
             <footer className={styles.mergeFooter}>

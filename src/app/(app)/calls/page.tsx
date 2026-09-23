@@ -59,6 +59,14 @@ function sanitizeTerm(term: string): string {
   return term.replace(/[%(),]/g, "").trim().slice(0, 40);
 }
 
+function plural(count: number, one: string, few: string, many: string): string {
+  const mod10 = Math.abs(count) % 10;
+  const mod100 = Math.abs(count) % 100;
+  if (mod10 === 1 && mod100 !== 11) return one;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+  return many;
+}
+
 // Нижняя граница периода в ISO: вызывается из серверного кода запроса,
 // Date.now здесь — момент запроса, а не рендера клиента.
 function periodStart(days: string): string | null {
@@ -101,7 +109,7 @@ export default async function CallsPage({ searchParams }: { searchParams: Promis
       .select("id")
       .ilike("full_name", `%${q}%`)
       .limit(200);
-    if (error) errors.push(`Поиск по контактам: ${error.message}`);
+    if (error) errors.push("Поиск по именам временно недоступен");
     contactIds = (data ?? []).map((r) => r.id as string);
   }
 
@@ -112,6 +120,7 @@ export default async function CallsPage({ searchParams }: { searchParams: Promis
     or(filters: string): Chain;
     is(column: string, value: null): Chain;
     gte(column: string, value: string): Chain;
+    gt(column: string, value: number): Chain;
     order(column: string, options?: { ascending?: boolean; nullsFirst?: boolean }): Chain;
   }
 
@@ -168,31 +177,50 @@ export default async function CallsPage({ searchParams }: { searchParams: Promis
     list = await runList(retryFrom, retryFrom + PAGE_SIZE - 1);
     total = list.count ?? total;
   }
-  if (list.error) errors.push(`Звонки: ${list.error.message}`);
+  if (list.error) errors.push("Не удалось загрузить список звонков");
   const rows = (list.data ?? []) as unknown as CallDbRow[];
   const calls = await hydrateCalls(supabase, rows);
 
-  // Счётчик «Не перезвонили» и итоги выборки.
-  interface QStats extends Chain {
-    limit(n: number): QStats;
-  }
-  type StatsResult = { data: { duration_sec: number | null }[] | null; error: { message: string } | null };
-  const statsPromise = (applyFilters(supabase.from("calls").select("duration_sec")) as unknown as QStats).limit(
-    5000,
-  ) as unknown as Promise<StatsResult>;
-  const [noCallback, stats] = await Promise.all([
-    supabase
+  // Счётчик «Не перезвонили» живёт в том же периоде, что и список: иначе
+  // таб показывает «за всё время», а строка итогов — за 30 дней.
+  const runNoCallback = () => {
+    let query = supabase
       .from("calls")
       .select("id", { count: "exact", head: true })
       .eq("direction", "in")
       .or("duration_sec.is.null,duration_sec.eq.0")
-      .is("called_back_at", null),
-    statsPromise,
-  ]);
-  if (noCallback.error) errors.push(`Счётчик: ${noCallback.error.message}`);
-  if (stats.error) errors.push(`Итоги: ${stats.error.message}`);
+      .is("called_back_at", null);
+    if (period !== "all") {
+      const since = periodStart(period);
+      if (since) query = query.gte("started_at", since);
+    }
+    return query;
+  };
+  // Итоги считает та же выборка, что и список: «разговоров» — точный
+  // head-счётчик с теми же фильтрами плюс длительность > 0, поэтому их
+  // всегда не больше, чем звонков. Сумма длительностей — по первым
+  // 5000 строк выборки, на тоталах больше выборки она приблизительная.
+  interface QStats extends Chain {
+    limit(n: number): QStats;
+  }
+  type StatsResult = { data: { duration_sec: number | null }[] | null; error: { message: string } | null };
+  type HeadResult = { error: { message: string } | null; count: number | null };
+  const statsPromise = (applyFilters(supabase.from("calls").select("duration_sec")) as unknown as QStats).limit(
+    5000,
+  ) as unknown as Promise<StatsResult>;
+  const talkedPromise = (applyFilters(
+    supabase.from("calls").select("id", { count: "exact", head: true }),
+  ) as unknown as QStats).gt("duration_sec", 0) as unknown as Promise<HeadResult>;
+  let noCallback = await runNoCallback();
+  // Однократный повтор: под manager счётчик иногда не приезжает с первого
+  // раза, а таб без числа выглядит сломанным.
+  if (noCallback.error) noCallback = await runNoCallback();
+  const [talkedHead, stats] = await Promise.all([talkedPromise, statsPromise]);
+  if (noCallback.error) errors.push("Счётчик «Не перезвонили» временно недоступен");
+  if (talkedHead.error) errors.push("Итоги выборки временно недоступны");
+  if (stats.error) errors.push("Длительность разговоров временно недоступна");
   const statRows = (stats.data ?? []) as { duration_sec: number | null }[];
-  const talked = statRows.filter((r) => (r.duration_sec ?? 0) > 0).length;
+  const talked = talkedHead.error ? statRows.filter((r) => (r.duration_sec ?? 0) > 0).length : (talkedHead.count ?? 0);
   const totalSec = statRows.reduce((sum, r) => sum + Math.max(0, r.duration_sec ?? 0), 0);
   const totalHours = Math.floor(totalSec / 3600);
   const totalMinutes = Math.round((totalSec % 3600) / 60);
@@ -307,7 +335,8 @@ export default async function CallsPage({ searchParams }: { searchParams: Promis
         </AutoSubmitForm>
         <span style={{ flex: 1 }} />
         <span className={styles.totals}>
-          {total.toLocaleString("ru-RU")} звонка · {talked.toLocaleString("ru-RU")} разговора ·{" "}
+          {total.toLocaleString("ru-RU")} {plural(total, "звонок", "звонка", "звонков")} ·{" "}
+          {talked.toLocaleString("ru-RU")} {plural(talked, "разговор", "разговора", "разговоров")} ·{" "}
           {totalHours > 0 ? `${totalHours} ч ${totalMinutes} мин` : `${totalMinutes} мин`}
         </span>
       </div>

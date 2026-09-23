@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { dbErrorText } from "@/lib/db-errors";
 import styles from "./calls.module.css";
 
 // Кнопка запуска расшифровки: после ответа обновляем панель через refresh,
@@ -36,7 +37,7 @@ export function TranscribeButton({ callId, label }: { callId: string; label: str
           }
           router.refresh();
         } catch (err) {
-          toast.error(err instanceof Error ? err.message : "Не удалось расшифровать");
+          toast.error(dbErrorText(err, "Не удалось расшифровать"));
         } finally {
           setPending(false);
         }

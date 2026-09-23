@@ -12,6 +12,8 @@ import {
 import { useRouter } from "next/navigation";
 import { StageIndicator } from "@/components/crm/stage-indicator";
 import { TaskCompletion } from "./task-completion";
+import { TaskEdit } from "./task-edit";
+import { TaskReopen } from "./task-reopen";
 
 const icons = {
   call: Phone,
@@ -24,6 +26,7 @@ const icons = {
 export function TaskRow({
   task,
   actorId,
+  people,
 }: {
   task: {
     id: string;
@@ -35,13 +38,16 @@ export function TaskRow({
     stageName: string;
     stage: { id: string; kind: "open" | "won" | "lost"; position: number } | null;
     allStages: { id: string; kind: "open" | "won" | "lost"; position: number }[];
+    assignee_id: string | null;
     assigneeName: string;
+    due_at: string;
     dueLabel: string;
     overdueLabel?: string;
     done_at: string | null;
     result_text?: string | null;
   };
   actorId: string;
+  people: { id: string; name: string }[];
 }) {
   const router = useRouter();
   const Icon = icons[task.typeCode as keyof typeof icons] ?? CalendarDays;
@@ -68,11 +74,18 @@ export function TaskRow({
         }}
       >
       {task.done_at ? (
-        <span className="task-check is-complete" aria-label="Задача выполнена">
-          <CheckCircle2 size={15} />
-        </span>
+        <TaskReopen taskId={task.id} />
       ) : (
         <TaskCompletion taskId={task.id} actorId={actorId} />
+      )}
+      {!task.done_at && (
+        <TaskEdit
+          taskId={task.id}
+          initialTitle={title}
+          initialDueAt={task.due_at}
+          initialAssigneeId={task.assignee_id}
+          people={people}
+        />
       )}
       <span className="task-type" title={task.typeName}>
         <Icon size={14} />

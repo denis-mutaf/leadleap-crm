@@ -68,6 +68,7 @@ export default async function DealRecordPage({
     allTags,
     allOwners,
     allSources,
+    lostReasons,
   ] = await Promise.all([
     supabase
       .from("contacts")
@@ -192,6 +193,12 @@ export default async function DealRecordPage({
       .in("role", ["manager", "head", "admin"])
       .order("full_name"),
     supabase.from("sources").select("id, name").eq("is_active", true).order("name"),
+    supabase
+      .from("lost_reasons")
+      .select("id, name")
+      .eq("is_active", true)
+      .order("position")
+      .order("name"),
   ]);
   const responses = {
     contact,
@@ -216,6 +223,7 @@ export default async function DealRecordPage({
     allTags,
     allOwners,
     allSources,
+    lostReasons,
   };
   for (const [label, response] of Object.entries(responses))
     if (response?.error) throw new Error(`${label}: ${response.error.message}`);
@@ -298,6 +306,7 @@ export default async function DealRecordPage({
     allTags: allTags.data ?? [],
     allOwners: allOwners.data ?? [],
     allSources: allSources.data ?? [],
+    allLostReasons: lostReasons.data ?? [],
   };
   return (
     <div className="record-page">

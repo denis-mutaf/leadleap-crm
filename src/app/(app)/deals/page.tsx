@@ -10,7 +10,7 @@ import Form from "next/form";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { DealsBoard, type BoardCard, type BoardColumn } from "./deals-board";
+import { DealsBoard, BoardRefreshGuard, type BoardCard, type BoardColumn } from "./deals-board";
 import { CreateDealModal } from "./create-deal-modal";
 
 const PAGE_SIZE = 24;
@@ -290,12 +290,12 @@ export default async function DealsPage({
       <div className="toolbar">
         <button className="view-switch active" type="button"><Funnel size={14} /> Воронка <ChevronDown size={13} /></button>
         <Link className="view-switch" href="/deals/table">Таблица</Link>
-        <button className="view-switch" type="button"><SlidersHorizontal size={14} /> Настройки вида <ChevronDown size={13} /></button>
         <span className="header-spacer" />
         <CreateDealModal stages={stages} sources={sources} projects={projects} tags={tags} owners={owners} />
       </div>
       <FilterBar query={query} owners={owners} projects={projects} tags={tags} sources={sources} counters={board.counters} />
       <div className="applied-summary">Страница {page + 1} · показано {columns.reduce((sum, column) => sum + column.deals.length, 0)} из {board.total}</div>
+      <BoardRefreshGuard serverFlag={flag ?? ""} />
       <DealsBoard
         key={`${page}|${sort}|${flag ?? ""}|${mine ? "mine" : ownerParam ?? ""}|${one(query.project) ?? ""}|${one(query.tag) ?? ""}|${one(query.source) ?? ""}`}
         columns={columns}
@@ -304,6 +304,7 @@ export default async function DealsPage({
         lostReasons={(lostReasonsResponse.data ?? []) as LostReason[]}
         taskTypes={(taskTypesResponse.data ?? []) as TaskType[]}
         activeAssignees={owners.map((item) => ({ id: item.id, name: item.full_name }))}
+        query={{ pageSize: PAGE_SIZE, owner, project: one(query.project) || null, tag: one(query.tag) || null, source: one(query.source) || null, flag, sort, lostKey: lostStage?.id ?? null }}
       />
       {(page > 0 || hasNextPage) && (
         <nav className="deals-pagination" aria-label="Страницы сделок">

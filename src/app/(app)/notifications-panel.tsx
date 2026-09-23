@@ -148,8 +148,15 @@ export function NotificationsPanel({ role }: { role: string }) {
     [filter, role, supabase],
   );
   useEffect(() => {
+    // Бейдж жил от монтирования до монтирования: уведомление, прочитанное
+    // или удалённое в другой вкладке, висело «1» до перезагрузки, а после
+    // открытия панели исчезало без следа. Обновляем счётчик раз в минуту.
     const timer = window.setTimeout(() => void refreshCount(), 0);
-    return () => window.clearTimeout(timer);
+    const interval = window.setInterval(() => void refreshCount(), 60000);
+    return () => {
+      window.clearTimeout(timer);
+      window.clearInterval(interval);
+    };
   }, [refreshCount]);
   useEffect(() => {
     if (!open) return;

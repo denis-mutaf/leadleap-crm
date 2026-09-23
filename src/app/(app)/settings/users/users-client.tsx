@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { UserRole } from "@/lib/types";
 import { USER_ROLE_LABELS } from "@/lib/types";
+import { dbErrorText } from "@/lib/db-errors";
 import styles from "./users.module.css";
 
 type Row = {
@@ -83,9 +84,7 @@ export default function UsersClient({
       );
     } catch (cause) {
       setError(
-        cause instanceof Error
-          ? cause.message
-          : "Не удалось сохранить изменения",
+        dbErrorText(cause, "Не удалось сохранить изменения"),
       );
     } finally {
       pendingRef.current = false;
@@ -112,9 +111,7 @@ export default function UsersClient({
       router.refresh();
     } catch (cause) {
       setError(
-        cause instanceof Error
-          ? cause.message
-          : "Не удалось отправить приглашение",
+        dbErrorText(cause, "Не удалось отправить приглашение"),
       );
     } finally {
       pendingRef.current = false;

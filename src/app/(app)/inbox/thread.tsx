@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { dbErrorText } from "@/lib/db-errors";
 import { ChannelIcon, channelTitle } from "./channel-icon";
 import { Composer } from "./composer";
 import { ThreadActions } from "./thread-actions";
@@ -65,7 +66,7 @@ async function loadThread(conversation: Conversation) {
         : Promise.resolve({ data: [], error: null }),
     ]);
 
-  if (messageResult.error) errors.push(`Сообщения: ${messageResult.error.message}`);
+  if (messageResult.error) errors.push(`Сообщения: ${dbErrorText(messageResult.error)}`);
   const messages = ((messageResult.data ?? []) as Message[]).slice().reverse();
 
   const phone =
@@ -96,7 +97,7 @@ async function loadThread(conversation: Conversation) {
       ? supabase.from("profiles").select("id, full_name").in("id", authorIds)
       : Promise.resolve({ data: [], error: null }),
   ]);
-  if (dealsResult.error) errors.push(`Сделки контакта: ${dealsResult.error.message}`);
+  if (dealsResult.error) errors.push(`Сделки контакта: ${dbErrorText(dealsResult.error)}`);
   const deal = ((dealsResult.data ?? []) as Deal[])[0] ?? null;
   const authors = new Map(
     ((authorsResult.data ?? []) as { id: string; full_name: string }[]).map((item) => [

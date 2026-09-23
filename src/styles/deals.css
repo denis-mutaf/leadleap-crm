@@ -651,6 +651,11 @@
   transform: scale(var(--press-scale));
 }
 
+.column-show-more {
+  width: 100%;
+  justify-content: center;
+}
+
 .empty-column {
   margin-bottom: 0;
   border: 1px dashed var(--input);

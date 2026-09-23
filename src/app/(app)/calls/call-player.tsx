@@ -85,6 +85,11 @@ export function CallPlayer({ callId, durationSec }: { callId: string; durationSe
         ref={audioRef}
         src={state.url}
         preload="metadata"
+        // Подписанная ссылка могла протухнуть: файл уже отдал 404, а плеер
+        // молча стоял на 0:00. Ошибку элемента показываем текстом.
+        onError={() =>
+          setState({ kind: "gone", message: "Запись недоступна" })
+        }
         onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
         onLoadedMetadata={(e) => {
           const d = e.currentTarget.duration;

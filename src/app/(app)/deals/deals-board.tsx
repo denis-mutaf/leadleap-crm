@@ -7,7 +7,6 @@ import {
   DragStartEvent,
   KeyboardSensor,
   PointerSensor,
-  pointerWithin,
   rectIntersection,
   useDraggable,
   useDroppable,
@@ -25,12 +24,13 @@ import {
   Plus,
   X,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch, type SetStateAction } from "react";
 import { StageIndicator } from "@/components/crm/stage-indicator";
 import { monthlyAmount, shortAmount } from "@/lib/amo-amount";
 import { DateField } from "@/components/crm/date-field";
 import { createClient } from "@/lib/supabase/client";
+import { dbErrorText } from "@/lib/db-errors";
 import { startRouteProgress } from "../route-progress";
 
 type OpenEvent = { metaKey: boolean; ctrlKey: boolean; button: number };
@@ -83,6 +83,17 @@ type Props = {
   lostReasons: Option[];
   taskTypes: Option[];
   activeAssignees: Option[];
+  query: BoardQuery;
+};
+export type BoardQuery = {
+  pageSize: number;
+  owner: string | null;
+  project: string | null;
+  tag: string | null;
+  source: string | null;
+  flag: "no_next_step" | "overdue" | "today" | null;
+  sort: string;
+  lostKey: string | null;
 };
 type Gate = {
   deal: BoardCard;
@@ -247,6 +258,31 @@ function KettleCard({ deal, onOpen, onClaim, index = 0 }: { deal: BoardCard; onO
   );
 }
 
+function ShowMoreButton({ total, shown, loading, onShowMore }: { total: number; shown: number; loading: boolean; onShowMore: () => void }) {
+  if (shown >= total) return null;
+  return (
+    <button className="btn-ghost column-show-more" type="button" onClick={onShowMore} disabled={loading}>
+      {loading ? "Загрузка…" : `Показать ещё (${total - shown})`}
+    </button>
+  );
+}
+
+// Клиентская навигация по счётчикам идёт через кэш роутера (staleTimes.dynamic),
+// поэтому URL и чип могут обновиться, а серверные данные доски — нет.
+// Guard сверяет флаг в URL с флагом, под который сервер собрал доску,
+// и при расхождении дёргает refresh: повторный проход уже свежий, цикла нет.
+const KNOWN_FLAGS = ["no_next_step", "overdue", "today"];
+export function BoardRefreshGuard({ serverFlag }: { serverFlag: string }) {
+  const router = useRouter();
+  const params = useSearchParams();
+  const raw = params.get("flag") ?? "";
+  const urlFlag = KNOWN_FLAGS.includes(raw) ? raw : "";
+  useEffect(() => {
+    if (urlFlag !== serverFlag) router.refresh();
+  }, [urlFlag, serverFlag, router]);
+  return null;
+}
+
 function BoardColumn({
   column,
   stages,
@@ -254,6 +290,8 @@ function BoardColumn({
   onCreate,
   onClaim,
   onToggle,
+  onShowMore,
+  loadingMore,
 }: {
   column: BoardColumn;
   stages: { id: string; kind: "open" | "won" | "lost"; position: number }[];
@@ -261,6 +299,8 @@ function BoardColumn({
   onCreate: () => void;
   onClaim: (id: string) => void;
   onToggle?: () => void;
+  onShowMore: (columnId: string) => void;
+  loadingMore: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
   const [menuOpen, setMenuOpen] = useState(false);
@@ -280,16 +320,17 @@ function BoardColumn({
       <div className="column-track motion-list">
       {column.deals.map((deal, index) => column.kettle ? <KettleCard key={deal.id} deal={deal} index={index} onOpen={(event) => onOpen(deal.id, event)} onClaim={() => onClaim(deal.id)} /> : <DraggableCard key={deal.id} deal={deal} index={index} onOpen={(event) => onOpen(deal.id, event)} />)}
       {column.deals.length === 0 && <div className="empty-column">Нет сделок</div>}
+      <ShowMoreButton total={column.total} shown={column.deals.length} loading={loadingMore} onShowMore={() => onShowMore(column.id)} />
       <button className="column-add-button" type="button" onClick={onCreate}><Plus size={14} /> Сделка</button>
       </div>
     </section>
   );
 }
 
-function LostColumn({ column, stages, expanded, onToggle, onOpen, onCreate }: { column: BoardColumn; stages: { id: string; kind: "open" | "won" | "lost"; position: number }[]; expanded: boolean; onToggle: () => void; onOpen: (id: string, event?: OpenEvent) => void; onCreate: () => void }) {
+function LostColumn({ column, stages, expanded, onToggle, onOpen, onCreate, onShowMore, loadingMore }: { column: BoardColumn; stages: { id: string; kind: "open" | "won" | "lost"; position: number }[]; expanded: boolean; onToggle: () => void; onOpen: (id: string, event?: OpenEvent) => void; onCreate: () => void; onShowMore: (columnId: string) => void; loadingMore: boolean }) {
   const { setNodeRef, isOver } = useDroppable({ id: "lost" });
   if (!expanded) return <button ref={setNodeRef} className={`closed-column ${isOver ? "drop-target" : ""}`} type="button" onClick={onToggle} aria-label={`Развернуть Отказ: ${column.total}`}><ChevronRight size={14} /><StageIndicator variant="dot" stage={{ id: column.id, kind: "lost", position: column.position ?? 0 }} stages={stages} /><span className="closed-column-label">Отказ</span><span className="pill">{column.total}</span></button>;
-  return <section ref={setNodeRef} className={`kanban-column lost-expanded ${isOver ? "drop-target" : ""}`}><div className="column-head"><button className="column-collapse" type="button" onClick={onToggle} aria-label="Свернуть Отказ"><ChevronDown size={14} /></button><StageIndicator stage={{ id: column.id, kind: "lost", position: column.position ?? 0 }} stages={stages} name={column.title} /><span className="pill">{column.total}</span></div><div className="column-track motion-list">{column.deals.map((deal, index) => <DraggableCard key={deal.id} deal={deal} index={index} onOpen={(event) => onOpen(deal.id, event)} />)}{column.deals.length === 0 && <div className="empty-column">Нет отказов</div>}<button className="column-add-button" type="button" onClick={onCreate}><Plus size={14} /> Сделка</button></div></section>;
+  return <section ref={setNodeRef} className={`kanban-column lost-expanded ${isOver ? "drop-target" : ""}`}><div className="column-head"><button className="column-collapse" type="button" onClick={onToggle} aria-label="Свернуть Отказ"><ChevronDown size={14} /></button><StageIndicator stage={{ id: column.id, kind: "lost", position: column.position ?? 0 }} stages={stages} name={column.title} /><span className="pill">{column.total}</span></div><div className="column-track motion-list">{column.deals.map((deal, index) => <DraggableCard key={deal.id} deal={deal} index={index} onOpen={(event) => onOpen(deal.id, event)} />)}{column.deals.length === 0 && <div className="empty-column">Нет отказов</div>}<ShowMoreButton total={column.total} shown={column.deals.length} loading={loadingMore} onShowMore={() => onShowMore(column.id)} /><button className="column-add-button" type="button" onClick={onCreate}><Plus size={14} /> Сделка</button></div></section>;
 }
 
 function GateDialog({ gate, form, setForm, props, pending, onCancel, onSubmit }: { gate: Gate; form: GateForm; setForm: Dispatch<SetStateAction<GateForm>>; props: Props; pending: boolean; onCancel: () => void; onSubmit: () => void }) {
@@ -317,10 +358,10 @@ export function DealsBoard(props: Props) {
   const [gate, setGate] = useState<Gate | null>(null);
   const [mobileConfirmation, setMobileConfirmation] = useState<MobileConfirmation | null>(null);
   const [gateForm, setGateForm] = useState<GateForm>({ qualification: "", reasonId: "", comment: "", taskTitle: "", taskDueAt: "", taskTypeId: props.taskTypes[0]?.id ?? "", taskAssigneeId: props.currentUserId });
+  const [loadingMore, setLoadingMore] = useState<Record<string, boolean>>({});
   const lastDragAt = useRef(0);
   const maps = useMemo(() => new Map(columns.flatMap((column) => column.deals).map((deal) => [deal.id, deal])), [columns]);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(KeyboardSensor));
-  const collisionDetectionStrategy = (args: Parameters<typeof pointerWithin>[0]) => args.pointerCoordinates ? pointerWithin(args) : rectIntersection(args);
   useEffect(() => { if (!feedback) return; const timer = window.setTimeout(() => setFeedback(null), 2800); return () => window.clearTimeout(timer); }, [feedback]);
   useEffect(() => { const onKey = (event: KeyboardEvent) => { if (event.key === "Escape" && !pending) { setGate(null); setMobileConfirmation(null); } }; window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey); }, [pending]);
   const openDeal = (id: string, event?: OpenEvent) => {
@@ -339,7 +380,7 @@ export function DealsBoard(props: Props) {
     if (taskDueAt && (!Number.isFinite(taskDueAt.getTime()) || taskDueAt.getTime() <= Date.now())) { setFeedback("Дата следующего шага должна быть в будущем"); return; }
     setPending(true);
     const result = await createClient().rpc("transition_crm_deal", { p_deal_id: gate.deal.id, p_stage_id: gate.target.id, p_owner_id: gate.lost ? gate.deal.owner_id : gate.deal.owner_id ?? props.currentUserId, p_lost_reason_id: gate.lost ? gateForm.reasonId : null, p_lost_comment: gate.lost ? gateForm.comment || null : null, p_qualification: gateForm.qualification || null, p_task_title: gate.needsTask ? gateForm.taskTitle.trim() : null, p_task_due_at: gate.needsTask ? taskDueAt?.toISOString() ?? null : null, p_task_type_id: gate.needsTask ? gateForm.taskTypeId : null, p_task_assignee_id: gate.needsTask ? gateForm.taskAssigneeId : null });
-    if (result.error || !result.data) { setFeedback(result.error?.message ?? "Сделка недоступна"); setPending(false); return; }
+    if (result.error || !result.data) { setFeedback(dbErrorText(result.error, "Сделка недоступна")); setPending(false); return; }
     const transition = result.data as { stage_id: string; owner_id: string | null; status: BoardCard["status"] };
     const confirmed = { ...gate.deal, stage_id: transition.stage_id, owner_id: transition.owner_id, status: transition.status, next_task: gate.needsTask && taskDueAt ? { title: gateForm.taskTitle.trim(), due_at: taskDueAt.toISOString() } : gate.deal.next_task };
     setColumns((current) => { const removed = current.map((column) => column.id === (gate.deal.stage_id || "kettle") || column.deals.some((item) => item.id === gate.deal.id) ? { ...column, total: column.deals.some((item) => item.id === gate.deal.id) ? Math.max(0, column.total - 1) : column.total, deals: column.deals.filter((item) => item.id !== gate.deal.id) } : column); if (gate.lost) return removed.map((column) => column.id === "lost" ? { ...column, total: column.total + 1, deals: [confirmed, ...column.deals] } : column); return removed.map((column) => column.id === gate.target.id ? { ...column, total: column.total + 1, deals: [confirmed, ...column.deals] } : column); });
@@ -373,10 +414,36 @@ export function DealsBoard(props: Props) {
     setColumns(columns.map((column) => column.id === source.id ? { ...column, total: column.total - 1, deals: column.deals.filter((item) => item.id !== dealId) } : column.id === target.id ? { ...column, total: column.total + 1, deals: [nextDeal, ...column.deals] } : column));
     setPending(true);
     const result = await createClient().rpc("transition_crm_deal", { p_deal_id: dealId, p_stage_id: target.kettle ? (deal.status === "won" ? targetStage.id : deal.stage_id) : target.id, p_owner_id: target.kettle ? null : nextDeal.owner_id, p_lost_reason_id: null, p_lost_comment: null, p_qualification: null, p_task_title: null, p_task_due_at: null, p_task_type_id: null, p_task_assignee_id: null });
-    if (result.error || !result.data) { setColumns(snapshot); setFeedback(result.error?.message ?? "Сделка не найдена или недоступна"); setPending(false); return; }
+    if (result.error || !result.data) { setColumns(snapshot); setFeedback(dbErrorText(result.error, "Сделка не найдена или недоступна")); setPending(false); return; }
     setPending(false); setFeedback("Сделка перемещена");
   }
   function claimDeal(dealId: string) { const firstOpen = columns.find((column) => column.kind === "open"); if (firstOpen) void moveDeal(dealId, firstOpen.id, true); }
+  // Догрузка одной колонки без правки SQL: crm_board нумерует сделки внутри
+  // каждой колонки (row_number по partition), и p_page_size режет каждую
+  // колонку отдельно. Просим ту же доску с большим лимитом и забираем
+  // из ответа только нужную колонку (ключ «Отказа» — id этапа, а не "lost").
+  async function showMore(columnId: string) {
+    const column = columns.find((item) => item.id === columnId);
+    if (!column || loadingMore[columnId] || column.deals.length >= column.total) return;
+    setLoadingMore((current) => ({ ...current, [columnId]: true }));
+    setFeedback(null);
+    const result = await createClient().rpc("crm_board", {
+      p_page: 0,
+      p_page_size: column.deals.length + props.query.pageSize,
+      p_owner: props.query.owner,
+      p_project: props.query.project,
+      p_tag: props.query.tag,
+      p_source: props.query.source,
+      p_flag: props.query.flag,
+      p_sort: props.query.sort,
+    });
+    setLoadingMore((current) => ({ ...current, [columnId]: false }));
+    const payload = (!result.error && result.data ? result.data : null) as { columns: Record<string, { deals: BoardCard[] }> } | null;
+    const key = columnId === "lost" ? (props.query.lostKey ?? "lost") : columnId;
+    const fresh = payload?.columns[key]?.deals;
+    if (!fresh) { setFeedback("Не удалось загрузить сделки"); return; }
+    setColumns((current) => current.map((item) => item.id === columnId ? { ...item, deals: fresh } : item));
+  }
   function onDragEnd(event: DragEndEvent) { lastDragAt.current = Date.now(); setActiveId(null); const targetId = event.over?.id ? String(event.over.id) : null; if (targetId) void moveDeal(String(event.active.id), targetId); }
   const visibleColumns = columns.filter((column) => column.id !== "lost");
   const lost = columns.find((column) => column.id === "lost");
@@ -385,10 +452,10 @@ export function DealsBoard(props: Props) {
     [columns],
   );
   return <>
-    <DndContext id="crm-deals-board" sensors={sensors} collisionDetection={collisionDetectionStrategy} onDragStart={onDragStart} onDragCancel={onDragCancel} onDragEnd={onDragEnd}>
+    <DndContext id="crm-deals-board" sensors={sensors} collisionDetection={rectIntersection} onDragStart={onDragStart} onDragCancel={onDragCancel} onDragEnd={onDragEnd}>
       <div className="board">
-        {visibleColumns.map((column) => <BoardColumn key={column.id} column={column} stages={stageList} onOpen={openDeal} onCreate={createDeal} onClaim={claimDeal} />)}
-        {lost && <LostColumn column={lost} stages={stageList} expanded={lostExpanded} onToggle={() => setLostExpanded((expanded) => !expanded)} onOpen={openDeal} onCreate={createDeal} />}
+        {visibleColumns.map((column) => <BoardColumn key={column.id} column={column} stages={stageList} onOpen={openDeal} onCreate={createDeal} onClaim={claimDeal} onShowMore={showMore} loadingMore={Boolean(loadingMore[column.id])} />)}
+        {lost && <LostColumn column={lost} stages={stageList} expanded={lostExpanded} onToggle={() => setLostExpanded((expanded) => !expanded)} onOpen={openDeal} onCreate={createDeal} onShowMore={showMore} loadingMore={Boolean(loadingMore[lost.id])} />}
       </div>
       <DragOverlay>{activeDeal ? <PresentationalCard deal={activeDeal} dragging /> : null}</DragOverlay>
     </DndContext>

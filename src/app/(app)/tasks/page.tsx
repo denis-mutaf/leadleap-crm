@@ -42,6 +42,7 @@ type ViewTask = TaskRow & {
   overdueLabel?: string;
   typeCode?: string | null;
 };
+type Person = { id: string; full_name?: string | null };
 const typeFallback: Record<string, string> = {
   call: "Звонок",
   meeting: "Встреча",
@@ -99,6 +100,7 @@ export default async function TasksPage({
     from?: string;
     to?: string;
     q?: string;
+    sort?: string;
   }>;
 }) {
   const profile = await getCurrentProfile();
@@ -122,6 +124,7 @@ export default async function TasksPage({
   const toDate = /^\d{4}-\d{2}-\d{2}$/.test(params.to ?? "")
     ? params.to
     : "";
+  const sort = params.sort === "created" ? "created" : "due";
   // Один и тот же набор фильтров ложится и на select(), и на head-счётчики, а
   // тип билдера Supabase меняется на каждом звене цепочки. Структурный дженерик
   // здесь уходит в TS2589 «instantiation is excessively deep»: рекурсия по
@@ -190,15 +193,21 @@ export default async function TasksPage({
   const safePage = totalPages > 0 ? Math.min(page, totalPages) : 1;
   const from = (safePage - 1) * pageSize;
   const to = from + pageSize - 1;
-  const filteredResult = await applyFilters(
+  const listBase = applyFilters(
     supabase.from("tasks").select(
-      "id, deal_id, contact_id, assignee_id, type_id, title, due_at, done_at, result_text",
+      "id, deal_id, contact_id, assignee_id, type_id, title, due_at, done_at, result_text, created_at",
     ),
-  )
-    .order("done_at", { ascending: true, nullsFirst: true })
-    .order("due_at", { ascending: true })
-    .order("id", { ascending: true })
-    .range(from, to);
+  );
+  const ordered =
+    sort === "created"
+      ? listBase
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+      : listBase
+          .order("done_at", { ascending: true, nullsFirst: true })
+          .order("due_at", { ascending: true })
+          .order("id", { ascending: true });
+  const filteredResult = await ordered.range(from, to);
   if (filteredResult.error)
     throw new Error(`Задачи: ${filteredResult.error.message}`);
   const rows = (filteredResult.data ?? []) as TaskRow[];
@@ -342,6 +351,23 @@ export default async function TasksPage({
       tasks: viewTasks.filter((task) => groupForTask(task) === "done"),
     },
   ].filter((group) => group.tasks.length);
+  // Пагинация держит фильтры: иначе переход на стр.2 сбрасывал assignee/type/q.
+  const pageLink = (nextPage: number) => {
+    const search = new URLSearchParams();
+    if (assignee !== "all") search.set("assignee", assignee);
+    if (typeId) search.set("type", typeId);
+    if (fromDate) search.set("from", fromDate);
+    if (toDate) search.set("to", toDate);
+    if (query) search.set("q", query);
+    if (sort !== "due") search.set("sort", sort);
+    if (nextPage > 1) search.set("page", String(nextPage));
+    const text = search.toString();
+    return text ? `/tasks?${text}` : "/tasks";
+  };
+  const peopleOptions = (allPeople as Person[]).map((person) => ({
+    id: person.id,
+    name: person.full_name ?? "Сотрудник",
+  }));
   return (
     <div className="tasks-page">
       <header className="tasks-header">
@@ -356,17 +382,18 @@ export default async function TasksPage({
           <span className="view-switch-active">Список</span>
         </div>
         <span className="header-spacer" />
-        <Form action="/tasks" className={styles.searchForm} key={`search|${query}|${assignee}|${typeId}|${fromDate}|${toDate}`}>
+        <Form action="/tasks" className={styles.searchForm} key={`search|${query}|${assignee}|${typeId}|${fromDate}|${toDate}|${sort}`}>
           {assignee !== "all" && <input type="hidden" name="assignee" value={assignee} />}
           {typeId && <input type="hidden" name="type" value={typeId} />}
           {fromDate && <input type="hidden" name="from" value={fromDate} />}
           {toDate && <input type="hidden" name="to" value={toDate} />}
+          {sort !== "due" && <input type="hidden" name="sort" value={sort} />}
           <Search size={14} />
           <input name="q" defaultValue={query} placeholder="Поиск по задачам" aria-label="Поиск по задачам" />
           <button className="task-icon-button" type="submit" aria-label="Найти"><Search size={14} /></button>
         </Form>
       </div>
-      <AutoSubmitForm action="/tasks" className="tasks-filterbar" key={`filters|${assignee}|${typeId}|${fromDate}|${toDate}|${query}`}>
+      <AutoSubmitForm action="/tasks" className="tasks-filterbar" key={`filters|${assignee}|${typeId}|${fromDate}|${toDate}|${query}|${sort}`}>
         <label className={styles.filterField}>
           <span>Ответственный</span>
           <select name="assignee" defaultValue={assignee}>
@@ -389,6 +416,13 @@ export default async function TasksPage({
           <span>Период</span>
           <DateField name="from" defaultValue={fromDate} aria-label="Дата от" placeholder="с" autoSubmit clearable />
           <DateField name="to" defaultValue={toDate} aria-label="Дата до" placeholder="по" autoSubmit clearable />
+        </label>
+        <label className={styles.filterField}>
+          <span>Сортировка</span>
+          <select name="sort" defaultValue={sort}>
+            <option value="due">По сроку</option>
+            <option value="created">По созданию</option>
+          </select>
         </label>
         <input type="hidden" name="q" value={query} />
         <Link className={styles.clear} href="/tasks" aria-label="Сбросить фильтры"><X size={14} /></Link>
@@ -419,7 +453,7 @@ export default async function TasksPage({
                   : group.tasks.length}
               </b>
             </div>
-            {group.tasks.map((task) => <TaskRow key={task.id} task={task} actorId={profile.id} />)}
+            {group.tasks.map((task) => <TaskRow key={task.id} task={task} actorId={profile.id} people={peopleOptions} />)}
           </section>
         ))}
         {!groups.length && (
@@ -446,7 +480,7 @@ export default async function TasksPage({
         {totalPages > 1 && (
           <nav className="tasks-pagination" aria-label="Страницы задач">
             {safePage > 1 ? (
-              <Link href={`/tasks?page=${safePage - 1}`}>← Назад</Link>
+              <Link href={pageLink(safePage - 1)}>← Назад</Link>
             ) : (
               <span />
             )}
@@ -454,7 +488,7 @@ export default async function TasksPage({
               Страница {safePage} из {totalPages}
             </span>
             {safePage < totalPages ? (
-              <Link href={`/tasks?page=${safePage + 1}`}>Вперёд →</Link>
+              <Link href={pageLink(safePage + 1)}>Вперёд →</Link>
             ) : (
               <span />
             )}

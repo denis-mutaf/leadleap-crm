@@ -3,6 +3,7 @@ import { Plus, X } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { dbErrorText } from "@/lib/db-errors";
 type Option = { id: string; name: string };
 type Stage = Option & { kind: "open" | "won" | "lost" };
 type Owner = { id: string; full_name: string };
@@ -57,7 +58,7 @@ export function CreateDealModal({
       });
       if (n !== request.current) return;
       setSearching(false);
-      if (r.error) setError(r.error.message);
+      if (r.error) setError(dbErrorText(r.error, "Не удалось проверить дубликаты"));
       else setCandidates((r.data ?? []) as Candidate[]);
     }, 350);
     return () => window.clearTimeout(timer);
@@ -112,8 +113,21 @@ export function CreateDealModal({
   function toggle(xs: string[], id: string) {
     return xs.includes(id) ? xs.filter((x) => x !== id) : [...xs, id];
   }
+  function pluralDigits(n: number) {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return "цифра";
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "цифры";
+    return "цифр";
+  }
+  const phoneTouched = phone.length > 0;
+  const phoneInvalid = phoneTouched && digits.length < 8;
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (phoneInvalid) {
+      setError("Проверьте номер телефона: нужно минимум 8 цифр.");
+      return;
+    }
     if (
       !fullName.trim() ||
       digits.length < 8 ||
@@ -143,7 +157,7 @@ export function CreateDealModal({
       p_reuse_contact_id: selectedContact,
     });
     if (r.error) {
-      setError(r.error.message);
+      setError(dbErrorText(r.error, "Не удалось создать сделку"));
       setSaving(false);
       return;
     }
@@ -169,7 +183,7 @@ export function CreateDealModal({
         { p_phone: phone },
       );
       if (n !== request.current) return;
-      if (duplicateSearch.error) setError(duplicateSearch.error.message);
+      if (duplicateSearch.error) setError(dbErrorText(duplicateSearch.error, "Не удалось проверить дубликаты"));
       else setCandidates((duplicateSearch.data ?? []) as Candidate[]);
       return;
     }
@@ -229,6 +243,8 @@ export function CreateDealModal({
                     Телефон *
                     <input
                       value={phone}
+                      aria-invalid={phoneInvalid}
+                      aria-describedby={phoneInvalid ? "create-deal-phone-error" : undefined}
                       onChange={(e) => {
                         request.current += 1;
                         setPhone(e.target.value);
@@ -241,6 +257,11 @@ export function CreateDealModal({
                       }}
                       placeholder="+373 60000000"
                     />
+                    {phoneInvalid && (
+                      <span id="create-deal-phone-error" className="create-deal-hint motion-fade-up" role="alert">
+                        В номере сейчас {digits.length} {pluralDigits(digits.length)} — нужно минимум 8 цифр.
+                      </span>
+                    )}
                   </label>
                 </div>
                 {searching && (

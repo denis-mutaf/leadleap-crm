@@ -47,6 +47,7 @@ type Props = {
   query: string;
   owner: string;
   stage: string;
+  flag: string;
   owners: { id: string; full_name: string }[];
   stages: { id: string; name: string; kind: string; position: number }[];
   tags: Option[];
@@ -56,6 +57,12 @@ type Props = {
 };
 
 type Action = "stage" | "owner" | "tag";
+
+const FLAG_LABELS: Record<string, string> = {
+  overdue: "Просрочено",
+  today: "На сегодня",
+  no_next_step: "Без следующего шага",
+};
 
 function href(params: Record<string, string | number | undefined>) {
   const search = new URLSearchParams();
@@ -181,6 +188,7 @@ export function DealsTableView(p: Props) {
     q: p.query,
     owner: p.owner,
     stage: p.stage,
+    flag: p.flag,
     sort: p.sort,
     dir: p.direction,
   };
@@ -323,8 +331,15 @@ export function DealsTableView(p: Props) {
         </select>
         <input type="hidden" name="sort" value={p.sort} />
         <input type="hidden" name="dir" value={p.direction} />
+        {p.flag ? <input type="hidden" name="flag" value={p.flag} /> : null}
         <button type="submit" className="btn btn-primary">Применить</button>
-        {(p.query || p.owner || p.stage) && <Link href="/deals/table">Сбросить</Link>}
+        {p.flag ? (
+          <Link className="filter-chip" href={href({ ...common, flag: undefined, page: undefined })} aria-label="Снять фильтр">
+            {FLAG_LABELS[p.flag] ?? p.flag}
+            <X size={12} aria-hidden="true" />
+          </Link>
+        ) : null}
+        {(p.query || p.owner || p.stage || p.flag) && <Link href="/deals/table">Сбросить</Link>}
         <span className={styles.sortChip} title="Активная сортировка">
           <ArrowDownUp size={12} aria-hidden="true" />
           Сортировка: {SORT_LABELS[p.sort] ?? p.sort}
@@ -405,8 +420,8 @@ export function DealsTableView(p: Props) {
       <nav className={styles.pagination} aria-label="Пагинация">
         <span>Страница {p.page + 1} из {pages} · найдено {p.total}</span>
         <span className={styles.pageLinks}>
-          {p.page > 0 && <Link href={href({ ...common, page: p.page - 1 })}><ChevronLeft size={16} />Назад</Link>}
-          {p.page + 1 < pages && <Link href={href({ ...common, page: p.page + 1 })}>Вперёд<ChevronRight size={16} /></Link>}
+          {p.page > 0 && <Link href={href({ ...common, page: p.page > 1 ? p.page : undefined })}><ChevronLeft size={16} />Назад</Link>}
+          {p.page + 1 < pages && <Link href={href({ ...common, page: p.page + 2 })}>Вперёд<ChevronRight size={16} /></Link>}
         </span>
       </nav>
       {count > 0 && <div className={styles.bulkSpacer} aria-hidden="true" />}

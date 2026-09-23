@@ -38,9 +38,10 @@ export default async function DealsTablePage({
   if (profile.role === "builder") redirect("/reports");
   const params = await searchParams;
   const requestedPage = Number.parseInt(firstString(params.page), 10);
+  // В адресе страница с единицы (?page=2 — вторая), внутри — с нуля.
   const page =
-    Number.isSafeInteger(requestedPage) && requestedPage > 0
-      ? Math.min(requestedPage, 100_000)
+    Number.isSafeInteger(requestedPage) && requestedPage > 1
+      ? Math.min(requestedPage - 1, 100_000)
       : 0;
   const sortParam = firstString(params.sort);
   const sort = SORT_FIELDS.has(sortParam) ? sortParam : "activity";
@@ -52,44 +53,50 @@ export default async function DealsTablePage({
   const stage = isUuid(stageParam) ? stageParam : "";
   const supabase = await createClient();
 
-  const sortColumn: Record<string, string> = {
-    created: "created_at",
-    activity: "updated_at",
-    contact: "contact_id",
-    stage: "stage_id",
-    owner: "owner_id",
-    tags: "id",
-    task: "updated_at",
-  };
-  const selectedSortColumn = sortColumn[sort] ?? "updated_at";
-  const filter = query ? `%${query}%` : "";
+  const flagParam = firstString(params.flag);
+  const flag = ["overdue", "today", "no_next_step"].includes(flagParam) ? flagParam : "";
   const offset = page * PAGE_SIZE;
-  const lastRow = offset + PAGE_SIZE - 1;
-  let dataQuery = supabase
-    .from("deals")
-    .select(
-      "id, contact_id, owner_id, stage_id, status, title, object_text, created_at, updated_at, contact:contacts!deals_contact_id_fkey(full_name)",
-      { count: "exact" },
-    );
-  dataQuery = dataQuery.is("deleted_at", null);
-  if (owner) {
-    dataQuery = dataQuery.eq("owner_id", owner);
+  // Порядок, фильтры и поиск (включая имя контакта и телефон) считает
+  // crm_deals_table; здесь только дочитываем строки страницы в её порядке.
+  const order = await supabase.rpc("crm_deals_table", {
+    p_q: query || null,
+    p_owner: owner || null,
+    p_stage: stage || null,
+    p_flag: flag || null,
+    p_sort: sort,
+    p_dir: direction,
+    p_offset: offset,
+    p_limit: PAGE_SIZE,
+  });
+  const orderRows = (order.data ?? []) as Array<{ id: string; total: number }>;
+  const orderedIds = orderRows.map((row) => row.id);
+  // Страница за концом списка (фильтр сузил выдачу) — на первую, а не «найдено 0».
+  if (!order.error && !orderedIds.length && offset > 0) {
+    const first = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      const item = Array.isArray(value) ? value[0] : value;
+      if (item && key !== "page") first.set(key, item);
+    }
+    redirect(`/deals/table?${first}`);
   }
-  if (stage) {
-    dataQuery = dataQuery.eq("stage_id", stage);
-  }
-  if (query) {
-    dataQuery = dataQuery.or(
-      `object_text.ilike.${filter},title.ilike.${filter}`,
-    );
-  }
-  const rows =
-    lastRow >= offset
-      ? await dataQuery
-          .order(selectedSortColumn, { ascending: direction === "asc" })
-          .order("id", { ascending: true })
-          .range(offset, lastRow)
-      : { data: [], error: null, count: 0 };
+  const pageRows = order.error
+    ? { data: null, error: order.error }
+    : orderedIds.length
+      ? await supabase
+          .from("deals")
+          .select(
+            "id, contact_id, owner_id, stage_id, status, title, object_text, created_at, updated_at, contact:contacts!deals_contact_id_fkey(full_name)",
+          )
+          .in("id", orderedIds)
+      : { data: [], error: null };
+  const position = new Map(orderedIds.map((id, index) => [id, index]));
+  const rows = {
+    error: pageRows.error,
+    count: Number(orderRows[0]?.total ?? 0),
+    data: (pageRows.data ?? []).sort(
+      (a, b) => (position.get(a.id) ?? 0) - (position.get(b.id) ?? 0),
+    ),
+  };
   if (rows.error) {
     console.error("[deals/table]", rows.error);
     const retryParams = new URLSearchParams();
@@ -391,6 +398,7 @@ export default async function DealsTablePage({
         query={query}
         owner={owner}
         stage={stage}
+        flag={flag}
         owners={owners.data ?? []}
         stages={stages.data ?? []}
         tags={tags.data ?? []}

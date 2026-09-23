@@ -241,6 +241,21 @@
 
 .field-value.is-empty { color: var(--muted-foreground); }
 
+/* Значение только для чтения: та же сетка и размер, что у .field-value, но без
+   наведения и курсора — не выглядит кнопкой. */
+.field-static {
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  margin-left: -8px;
+  color: var(--foreground);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.field-static.is-empty { color: var(--muted-foreground); }
+
 .field-value:disabled { cursor: default; }
 
 .field-value:disabled:hover { background: transparent; }

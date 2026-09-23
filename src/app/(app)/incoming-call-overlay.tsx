@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { dbErrorText } from "@/lib/db-errors";
 import styles from "./incoming-call-overlay.module.css";
 
 type Notice = {
@@ -432,7 +433,7 @@ export function IncomingCallOverlay({
         .eq("id", notice.id);
       setNotice((current) => current ? { ...current, kind: "incoming_call", contact_id: contactResult.data.id, deal_id: dealResult.data.id } : current);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Не удалось создать сделку");
+      setError(dbErrorText(cause, "Не удалось создать сделку"));
     } finally {
       pendingRef.current = null;
       setPending(null);

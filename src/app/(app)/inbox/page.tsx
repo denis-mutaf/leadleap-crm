@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { Inbox, MessageCircle, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { dbErrorText } from "@/lib/db-errors";
 import { getCurrentProfile } from "@/lib/auth";
 import { EmptyState } from "@/components/crm/empty-state";
 import type { Profile } from "@/lib/types";
@@ -66,7 +67,7 @@ async function loadList(
       supabase.from("contacts").select("id").ilike("full_name", `%${term}%`).limit(200),
     ]);
     for (const result of [byMessage, byName, byContact])
-      if (result.error) errors.push(`Поиск: ${result.error.message}`);
+      if (result.error) errors.push(`Поиск: ${dbErrorText(result.error)}`);
     const ids = new Set<string>();
     for (const row of byMessage.data ?? []) ids.add(row.conversation_id as string);
     for (const row of byName.data ?? []) ids.add(row.id as string);
@@ -78,7 +79,7 @@ async function loadList(
         .in("contact_id", contactIds)
         .limit(500);
       if (byContactConversations.error)
-        errors.push(`Поиск по контактам: ${byContactConversations.error.message}`);
+        errors.push(`Поиск по контактам: ${dbErrorText(byContactConversations.error)}`);
       for (const row of byContactConversations.data ?? []) ids.add(row.id as string);
     }
     matched = [...ids];
@@ -107,24 +108,30 @@ async function loadList(
     listResult = await listQuery((safePage - 1) * PAGE_SIZE);
     total = listResult.count ?? total;
   }
-  if (listResult.error) errors.push(`Диалоги: ${listResult.error.message}`);
+  if (listResult.error) errors.push(`Диалоги: ${dbErrorText(listResult.error)}`);
   const conversations = (listResult.data ?? []) as unknown as ConversationRow[];
 
   let selected = conversations.find((item) => item.id === selectedId);
   if (!selected && selectedId) {
-    const selectedResult = await supabase
-      .from("conversations")
-      .select(COLUMNS_JOINED)
-      .eq("id", selectedId)
-      .maybeSingle();
-    if (selectedResult.error) errors.push(`Выбранный диалог: ${selectedResult.error.message}`);
+    // Однократный повтор: при возврате «Назад» со сделки панель иногда
+    // оставалась закрытой при живом ?conversation= — добор диалога по id
+    // с первого раза не приезжал, повторный заход (F5) его находил.
+    const loadSelected = () =>
+      supabase
+        .from("conversations")
+        .select(COLUMNS_JOINED)
+        .eq("id", selectedId)
+        .maybeSingle();
+    let selectedResult = await loadSelected();
+    if (selectedResult.error) selectedResult = await loadSelected();
+    if (selectedResult.error) errors.push("Выбранный диалог временно недоступен");
     selected = (selectedResult.data as unknown as ConversationRow | null) ?? undefined;
   }
   if (!selectedId) selected = conversations[0];
 
   const [allCount, unansweredCount, mineCount] = await counting;
   for (const result of [allCount, unansweredCount, mineCount])
-    if (result.error) errors.push(`Счётчики: ${result.error.message}`);
+    if (result.error) errors.push(`Счётчики: ${dbErrorText(result.error)}`);
 
   return {
     conversations,

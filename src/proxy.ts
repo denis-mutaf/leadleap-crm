@@ -17,6 +17,7 @@ export async function proxy(request: NextRequest) {
   const { response, userId } = await updateSession(request);
 
   const isLoginPage = pathname === "/login";
+  const isSetPasswordPage = pathname === "/auth/set-password";
 
   function redirectWithSession(path: string) {
     const url = request.nextUrl.clone();
@@ -37,7 +38,7 @@ export async function proxy(request: NextRequest) {
     return unauthorized;
   }
 
-  if (!userId && !isLoginPage) {
+  if (!userId && !isLoginPage && !isSetPasswordPage) {
     return redirectWithSession("/login");
   }
 

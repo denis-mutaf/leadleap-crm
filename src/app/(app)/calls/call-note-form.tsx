@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { dbErrorText } from "@/lib/db-errors";
 import styles from "./calls.module.css";
 
 export function CallNoteForm({
@@ -63,7 +64,7 @@ export function CallNoteForm({
           setEditing(false);
           router.refresh();
         } catch (err) {
-          toast.error(err instanceof Error ? err.message : "Не удалось сохранить");
+          toast.error(dbErrorText(err, "Не удалось сохранить"));
         } finally {
           setSaving(false);
         }

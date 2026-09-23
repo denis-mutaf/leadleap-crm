@@ -33,7 +33,8 @@ type Props = Base &
 
 /**
  * Поле карточки, которое правится на месте.
- * Enter — сохранить, Escape — отменить, потеря фокуса — сохранить.
+ * Enter — сохранить (в многострочном — Shift+Enter переносит строку),
+ * Escape — отменить, потеря фокуса — сохранить.
  * Значение обновляется оптимистично и откатывается при ошибке.
  */
 export function InlineField({
@@ -90,7 +91,7 @@ export function InlineField({
     setSaving(false);
     if (result.error) {
       setCurrent(previous);
-      toast.error(`Не сохранилось: ${result.error.message}`);
+      toast.error(`${label} не сохранилось. Попробуйте ещё раз.`);
       return;
     }
     toast.success(`${label} — сохранено`);
@@ -135,8 +136,10 @@ export function InlineField({
             onBlur={(event) => commit(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Escape") setEditing(false);
-              if (event.key === "Enter" && (event.metaKey || event.ctrlKey))
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
                 commit(draft);
+              }
             }}
           />
         ) : type === "date" ? (
@@ -179,7 +182,7 @@ export function InlineField({
   );
 }
 
-/** Поле только для чтения — та же сетка, чтобы карточка не расползалась. */
+/** Поле только для чтения — та же сетка, но обычный текст без вида кнопки. */
 export function ReadField({
   label,
   icon,
@@ -195,7 +198,7 @@ export function ReadField({
   return (
     <div className="field-row">
       <span>{icon}{label}</span>
-      <span className={`field-value ${empty ? "is-empty" : ""}`} style={{ cursor: "default" }}>
+      <span className={`field-static ${empty ? "is-empty" : ""}`}>
         {empty ? placeholder : String(value)}
       </span>
     </div>

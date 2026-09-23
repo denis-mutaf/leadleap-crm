@@ -3,6 +3,7 @@ import { BriefcaseBusiness, ListTodo, Search, Users, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { dbErrorText } from "@/lib/db-errors";
 import { createClient } from "@/lib/supabase/client";
 
 type Result = {
@@ -12,21 +13,16 @@ type Result = {
   meta?: string;
   href: string;
 };
-type Row = {
+type SearchRow = {
+  kind: "contact" | "deal" | "task";
   id: string;
   title: string;
-  due_at?: string;
-  deal_id?: string | null;
-  contact_id?: string | null;
-  status?: string;
-  object_text?: string | null;
+  meta: string | null;
+  deal_id: string | null;
 };
 const LIMIT = 8,
-  CHUNK = 100,
   digits = (value: string) => value.replace(/\D/g, ""),
   isPhone = (value: string) => /^[\d\s+()\-]+$/.test(value);
-const likeLiteral = (value: string) =>
-  value.replace(/[\\%_]/g, (character) => `\\${character}`);
 const highlight = (value: string, query: string): ReactNode => {
   const term = query.trim();
   if (!term) return value;
@@ -35,20 +31,6 @@ const highlight = (value: string, query: string): ReactNode => {
     part.toLowerCase() === term.toLowerCase() ? <mark key={index}>{part}</mark> : part,
   );
 };
-async function chunks<T>(
-  ids: string[],
-  load: (
-    ids: string[],
-  ) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
-) {
-  const rows: T[] = [];
-  for (let i = 0; i < ids.length; i += CHUNK) {
-    const result = await load(ids.slice(i, i + CHUNK));
-    if (result.error) throw new Error(result.error.message);
-    rows.push(...(result.data ?? []));
-  }
-  return rows;
-}
 
 export function GlobalSearch() {
   const [open, setOpen] = useState(false),
@@ -140,7 +122,6 @@ export function GlobalSearch() {
     if (!open) return;
     inputRef.current?.focus();
     const value = query.trim(),
-      pattern = likeLiteral(value),
       phone = isPhone(value),
       phoneDigits = digits(value);
     invalidate();
@@ -160,287 +141,61 @@ export function GlobalSearch() {
       setLoading(true);
       setError(null);
       try {
-        const db = createClient();
-        const textSearch = !phone
-          ? Promise.all([
-              db
-                .from("deals")
-                .select("id, title, object_text, status")
-                .ilike("title", `%${pattern}%`)
-                .limit(LIMIT),
-              db
-                .from("deals")
-                .select("id, title, object_text, status")
-                .ilike("object_text", `%${pattern}%`)
-                .limit(LIMIT),
-              db
-                .from("tasks")
-                .select("id, title, due_at, deal_id")
-                .is("done_at", null)
-                .ilike("title", `%${pattern}%`)
-                .limit(LIMIT),
-            ]).then(
-              ([dealsByTitle, dealsByObject, tasksByTitle]) => ({
-                dealsByTitle,
-                dealsByObject,
-                tasksByTitle,
-                error: null,
-              }),
-              (cause) => ({
-                dealsByTitle: null,
-                dealsByObject: null,
-                tasksByTitle: null,
-                error:
-                  cause instanceof Error ? cause : new Error(String(cause)),
-              }),
-            )
-          : null;
-        let contactIds: string[] = [];
-        if (phone) {
-          const [a, b] = await Promise.all([
-            db
-              .from("contact_phones")
-              .select("contact_id")
-              .ilike("phone", `%${phoneDigits.slice(-4)}%`)
-              .limit(LIMIT),
-            db
-              .from("imported_contact_phones")
-              .select("contact_id")
-              .ilike("normalized_phone", `%${phoneDigits}%`)
-              .limit(LIMIT),
-          ]);
-          if (a.error || b.error)
-            throw new Error(a.error?.message ?? b.error?.message);
-          contactIds = [
-            ...new Set(
-              [...(a.data ?? []), ...(b.data ?? [])].map(
-                (row) => row.contact_id,
-              ),
-            ),
-          ];
-        } else {
-          const a = await db
-            .from("contacts")
-            .select("id")
-            .ilike("full_name", `%${pattern}%`)
-            .limit(LIMIT);
-          if (a.error) throw new Error(a.error.message);
-          contactIds = (a.data ?? []).map((row) => row.id);
-        }
-        const contacts = await chunks(contactIds.slice(0, LIMIT), (ids) =>
-          db.from("contacts").select("id, full_name").in("id", ids),
-        );
+        // Один вызов: телефон нормализует и ищет по всем цифрам база
+        // (crm_global_search), она же подписывает сделку этапом.
+        const result = await createClient().rpc("crm_global_search", {
+          p_q: value,
+          p_limit: LIMIT,
+        });
         if (current !== requestId.current) return;
-        const names = new Map(contacts.map((row) => [row.id, row.full_name]));
-        if (contactIds.length) {
-          setGroups([
-            {
-              label: "Контакты",
-              icon: Users,
-              items: contactIds.slice(0, LIMIT).map((id) => ({
-                id,
-                kind: "contact",
-                title: names.get(id) ?? "Контакт",
-                meta: phone ? "Найден по номеру" : undefined,
-                href: `/contacts/${id}`,
-              })),
-            },
-          ]);
-        }
-        if (!phone && textSearch) {
-          const direct = await textSearch;
-          if (current !== requestId.current) return;
-          if (direct.error) {
-            setError(`Прямой поиск: ${direct.error.message}`);
-          } else {
-            const directDeals = [
-              ...new Map(
-                [
-                  ...(direct.dealsByTitle?.data ?? []),
-                  ...(direct.dealsByObject?.data ?? []),
-                ].map((row) => [row.id, row]),
-              ).values(),
-            ];
-            const directTasks = direct.tasksByTitle?.data ?? [];
-            setGroups((previous) => [
-              ...previous,
-              ...(directDeals.length
-                ? [
-                    {
-                      label: "Сделки",
-                      icon: BriefcaseBusiness,
-                      items: directDeals
-                        .slice(0, LIMIT)
-                        .map((row) => ({
-                          id: row.id,
-                          kind: "deal" as const,
-                          title: row.title || row.object_text || "Без названия",
-                          meta: row.status,
-                          href: `/deals/${row.id}`,
-                        })),
-                    },
-                  ]
-                : []),
-              ...(directTasks.length
-                ? [
-                    {
-                      label: "Задачи",
-                      icon: ListTodo,
-                      items: directTasks
-                        .slice(0, LIMIT)
-                        .map((row) => ({
-                          id: row.id,
-                          kind: "task" as const,
-                          title: row.title,
-                          meta: row.due_at
-                            ? new Date(row.due_at).toLocaleDateString("ru-RU", { timeZone: "Europe/Chisinau" })
-                            : undefined,
-                          href: row.deal_id
-                            ? `/deals/${row.deal_id}`
-                            : "/tasks",
-                        })),
-                    },
-                  ]
-                : []),
-            ]);
-          }
-        }
-        const directDeals = contactIds.length
-          ? await chunks<Row>(contactIds, (ids) =>
-              db
-                .from("deals")
-                .select("id, title, object_text, status, contact_id")
-                .in("contact_id", ids)
-                .limit(LIMIT),
-            )
-          : [];
-        const links = contactIds.length
-          ? await chunks<{ deal_id: string }>(contactIds, (ids) =>
-              db
-                .from("deal_contacts")
-                .select("deal_id")
-                .in("contact_id", ids)
-                .limit(LIMIT),
-            )
-          : [];
-        const dealIds = [
-          ...new Set([
-            ...directDeals.map((row) => row.id),
-            ...links.map((row) => row.deal_id),
-          ]),
-        ].slice(0, LIMIT);
-        const linkedDeals = dealIds.length
-          ? await chunks<Row>(dealIds, (ids) =>
-              db
-                .from("deals")
-                .select("id, title, object_text, status, contact_id")
-                .in("id", ids)
-                .limit(LIMIT),
-            )
-          : [];
-        let deals = [
-          ...new Map(
-            [...directDeals, ...linkedDeals].map((row) => [row.id, row]),
-          ).values(),
-        ];
-        let tasks: Row[] = [];
-        if (contactIds.length || dealIds.length) {
-          const [a, b] = await Promise.all([
-            contactIds.length
-              ? chunks<Row>(contactIds, (ids) =>
-                  db
-                    .from("tasks")
-                    .select("id, title, due_at, deal_id, contact_id")
-                    .is("done_at", null)
-                    .in("contact_id", ids)
-                    .limit(LIMIT),
-                )
-              : Promise.resolve([]),
-            dealIds.length
-              ? chunks<Row>(dealIds, (ids) =>
-                  db
-                    .from("tasks")
-                    .select("id, title, due_at, deal_id, contact_id")
-                    .is("done_at", null)
-                    .in("deal_id", ids)
-                    .limit(LIMIT),
-                )
-              : Promise.resolve([]),
-          ]);
-          tasks = [
-            ...new Map([...a, ...b].map((row) => [row.id, row])).values(),
-          ];
-        }
-        if (!phone) {
-          const direct = await textSearch;
-          if (current !== requestId.current) return;
-          if (!direct || direct.error) return;
-          const { dealsByTitle: a, dealsByObject: b, tasksByTitle: c } = direct;
-          if (a?.error || b?.error || c?.error) return;
-          deals = [
-            ...new Map(
-              [...(deals ?? []), ...(a.data ?? []), ...(b.data ?? [])].map(
-                (row) => [row.id, row],
-              ),
-            ).values(),
-          ];
-          tasks = [
-            ...new Map(
-              [...tasks, ...(c.data ?? [])].map((row) => [row.id, row]),
-            ).values(),
-          ];
-        }
-        const next: { label: string; icon: typeof Users; items: Result[] }[] =
-          [];
-        if (contactIds.length)
+        if (result.error) throw result.error;
+        const rows = (result.data ?? []) as SearchRow[];
+        const pick = (kind: SearchRow["kind"]) => rows.filter((row) => row.kind === kind);
+        const next: { label: string; icon: typeof Users; items: Result[] }[] = [];
+        const contacts = pick("contact");
+        if (contacts.length)
           next.push({
             label: "Контакты",
             icon: Users,
-            items: contactIds.slice(0, LIMIT).map((id) => ({
-              id,
+            items: contacts.map((row) => ({
+              id: row.id,
               kind: "contact",
-              title: names.get(id) ?? "Контакт",
-              meta: phone ? "Найден по номеру" : undefined,
-              href: `/contacts/${id}`,
+              title: row.title,
+              meta: row.meta ?? undefined,
+              href: `/contacts/${row.id}`,
             })),
           });
+        const deals = pick("deal");
         if (deals.length)
           next.push({
             label: "Сделки",
             icon: BriefcaseBusiness,
-            items: deals.slice(0, LIMIT).map((row) => ({
+            items: deals.map((row) => ({
               id: row.id,
               kind: "deal",
-              title: row.title || row.object_text || "Без названия",
-              meta: row.status,
+              title: row.title,
+              meta: row.meta ?? undefined,
               href: `/deals/${row.id}`,
             })),
           });
+        const tasks = pick("task");
         if (tasks.length)
           next.push({
             label: "Задачи",
             icon: ListTodo,
-            items: tasks.slice(0, LIMIT).map((row) => ({
+            items: tasks.map((row) => ({
               id: row.id,
               kind: "task",
               title: row.title,
-              meta: row.due_at
-                ? new Date(row.due_at).toLocaleDateString("ru-RU", { timeZone: "Europe/Chisinau" })
-                : undefined,
+              meta: row.meta ?? undefined,
               href: row.deal_id ? `/deals/${row.deal_id}` : "/tasks",
             })),
           });
-        if (current === requestId.current) {
-          setGroups(next);
-          setSelected(0);
-        }
+        setGroups(next);
+        setSelected(0);
       } catch (cause) {
         if (current === requestId.current)
-          setError(
-            cause instanceof Error
-              ? cause.message
-              : "Не удалось выполнить поиск",
-          );
+          setError(dbErrorText(cause, "Не удалось выполнить поиск"));
       } finally {
         if (current === requestId.current) setLoading(false);
       }

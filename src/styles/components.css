@@ -131,6 +131,13 @@ button.tile:active {
    который иначе сбрасывает фон и радиус; любой экранный CSS вне слоя сильнее. */
 
 @layer base {
+  /* Модальный <dialog>: сброс Tailwind обнуляет margin, и окно прилипает
+     к левому верхнему углу. Возвращаем центрирование браузера. */
+  dialog:modal {
+    margin: auto;
+    max-height: calc(100dvh - 32px);
+  }
+
   .app-shell :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"]), select) {
     height: var(--h-control);
     padding: 0 12px;

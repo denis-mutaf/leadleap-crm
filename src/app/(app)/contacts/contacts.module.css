@@ -58,6 +58,7 @@
 .sortControl svg { transition: transform var(--motion) var(--ease); }
 .sortControl:hover svg { transform: scale(1.06); }
 .sortSubmit { margin-left: auto; }
+.sortForm { margin-left: auto; display: inline-flex; }
 
 /* Таблица: модуль, внутри плитка со строками 36. Пагинация — пилюли под модулем. */
 .contactsTable { min-height: 0; flex: 1; overflow: auto; border-radius: var(--radius-module); background: var(--module); box-shadow: var(--shadow-inset); padding: 6px; }

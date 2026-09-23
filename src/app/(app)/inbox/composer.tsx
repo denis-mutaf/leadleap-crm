@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { SendHorizonal } from "lucide-react";
+import { dbErrorText } from "@/lib/db-errors";
 
 // Ответ пишется там же, где читается переписка: уводить менеджера в Facebook
 // ради одной строки — это и есть та потеря, из-за которой клиенты ждут сутки.
@@ -35,7 +36,7 @@ export function Composer({
       | { error?: string }
       | null;
     if (!response.ok) {
-      setError(payload?.error ?? "Не удалось отправить сообщение");
+      setError(dbErrorText(payload?.error, "Не удалось отправить сообщение"));
       return;
     }
     setValue("");

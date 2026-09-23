@@ -7,6 +7,7 @@ import { DndContext, PointerSensor, KeyboardSensor, closestCenter, useSensor, us
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Stage, StageKind } from "@/lib/types";
+import { dbErrorText } from "@/lib/db-errors";
 import { StageIndicator } from "@/components/crm/stage-indicator";
 import styles from "./settings.module.css";
 
@@ -58,26 +59,26 @@ export function StageTable({ rows, canEdit }: { rows: Row[]; canEdit: boolean })
       if (temp.some((result) => result.error)) throw temp.find((result) => result.error)?.error;
       const final = await Promise.all(next.map((row) => db.from("stages").update({ position: row.position }).eq("id", row.id)));
       if (final.some((result) => result.error)) throw final.find((result) => result.error)?.error;
-    } catch (cause) { setItems(previous); setError(cause instanceof Error ? cause.message : "Не удалось изменить порядок"); }
+    } catch (cause) { setItems(previous); setError(dbErrorText(cause, "Не удалось изменить порядок")); }
     finally { busyRef.current = false; setBusy(false); }
   }
   async function toggle(row: Row, key: GateKey) {
     if (!canEdit || busyRef.current) return;
     const value = !row[key]; setItems((current) => current.map((item) => item.id === row.id ? { ...item, [key]: value } : item)); setBusy(true); busyRef.current = true; setError("");
     const result = await createClient().from("stages").update({ [key]: value }).eq("id", row.id);
-    if (result.error) { setItems((current) => current.map((item) => item.id === row.id ? { ...item, [key]: row[key] } : item)); setError(result.error.message); }
+    if (result.error) { setItems((current) => current.map((item) => item.id === row.id ? { ...item, [key]: row[key] } : item)); setError(dbErrorText(result.error, "Не удалось сохранить")); }
     busyRef.current = false; setBusy(false);
   }
   async function saveName() {
     if (!editing || !draft.trim() || busyRef.current) return;
     setBusy(true); busyRef.current = true; setError(""); const result = await createClient().from("stages").update({ name: draft.trim() }).eq("id", editing.id).select("name").single();
-    if (result.error) setError(result.error.message); else { setItems((current) => current.map((row) => row.id === editing.id ? { ...row, name: draft.trim() } : row)); setEditing(null); }
+    if (result.error) setError(dbErrorText(result.error, "Не удалось переименовать этап")); else { setItems((current) => current.map((row) => row.id === editing.id ? { ...row, name: draft.trim() } : row)); setEditing(null); }
     busyRef.current = false; setBusy(false);
   }
   async function addStage() {
     if (!newName.trim() || busyRef.current) return;
     setBusy(true); busyRef.current = true; setError(""); const result = await createClient().from("stages").insert({ name: newName.trim(), position: openRows.length, kind: "open", requires_next_step: false, requires_qualification: false, requires_qualification_tag: false, is_active: true }).select("id,name,position,kind,requires_next_step,requires_qualification_tag,requires_qualification,is_active,created_at").single();
-    if (result.error) setError(result.error.message); else { setItems((current) => [...current, { ...(result.data as Stage), counts: { total: 0 } }]); setNewName(""); setAdding(false); }
+    if (result.error) setError(dbErrorText(result.error, "Не удалось добавить этап")); else { setItems((current) => [...current, { ...(result.data as Stage), counts: { total: 0 } }]); setNewName(""); setAdding(false); }
     busyRef.current = false; setBusy(false);
   }
   return <>

@@ -18,6 +18,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { dbErrorText } from "@/lib/db-errors";
 import styles from "./fields.module.css";
 
 export type FieldRow = {
@@ -215,9 +216,7 @@ export default function FieldsClient({
     } catch (cause) {
       setRows(previous);
       setError(
-        cause instanceof Error
-          ? cause.message
-          : "Не удалось изменить порядок полей",
+        dbErrorText(cause, "Не удалось изменить порядок полей"),
       );
     } finally {
       busyRef.current = false;
@@ -279,7 +278,7 @@ export default function FieldsClient({
       setPanel(null);
       setError("");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Ошибка");
+      setError(dbErrorText(cause, "Ошибка"));
     } finally {
       busyRef.current = false;
       setBusy(false);
@@ -309,7 +308,7 @@ export default function FieldsClient({
       setConfirm(null);
       setMenu(null);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Ошибка");
+      setError(dbErrorText(cause, "Ошибка"));
     } finally {
       busyRef.current = false;
       setBusy(false);
@@ -340,7 +339,7 @@ export default function FieldsClient({
         );
     } catch (cause) {
       setError(
-        cause instanceof Error ? cause.message : "Не удалось восстановить поле",
+        dbErrorText(cause, "Не удалось восстановить поле"),
       );
     } finally {
       busyRef.current = false;

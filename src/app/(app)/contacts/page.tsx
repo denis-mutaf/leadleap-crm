@@ -83,11 +83,7 @@ export default async function ContactsPage({
           <input type="hidden" name="sort" value={sort} />
           <button type="submit" className="btn btn-primary">Найти</button>
         </form>
-        <ContactSortSelect value={sort} />
-        <form id="contacts-sort-form" className={styles.sortSubmit}>
-          <input type="hidden" name="q" value={q} />
-          <button type="submit" className="btn">Применить</button>
-        </form>
+        <ContactSortSelect value={sort} q={q} />
       </div>
       <div className={`${styles.contactsTable} motion-list`} role="table" aria-label="Контакты">
         <div className={`${styles.contactsRow} ${styles.contactsHead}`} role="row">

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Ellipsis, Info, Plus, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { dbErrorText } from "@/lib/db-errors";
 import type { UserRole } from "@/lib/types";
 import styles from "./dictionaries.module.css";
 
@@ -95,9 +96,7 @@ export function DictionariesClient({
       await action();
     } catch (cause) {
       setError(
-        cause instanceof Error
-          ? cause.message
-          : "Не удалось сохранить изменения.",
+        dbErrorText(cause, "Не удалось сохранить изменения."),
       );
     } finally {
       busyRef.current = false;
