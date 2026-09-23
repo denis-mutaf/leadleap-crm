@@ -1,12 +1,19 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Doto, Inter_Tight, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
 // Интерфейс русский (ТЗ, раздел 2) — кириллица обязательна в подмножестве.
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin", "cyrillic"],
+const interTight = Inter_Tight({
+  variable: "--font-inter-tight",
+  subsets: ["latin", "latin-ext", "cyrillic"],
+});
+
+// Точечные цифры витрины (дашборд, отчёты). Кириллицы в Doto нет — только цифры и €.
+const doto = Doto({
+  variable: "--font-doto",
+  subsets: ["latin"],
+  weight: ["600", "800"],
 });
 
 const mono = JetBrains_Mono({
@@ -23,7 +30,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="ru"
-      className={`${inter.variable} ${mono.variable} h-full antialiased`}
+      className={`${interTight.variable} ${doto.variable} ${mono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

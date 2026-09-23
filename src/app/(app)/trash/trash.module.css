@@ -1,7 +1,7 @@
 .page {
   box-sizing: border-box;
   max-width: 100%;
-  min-height: 100vh;
+  min-height: var(--vh-shell);
   padding: 28px 32px 48px;
   background: var(--background);
   color: var(--foreground);

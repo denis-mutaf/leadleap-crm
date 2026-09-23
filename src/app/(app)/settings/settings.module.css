@@ -1,7 +1,7 @@
-.shell { min-height: 100vh; background: var(--background); color: var(--foreground); }
+.shell { min-height: var(--vh-shell); background: var(--background); color: var(--foreground); }
 .topbar { height: var(--h-header); display: flex; align-items: center; gap: 8px; padding: 0 12px; border-bottom: 1px solid var(--border); font-size: 14px; }
 .topbar svg { color: var(--muted-foreground); }
-.workspace { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: calc(100vh - var(--h-header)); }
+.workspace { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: calc(var(--vh-shell) - var(--h-header)); }
 .sections { padding: 8px; border-right: 1px solid var(--border); background: var(--background); }
 .group > p { margin: 12px 8px 4px; color: var(--muted-foreground); font-size: 13px; line-height: 18px; }
 .group:first-child > p { margin-top: 0; }
