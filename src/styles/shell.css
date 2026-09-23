@@ -1,6 +1,32 @@
-/* Этап как связка «точка + название» (кит, _kit.css .st).
-   Внутри сплошного предложения не применять — там этап живёт словом, без точки. */
+/* Оболочка «Фарфор»: остров навигации слева, рабочая область без подложки —
+   модули экрана стоят прямо на фарфоре. Правила — docs/design-system.md. */
 
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+html,
+body { background: var(--page); }
+
+body { letter-spacing: -0.005em; -webkit-font-smoothing: antialiased; }
+
+::selection { background: var(--surface-select); }
+
+/* Фокус с клавиатуры виден везде одинаково; мышью — не мигает. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Этап как связка «точка + название». Внутри предложения не применять. */
 .st {
   display: inline-flex;
   align-items: center;
@@ -8,58 +34,83 @@
   white-space: nowrap;
 }
 
-.tr {
+.tr,
+.truncate {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* Тёмная тема Attio не снята — в справке кадры только светлые.
-   Пустой блок намеренно: чужие значения сюда не подставляем. */
-
-.dark {
-  color-scheme: light;
-}
+/* Тёмной темы нет: кадры только светлые. */
+.dark { color-scheme: light; }
 
 .app-shell {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
-  min-height: var(--vh-shell);
+  gap: var(--gap-island);
+  height: 100vh;
+  min-height: 0;
+  padding: var(--gap-island);
+  overflow: hidden;
 }
 
+/* ---- остров навигации ---- */
+
 .nav {
-  background: var(--sidebar);
-  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  padding: 8px;
+  height: var(--vh-shell);
+  padding: 18px 12px;
+  border-radius: var(--radius-island);
+  background: var(--sidebar);
+  box-shadow: var(--shadow-island);
+  overflow-y: auto;
 }
 
 .nav-brand {
-  height: 28px;
+  height: 40px;
   display: flex;
   align-items: center;
   padding: 0 8px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   font-weight: 500;
 }
 
+.nav-brand img { height: 22px; width: auto; display: block; }
+
 .nav-item {
-  height: 28px;
+  position: relative;
+  height: 36px;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 8px;
-  border-radius: 6px;
-  color: var(--foreground);
+  padding: 0 12px;
+  border-radius: var(--radius-control);
+  color: #3a3a3a;
   text-decoration: none;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    box-shadow var(--motion) var(--ease),
+    color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
 }
 
-.nav-item:hover,
+.nav-item svg { transition: transform var(--motion) var(--ease); }
+
+.nav-item:hover { background: var(--sidebar-accent); color: var(--foreground); }
+
+.nav-item:hover svg { transform: translateX(1px); }
+
+.nav-item:active { transform: scale(var(--press-scale)); }
+
 .nav-item.is-active {
-  background: var(--accent);
+  background: var(--card);
+  color: var(--foreground);
   font-weight: 500;
+  box-shadow: inset 0 1px 0 #fff, 0 6px 14px -8px rgba(0, 0, 0, 0.22);
 }
+
+.nav .pill { background: #e4e4e4; color: #555555; }
 
 .nav-foot {
   margin-top: auto;
@@ -67,7 +118,6 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  border-top: 1px solid var(--border);
 }
 
 .nav-person {
@@ -85,81 +135,82 @@
   font-weight: 500;
 }
 
-.nav-person small {
-  color: var(--muted-foreground);
+.nav-person small { color: var(--muted-foreground); }
+
+/* Точка перехода под пунктом, пока грузится раздел. */
+.nav-item-pending {
+  position: absolute;
+  inset-inline: 14px;
+  bottom: 3px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--foreground);
+  opacity: 0.5;
+  transform-origin: left;
+  animation: nav-pending 900ms var(--ease-in-out) infinite alternate;
 }
+
+@keyframes nav-pending {
+  from { transform: scaleX(0.15); }
+  to { transform: scaleX(1); }
+}
+
+.nav-item-badge {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--warning-soft);
+  color: var(--warning);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 20px;
+  text-align: center;
+  animation: badge-in var(--motion-slow) var(--ease) both;
+}
+
+@keyframes badge-in {
+  from { opacity: 0; transform: scale(0.6); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ---- рабочая область ---- */
 
 .main-shell {
+  position: relative;
   min-width: 0;
-  min-height: var(--vh-shell);
+  height: var(--vh-shell);
+  min-height: 0;
+  overflow: auto;
+  background: transparent;
 }
 
-.truncate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.main-shell > * { background: transparent; }
+
+/* Экран появляется мягко при каждом переходе: сегмент страницы
+   монтируется заново, анимация проигрывается сама. */
+.main-shell > * {
+  animation: screen-in var(--motion-slow) var(--ease) both;
 }
 
-@media (max-width: 600px) {
-  .app-shell { display: block; min-height: var(--vh-shell); }
-}
-
-@media (max-width: 600px) {
-  .nav { height: 48px; box-sizing: border-box; flex-direction: row; align-items: center; gap: 6px; overflow-x: auto; padding: 8px; border-right: 0; border-bottom: 1px solid var(--border); }
-}
-
-@media (max-width: 600px) {
-  .nav-brand { flex: none; height: 28px; margin: 0 4px 0 0; padding: 0 6px; }
-}
-
-@media (max-width: 600px) {
-  .nav nav { display: flex; flex: none; gap: 2px; }
-}
-
-@media (max-width: 600px) {
-  .nav-item { flex: none; height: 28px; white-space: nowrap; }
-}
-
-@media (max-width: 600px) {
-  .nav-item .pill,
-  .nav-foot { display: none; }
-}
-
-@media (max-width: 600px) {
-  .main-shell { min-height: calc(var(--vh-shell) - 48px); }
-}
-
-@media (max-width: 600px) {
-  .nav { min-width: 0; width: 100%; overflow-x: hidden; }
-}
-
-@media (max-width: 600px) {
-  .nav nav { flex: 1 1 auto; min-width: 0; width: auto; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: thin; }
-}
-
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-  html {
-    @apply font-sans;
-  }
+@keyframes screen-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
 }
 
 /* Колокольчик уведомлений висит абсолютом в правом верхнем углу рабочей
-   области, поэтому правый край шапки любого экрана заезжал под иконку:
-   «Показано 0 и🔔», «Звонки и заявки формы уже работа🔔». Запас под него
-   резервируется один раз здесь, а не на каждом экране отдельно. */
+   области: запас под него резервируется один раз здесь. */
+.main-shell > * > header:first-child { padding-right: 44px; }
 
-.main-shell > * > header:first-child {
-  padding-right: 44px;
+.main-shell > * > header.page-header > span:first-of-type {
+  font-size: var(--text-title);
+  line-height: var(--text-title-lh);
+  font-weight: 400;
+  letter-spacing: -0.03em;
 }
 
 /* Полоса перехода: видна только пока идёт навигация, поверх всего. */
-
 .route-progress {
   position: fixed;
   z-index: 100;
@@ -167,10 +218,10 @@
   height: 2px;
   opacity: 0;
   pointer-events: none;
-  background: var(--primary);
+  background: var(--foreground);
   transform: scaleX(0);
   transform-origin: left;
-  transition: opacity 120ms linear;
+  transition: opacity var(--motion-fast) linear;
 }
 
 .route-progress.is-pending {
@@ -178,107 +229,42 @@
   animation: route-progress-run 1.6s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
 }
 
+@keyframes route-progress-run {
+  0% { transform: scaleX(0); }
+  60% { transform: scaleX(0.82); }
+  100% { transform: scaleX(1); }
+}
+
+/* ---- телефон: навигация полосой сверху, острова без полей ---- */
+
+@media (max-width: 600px) {
+  .app-shell { display: block; height: auto; overflow: visible; padding: 0; }
+  .nav {
+    height: 48px; min-width: 0; width: 100%; box-sizing: border-box;
+    flex-direction: row; align-items: center; gap: 6px;
+    padding: 8px; overflow-x: hidden;
+    border-radius: 0; box-shadow: none; border-bottom: 1px solid var(--border);
+  }
+  .nav-brand { flex: none; height: 28px; margin: 0 4px 0 0; padding: 0 6px; }
+  .nav nav {
+    display: flex; flex: 1 1 auto; gap: 2px; min-width: 0; width: auto;
+    overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: thin;
+  }
+  .nav-item { flex: none; height: 30px; white-space: nowrap; }
+  .nav-item .pill,
+  .nav-foot { display: none; }
+  .main-shell { height: auto; min-height: calc(100vh - 48px); overflow: visible; }
+}
+
+/* Кто просил меньше движения — получает мгновенные смены состояний. */
 @media (prefers-reduced-motion: reduce) {
-  .route-progress.is-pending { animation: none; transform: scaleX(1); }
-}
-
-.nav-item-pending {
-  position: absolute;
-  inset-inline: 8px;
-  bottom: 0;
-  height: 2px;
-  border-radius: var(--radius);
-  background: var(--primary);
-}
-
-.nav-item-badge {
-  margin-left: auto;
-  min-width: 18px;
-  padding: 1px 5px;
-  border-radius: 999px;
-  background: var(--warning-soft);
-  color: var(--warning);
-  font-size: 11px;
-  font-weight: 500;
-  text-align: center;
-}
-
-/* ===== «Фарфор», 23.09.2026: острова, форма, вес. Кадры: design/screens/_kit.css ===== */
-
-html,
-body { background: var(--page); }
-
-body { letter-spacing: -0.005em; }
-
-.app-shell {
-  height: 100vh;
-  min-height: 0;
-  padding: var(--gap-island);
-  gap: var(--gap-island);
-  grid-template-columns: 220px minmax(0, 1fr);
-  overflow: hidden;
-}
-
-.nav {
-  height: var(--vh-shell);
-  border-right: 0;
-  border-radius: var(--radius-island);
-  padding: 14px 10px;
-  background: var(--sidebar);
-  box-shadow: var(--shadow-island);
-  overflow-y: auto;
-}
-
-.nav-brand { height: 40px; margin-bottom: 8px; }
-
-.nav-brand img { height: 22px; width: auto; display: block; }
-
-.nav-item { height: 32px; border-radius: 10px; color: #3a3a3a; }
-
-.nav-item:hover { background: #e9e9e9; font-weight: 400; }
-
-.nav-item.is-active { background: var(--card); font-weight: 500; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.07); }
-
-.nav .pill { background: #e4e4e4; color: #555555; border-radius: 999px; }
-
-.nav-foot { border-top: 0; }
-
-.main-shell {
-  position: relative;
-  height: var(--vh-shell);
-  min-height: 0;
-  overflow: auto;
-  background: var(--background);
-  border-radius: var(--radius-island);
-  box-shadow: var(--shadow-island);
-}
-
-@media (max-width: 600px) {
-  .app-shell { height: auto; overflow: visible; padding: 0; }
-}
-
-@media (max-width: 600px) {
-  .nav { height: 48px; border-radius: 0; box-shadow: none; }
-}
-
-@media (max-width: 600px) {
-  .main-shell { height: auto; border-radius: 0; box-shadow: none; overflow: visible; }
-}
-
-/* навигация: остров-пилюли */
-
-.nav { border-radius: var(--radius-island); padding: 18px 12px; }
-
-.nav-item { height: 36px; border-radius: 999px; padding: 0 12px; }
-
-.nav-item.is-active { box-shadow: inset 0 1px 0 #fff, 0 6px 14px -8px rgba(0, 0, 0, 0.22); }
-
-/* рабочая область без общей подложки: модули стоят прямо на фарфоре */
-
-.main-shell { background: transparent; box-shadow: none; border-radius: 0; }
-
-.main-shell > * { background: transparent; }
-
-.main-shell > * > header.page-header > span:first-of-type {
-  font-size: 26px; line-height: 32px; font-weight: 400; letter-spacing: -0.03em;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .route-progress.is-pending { transform: scaleX(1); }
 }

@@ -1,125 +1,249 @@
-.view-switch {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  font-size: 13px;
+/* Примитивы «Фарфор». Экраны собираются из них и из токенов; свой цвет,
+   радиус или тень в экранном CSS — только токеном. Правила — docs/design-system.md. */
+
+/* ===== Поверхности ===== */
+
+/* Модуль — самостоятельный блок на фарфоре: колонка, секция, таблица, панель. */
+.module {
+  border-radius: var(--radius-module);
+  background: var(--module);
+  box-shadow: var(--shadow-inset);
 }
 
-.view-switch span,
-.filter-control {
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 9px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  color: var(--muted-foreground);
+/* Плитка — элемент внутри модуля: карточка, строка-блок, метрика. */
+.tile {
+  border-radius: var(--radius-tile);
+  background: var(--module-card);
+  box-shadow: var(--shadow-module);
 }
 
-.view-switch-active {
-  color: var(--foreground) !important;
-  background: var(--accent);
-  font-weight: 500;
+/* Кликабельная плитка поднимается под курсором и проседает при нажатии. */
+.tile-link,
+a.tile,
+button.tile {
+  transition:
+    box-shadow var(--motion) var(--ease),
+    transform var(--motion) var(--ease),
+    background-color var(--motion-fast) var(--ease);
 }
 
-.filter-control {
-  border-style: dashed;
-  border-color: var(--input);
-  background: var(--secondary);
-  color: var(--foreground);
+.tile-link:hover,
+a.tile:hover,
+button.tile:hover {
+  box-shadow: var(--shadow-module-hover);
+  transform: translateY(var(--lift));
 }
 
-.filter-chip {
-  height: 26px;
-  display: inline-flex;
-  align-items: center;
-  padding: 0 9px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  color: var(--muted-foreground);
+.tile-link:active,
+a.tile:active,
+button.tile:active {
+  transform: translateY(0) scale(0.99);
+  transition-duration: var(--motion-fast);
 }
 
-.page-header,
-.toolbar,
-.filterbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 12px;
-  border-bottom: 1px solid var(--border);
-  flex: none;
-}
-
-.page-header {
-  height: 48px;
-}
-
-.toolbar {
-  height: 49px;
-}
-
-.filterbar {
-  height: 51px;
-}
-
-.header-spacer {
-  margin-left: auto;
-}
-
-.separator {
-  height: 16px;
-  width: 1px;
-  background: var(--border);
-}
-
-.drop-target {
-  background: color-mix(in srgb, var(--accent) 35%, transparent);
-  border-radius: 6px;
-}
+/* ===== Кнопки ===== */
 
 .btn,
 .btn-ghost {
+  height: var(--h-control);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-control);
+  font: inherit;
+  font-size: var(--text-body);
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    box-shadow var(--motion) var(--ease),
+    transform var(--motion-fast) var(--ease),
+    color var(--motion-fast) var(--ease),
+    opacity var(--motion-fast) var(--ease);
+}
+
+.btn {
+  background: var(--module-card);
+  color: var(--foreground);
+  box-shadow: var(--shadow-pill);
+}
+
+.btn:hover { background: var(--card); box-shadow: var(--shadow-pill-hover); }
+
+.btn-ghost {
   height: 28px;
+  padding: 0 12px;
+  background: var(--ghost);
+  color: #3a3a3a;
+}
+
+.btn-ghost:hover { background: var(--ghost-hover); color: var(--foreground); }
+
+/* Главное действие экрана — одно, лаймовое. */
+.btn-primary,
+.filter-submit {
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  font-weight: 500;
+}
+
+.btn-primary:hover,
+.filter-submit:hover { background: var(--primary-hover) !important; }
+
+.btn-danger { color: var(--destructive); }
+
+.btn-danger:hover { background: var(--hue-red-bg); }
+
+.btn-sm { height: var(--h-control-sm); padding: 0 12px; font-size: var(--text-small); }
+
+.btn-icon { width: var(--h-control); padding: 0; }
+
+.btn:active,
+.btn-ghost:active,
+.btn-primary:active,
+.filter-submit:active {
+  transform: scale(var(--press-scale));
+}
+
+.btn:disabled,
+.btn-ghost:disabled,
+.btn[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: default;
+  transform: none;
+}
+
+/* Иконка внутри кнопки слегка отвечает на наведение. */
+.btn svg,
+.btn-ghost svg { flex: none; transition: transform var(--motion) var(--ease); }
+
+.btn:hover svg,
+.btn-ghost:hover svg { transform: scale(1.06); }
+
+/* ===== Поля ввода =====
+   Нативные контролы получают фарфоровую форму по умолчанию (слой base —
+   любой класс экрана сильнее). Поле — пилюля на ступень темнее плитки. */
+
+@layer base {
+  :where(.app-shell) :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"]), select) {
+    height: var(--h-control);
+    padding: 0 12px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-control);
+    background: var(--sidebar);
+    color: var(--foreground);
+    font: inherit;
+    font-size: var(--text-body);
+    transition:
+      background-color var(--motion-fast) var(--ease),
+      border-color var(--motion-fast) var(--ease),
+      box-shadow var(--motion) var(--ease);
+  }
+  :where(.app-shell) :where(textarea) {
+    padding: 8px 12px;
+    border: 1px solid transparent;
+    border-radius: 14px;
+    background: var(--sidebar);
+    color: var(--foreground);
+    font: inherit;
+    font-size: var(--text-body);
+    transition:
+      background-color var(--motion-fast) var(--ease),
+      border-color var(--motion-fast) var(--ease),
+      box-shadow var(--motion) var(--ease);
+  }
+  :where(.app-shell) :where(input, select, textarea):hover { background: #ececec; }
+  :where(.app-shell) :where(input, select, textarea):focus {
+    outline: none;
+    border-color: var(--foreground);
+    background: var(--card);
+    box-shadow: 0 0 0 3px rgba(38, 38, 38, 0.08);
+  }
+  :where(.app-shell) :where(input, textarea)::placeholder { color: var(--muted-foreground); }
+  :where(.app-shell) :where(input[type="checkbox"], input[type="radio"]) {
+    accent-color: var(--foreground);
+    transition: transform var(--motion-fast) var(--ease);
+  }
+  :where(.app-shell) :where(input[type="checkbox"], input[type="radio"]):active { transform: scale(0.9); }
+}
+
+/* Поле-пилюля с иконкой поиска (кит: .input). */
+.input {
+  height: var(--h-control);
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 0 10px;
-  border: 1px solid var(--input);
-  border-radius: var(--radius);
-  background: var(--secondary);
-  color: var(--foreground);
-  font: inherit;
-  font-size: 13px;
+  padding: 0 12px;
+  border-radius: var(--radius-control);
+  background: var(--sidebar);
+  color: var(--muted-foreground);
+  font-size: var(--text-body);
 }
 
-.btn-icon {
-  width: 28px;
-  justify-content: center;
-  padding: 0;
-}
+/* ===== Пилюли, метки, чипы, точки, аватары ===== */
 
-.btn-ghost {
-  height: 26px;
-  padding: 0 8px;
-  border-style: dashed;
-  background: transparent;
-  color: #606164;
-}
-
-.avatar {
-  width: 20px;
+.pill {
+  min-width: 20px;
   height: 20px;
-  border-radius: 50%;
-  flex: none;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--muted);
+  color: var(--secondary-text);
+  font-size: var(--text-small);
+  line-height: 20px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.pill.nbadge { background: var(--destructive); color: #fff; }
+
+.tag {
+  height: 22px;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  background: #6c5ce7;
-  color: #fff;
-  font-size: 10px;
-  font-weight: 500;
+  gap: 6px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--muted);
+  color: #4a4a4a;
+  font-size: var(--text-small);
+  line-height: 22px;
+  white-space: nowrap;
 }
+
+.tag-grey { background: var(--muted); color: #4a4a4a; }
+
+/* Проект с миниатюрой рендера слева: Select и Next. */
+.tag-select,
+.tag-next {
+  padding: 0 8px 0 3px;
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.tag-select::before,
+.tag-next::before {
+  content: "";
+  width: 24px;
+  height: 16px;
+  flex: none;
+  border-radius: 999px;
+  background-size: cover;
+  background-position: center;
+}
+
+.tag-select::before { background-image: url("/brand/select.jpg"); }
+
+.tag-next::before { background-image: url("/brand/next.jpg"); }
+
+.tag-kval { background: var(--primary) !important; color: var(--primary-foreground) !important; }
+
+.chip { border-radius: 999px; }
 
 .dot {
   width: 8px;
@@ -129,98 +253,178 @@
   margin-top: 5px;
 }
 
-.dot-blue {
-  background: var(--primary);
-}
+.dot-blue { background: var(--info); }
 
-.dot-amber {
-  background: var(--warning);
-}
+.dot-amber { background: var(--warning); }
 
-.dot-red {
-  background: var(--destructive);
-}
+.dot-red { background: var(--destructive); }
 
-.dot-green {
-  background: var(--success);
-}
+.dot-green { background: var(--success); }
 
-.dot-grey {
-  background: var(--muted-foreground);
-}
+.dot-grey { background: var(--muted-foreground); }
 
-.pill {
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 4px;
-  background: var(--muted);
-  color: #606164;
-  font-size: 12px;
-  line-height: 18px;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-
-.tag {
+.avatar {
+  width: 20px;
   height: 20px;
+  border-radius: 50%;
+  flex: none;
   display: inline-flex;
   align-items: center;
-  padding: 0 6px;
-  border-radius: 4px;
-  font-size: 12px;
-  line-height: 20px;
-  white-space: nowrap;
+  justify-content: center;
+  background: var(--foreground);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 500;
 }
 
-.tag-select {
-  background: #eaf0fd;
-  color: #2f55b5;
+/* Итоговое число точечным шрифтом — только итоги колонок, метрики, счётчики. */
+.num-dots {
+  font-family: var(--font-dots);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
 }
 
-.tag-next {
-  background: #e8f5ee;
-  color: #227a51;
-}
-
-.tag-grey {
+kbd {
+  margin-left: 4px;
+  padding: 1px 5px;
+  border-radius: 6px;
   background: var(--muted);
-  color: #606164;
+  color: var(--secondary-text);
+  font: inherit;
+  font-size: 10px;
 }
 
-.toolbar-label {
-  color: #606164;
-  font-size: 13px;
+/* ===== Шапка экрана и полосы действий ===== */
+
+.page-header,
+.toolbar,
+.filterbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 var(--px-cell);
+  border-bottom: 0;
+  background: transparent;
+  flex: none;
 }
 
-kbd { margin-left:4px; padding:1px 4px; border:1px solid currentColor; border-radius:3px; font-size:10px; opacity:.65; }
+.page-header { height: var(--h-header); }
 
-.page-header { padding-inline: var(--px-cell); }
+.toolbar { height: var(--h-toolbar); }
 
-.header-notification { position: relative; display: inline-flex; align-items: center; color: var(--muted-foreground); }
+.filterbar { position: relative; height: var(--h-filters); }
 
-.header-notification b { position: absolute; top: -10px; right: -12px; min-width: 19px; height: 18px; padding: 0 4px; border-radius: 4px; background: var(--destructive); color: #fff; font-size: 11px; line-height: 18px; text-align: center; font-weight: 500; }
+.header-spacer { margin-left: auto; }
 
-.toolbar { padding-inline: var(--px-cell); }
+.separator { height: 16px; width: 1px; background: var(--input); }
 
-/* из экрана сделок: стояли раньше .toolbar .view-switch по каскаду */
-.deals-page .view-switch {
+.toolbar-label { color: var(--secondary-text); font-size: var(--text-body); }
+
+.header-notification {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
   color: var(--muted-foreground);
-  font-size: 13px;
+  transition: color var(--motion-fast) var(--ease), transform var(--motion-fast) var(--ease);
+}
+
+.header-notification:hover { color: var(--foreground); }
+
+.header-notification:active { transform: scale(0.92); }
+
+.header-notification b {
+  position: absolute;
+  top: -10px;
+  right: -12px;
+  min-width: 19px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--destructive);
+  color: #fff;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  font-weight: 500;
+  animation: badge-in var(--motion-slow) var(--ease) both;
+}
+
+/* ===== Сегмент: переключатель вида ===== */
+
+.view-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--text-body);
+  border-radius: var(--radius-control);
+}
+
+.view-switch span,
+.filter-control {
+  height: var(--h-control);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-control);
+  color: var(--secondary-text);
+  transition: background-color var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease);
+}
+
+.view-switch-active {
+  color: var(--foreground) !important;
+  background: var(--card);
+  font-weight: 500;
+  box-shadow: var(--shadow-pill);
+}
+
+.filter-control {
+  background: var(--module-card);
+  color: var(--foreground);
+  box-shadow: var(--shadow-pill);
+}
+
+.deals-page .view-switch {
+  color: var(--secondary-text);
+  font-size: var(--text-body);
   text-decoration: none;
-  padding: 5px 9px;
-  border-radius: 5px;
+  padding: 5px 12px;
 }
 
 .deals-page .view-switch:hover,
-.deals-page .view-switch:focus-visible { background: var(--muted); color: var(--foreground); }
+.deals-page .view-switch:focus-visible { background: var(--ghost); color: var(--foreground); }
 
-.deals-page .view-switch.active { background: var(--secondary); color: var(--foreground); font-weight: 600; }
-.toolbar .view-switch { display: inline-flex; align-items: center; gap: 6px; height: var(--h-control); padding: 0 9px; border: 1px solid var(--input); border-radius: var(--radius); background: var(--secondary); color: var(--foreground); font: inherit; font-size: 13px; text-decoration: none; cursor: pointer; }
+.deals-page .view-switch.active { background: var(--card); color: var(--foreground); font-weight: 500; }
 
-.toolbar .view-switch.active { border-color: var(--input); background: var(--accent); }
+.toolbar .view-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--h-control);
+  padding: 0 12px;
+  border: 0;
+  background: var(--module-card);
+  color: var(--foreground);
+  font: inherit;
+  font-size: var(--text-body);
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: var(--shadow-pill);
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    box-shadow var(--motion) var(--ease),
+    transform var(--motion-fast) var(--ease);
+}
 
-.filterbar { position: relative; padding-inline: var(--px-cell); }
+.toolbar .view-switch:hover { background: var(--card); }
+
+.toolbar .view-switch:active { transform: scale(var(--press-scale)); }
+
+.toolbar .view-switch.active { background: var(--card); font-weight: 500; }
+
+/* ===== Фильтр-поповер и меню ===== */
 
 .filter-popover { position: relative; }
 
@@ -228,89 +432,125 @@ kbd { margin-left:4px; padding:1px 4px; border:1px solid currentColor; border-ra
 
 .filter-popover > summary::-webkit-details-marker { display: none; }
 
-.filter-button { display: inline-flex; align-items: center; gap: 5px; height: var(--h-control-sm); padding: 0 8px; border: 1px dashed var(--input); border-radius: var(--radius); color: var(--muted-foreground); font-size: 13px; cursor: pointer; }
+.filter-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--ghost);
+  color: #3a3a3a;
+  font-size: var(--text-body);
+  cursor: pointer;
+  transition: background-color var(--motion-fast) var(--ease), transform var(--motion-fast) var(--ease);
+}
+
+.filter-button svg:last-child { transition: transform var(--motion) var(--ease); }
 
 .filter-button:hover,
-.filter-popover[open] .filter-button { background: var(--accent); color: var(--foreground); }
+.filter-popover[open] .filter-button { background: var(--ghost-hover); color: var(--foreground); }
 
-.filter-menu { position: absolute; z-index: 10; top: calc(100% + 6px); left: 0; min-width: 190px; padding: 4px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); box-shadow: 0 10px 24px rgb(28 31 38 / 12%); }
+.filter-popover[open] .filter-button svg:last-child { transform: rotate(180deg); }
+
+.filter-button:active { transform: scale(var(--press-scale)); }
+
+/* Меню и поповер: белая плитка над модулем, появляется сверху вниз. */
+.filter-menu,
+.menu {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 190px;
+  padding: 6px;
+  border: 0;
+  border-radius: var(--radius-popover);
+  background: var(--popover);
+  box-shadow: var(--shadow-overlay);
+  transform-origin: top left;
+  animation: popover-in var(--motion) var(--ease) both;
+}
 
 .filter-menu > a,
-.filter-menu > button { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: var(--h-control); padding: 0 8px; border: 0; border-radius: var(--radius); background: transparent; color: var(--foreground); font: inherit; font-size: 13px; text-align: left; text-decoration: none; cursor: pointer; }
+.filter-menu > button,
+.menu > a,
+.menu > button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: var(--text-body);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--motion-fast) var(--ease);
+}
 
 .filter-menu > a:hover,
 .filter-menu > a.is-selected,
-.filter-menu > button:hover { background: var(--accent); }
+.filter-menu > button:hover,
+.menu > a:hover,
+.menu > button:hover { background: var(--accent); }
 
-.filter-form { display: grid; gap: 8px; min-width: 260px; padding: 10px; }
+.filter-form { display: grid; gap: 10px; min-width: 260px; padding: 12px; }
 
-.filter-form label { display: grid; gap: 4px; color: var(--muted-foreground); font-size: 12px; }
+.filter-form label { display: grid; gap: 4px; color: var(--secondary-text); font-size: var(--text-small); }
 
-.filter-form select { width: 100%; height: var(--h-control); border: 1px solid var(--input); border-radius: var(--radius); background: var(--background); color: var(--foreground); font: inherit; font-size: 13px; }
+.filter-form select { width: 100%; }
 
-.filter-check { display: flex !important; grid-template-columns: auto 1fr; align-items: center; gap: 7px !important; color: var(--foreground) !important; }
+.filter-check {
+  display: flex !important;
+  align-items: center;
+  gap: 7px !important;
+  color: var(--foreground) !important;
+}
 
-.filter-check input { accent-color: var(--primary); }
+.filter-check input { accent-color: var(--foreground); }
 
-.filter-submit { justify-content: center !important; border-color: var(--primary-border) !important; background: var(--primary) !important; color: var(--primary-foreground) !important; }
+.filter-submit { justify-content: center !important; border: 0 !important; }
 
 .filter-help { color: var(--muted-foreground); font-size: 11px; }
 
-.filter-chips { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.filter-chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 
-.filter-chip { display: inline-flex; align-items: center; gap: 4px; height: var(--h-control-sm); padding: 0 7px; border: 1px solid var(--input); border-radius: 999px; background: var(--accent); color: var(--foreground); font-size: 12px; text-decoration: none; }
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: var(--h-control-sm);
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--module-card);
+  color: var(--foreground);
+  font-size: var(--text-small);
+  text-decoration: none;
+  box-shadow: var(--shadow-pill);
+  animation: chip-in var(--motion) var(--ease) both;
+  transition: background-color var(--motion-fast) var(--ease), transform var(--motion-fast) var(--ease);
+}
 
-.filter-chip:hover { border-color: var(--foreground); }
+.filter-chip:hover { background: var(--card); }
 
-@media (max-width: 640px) {
-  .filterbar { min-height: auto; padding-block: 8px; flex-wrap: wrap; }
+.filter-chip:active { transform: scale(var(--press-scale)); }
+
+.drop-target {
+  background: var(--surface-select);
+  border-radius: var(--radius-tile);
 }
 
 @media (max-width: 640px) {
+  .filterbar { height: auto; min-height: auto; padding-block: 8px; flex-wrap: wrap; }
   .filter-chips { width: 100%; }
-}
-
-@media (max-width: 640px) {
   .toolbar { overflow: auto; }
-}
-
-@media (max-width: 640px) {
   .toolbar .view-switch { white-space: nowrap; }
 }
-
-.pill,
-.tag,
-.chip { border-radius: 999px; }
-
-.pill.nbadge { background: var(--destructive); color: #fff; }
-
-.tag-kval { background: var(--primary) !important; color: var(--primary-foreground) !important; }
-
-@media (max-width: 600px) {
-  :root { --gap-island: 0px; --radius-island: 0px; }
-}
-
-.avatar { background: #262626; }
-
-/* кнопки и поля — пилюли с бликом */
-
-.btn,
-.filter-button,
-.filter-control,
-.view-switch {
-  border-radius: 999px !important;
-}
-
-.btn { border: 0; background: var(--module-card); box-shadow: inset 0 1px 0 #fff, 0 6px 14px -10px rgba(0, 0, 0, 0.25); }
-
-.btn:hover { background: #ffffff; }
-
-.filter-submit {
-  border: 0 !important; background: var(--primary) !important; color: var(--primary-foreground) !important; font-weight: 500;
-}
-
-.filter-submit:hover { background: #cde82a !important; }
-
-.btn-ghost { border: 0; border-radius: 999px; background: #e9e9e9; }
-
-.tag { border-radius: 999px; }

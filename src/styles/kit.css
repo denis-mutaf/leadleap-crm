@@ -1,6 +1,58 @@
-/* Клик по диалогу отвечает сразу: строка подсвечивается и крутит колечко,
-   пока сервер собирает переписку. Без этого по строке бьют дважды. */
+/* Кит продукта «Фарфор»: движение, скелетоны, пустые состояния, инлайн-поля.
+   Один источник для всех экранов. Правила — docs/design-system.md. */
 
+/* ===== Движение: общие появления ===== */
+
+@keyframes crm-veil-in { from { opacity: 0; } to { opacity: 1; } }
+
+@keyframes crm-dialog-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes crm-panel-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes popover-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes chip-in {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Затемнение под диалогом, диалог, боковая панель. */
+.motion-veil { animation: crm-veil-in var(--motion) var(--ease) both; }
+
+.motion-dialog { animation: crm-dialog-in var(--motion-slow) var(--ease) both; }
+
+.motion-panel { animation: crm-panel-in var(--motion-slow) var(--ease) both; }
+
+.motion-popover { animation: popover-in var(--motion) var(--ease) both; transform-origin: top; }
+
+/* Список появляется лесенкой: элементу ставится style="--i: N" (0…12). */
+.motion-list > * {
+  animation: fade-up var(--motion-slow) var(--ease) both;
+  animation-delay: calc(min(var(--i, 0), 12) * 18ms);
+}
+
+.motion-fade-up { animation: fade-up var(--motion-slow) var(--ease) both; }
+
+/* Спиннер строки инбокса. */
 @keyframes inbox-row-spin {
   to { transform: rotate(360deg); }
 }
@@ -20,7 +72,7 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ---- скелетон: форма страницы, а не крутилка ---- */
+/* ===== Скелетон: форма экрана из модулей, а не крутилка ===== */
 
 @keyframes crm-shimmer {
   0% { background-position: 100% 0; }
@@ -28,15 +80,10 @@
 }
 
 .sk {
-  border-radius: var(--radius);
-  background: linear-gradient(
-    90deg,
-    var(--muted) 0%,
-    var(--accent) 50%,
-    var(--muted) 100%
-  );
+  border-radius: var(--radius-control);
+  background: linear-gradient(90deg, #e6e6e6 0%, #f3f3f3 50%, #e6e6e6 100%);
   background-size: 200% 100%;
-  animation: crm-shimmer 1.2s linear infinite;
+  animation: crm-shimmer 1.4s linear infinite;
 }
 
 .sk-text { height: 10px; }
@@ -47,7 +94,14 @@
 
 .sk-avatar { height: 20px; width: 20px; border-radius: 999px; }
 
-.sk-page { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.sk-page {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  flex: 1;
+  animation: crm-veil-in var(--motion) var(--ease) both;
+}
 
 .sk-header {
   height: var(--h-header);
@@ -56,7 +110,6 @@
   align-items: center;
   gap: 10px;
   padding: 0 var(--px-cell);
-  border-bottom: 1px solid var(--border);
 }
 
 .sk-toolbar {
@@ -66,7 +119,6 @@
   align-items: center;
   gap: 8px;
   padding: 0 var(--px-cell);
-  border-bottom: 1px solid var(--border);
 }
 
 .sk-row {
@@ -78,27 +130,32 @@
   border-bottom: 1px solid var(--border);
 }
 
-.sk-board { display: flex; gap: 8px; padding: 12px; overflow: hidden; }
+.sk-board { display: flex; gap: var(--gap-module); padding: 4px 0 12px; overflow: hidden; }
 
 .sk-col {
-  width: 268px;
+  width: 272px;
   flex: none;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding: 8px;
+  border-radius: var(--radius-module);
+  background: var(--module);
+  box-shadow: var(--shadow-inset);
 }
 
 .sk-card {
   height: 116px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 10px 12px;
+  border-radius: var(--radius-tile);
+  background: var(--module-card);
+  box-shadow: var(--shadow-module);
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-/* ---- пустое состояние: объяснение и действие, не белый прямоугольник ---- */
+/* ===== Пустое состояние: объяснение и действие, не белый прямоугольник ===== */
 
 .empty-state {
   display: flex;
@@ -108,38 +165,40 @@
   gap: 6px;
   padding: 40px 24px;
   text-align: center;
-  color: var(--muted-foreground);
+  color: var(--secondary-text);
+  animation: fade-up var(--motion-slow) var(--ease) both;
 }
 
 .empty-state .empty-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  margin-bottom: 2px;
-  border-radius: var(--radius);
-  background: var(--muted);
-  color: var(--muted-foreground);
+  width: 40px;
+  height: 40px;
+  margin-bottom: 4px;
+  border-radius: 999px;
+  background: var(--module-card);
+  color: var(--secondary-text);
+  box-shadow: var(--shadow-pill);
 }
 
 .empty-state strong {
   color: var(--foreground);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
 }
 
-.empty-state p { margin: 0; font-size: 13px; line-height: 18px; max-width: 360px; }
+.empty-state p { margin: 0; font-size: var(--text-body); line-height: 18px; max-width: 360px; }
 
 .empty-state .empty-action { margin-top: 8px; }
 
 .empty-inline {
   padding: 16px var(--px-cell);
   color: var(--muted-foreground);
-  font-size: 13px;
+  font-size: var(--text-body);
 }
 
-/* ---- инлайн-поле: подпись всегда видна, пустое значение кликабельно ---- */
+/* ===== Инлайн-поле: подпись всегда видна, пустое значение кликабельно ===== */
 
 .field-row {
   display: grid;
@@ -150,25 +209,23 @@
   padding: 3px 0;
 }
 
-/* Приглушена только подпись слева. Правило без :first-child красило серым и
-   значение: имя контакта, телефон, статус читались как заглушки. */
-
+/* Приглушена только подпись слева, значение читается основным цветом. */
 .field-row > span:first-child {
-  color: var(--secondary-text, var(--muted-foreground));
-  font-size: 13px;
+  color: var(--secondary-text);
+  font-size: var(--text-body);
   line-height: 20px;
 }
 
 .field-value {
   display: flex;
   align-items: center;
-  min-height: 22px;
+  min-height: 24px;
   width: 100%;
   border: 1px solid transparent;
-  border-radius: var(--radius);
+  border-radius: 10px;
   background: transparent;
-  padding: 0 6px;
-  margin-left: -6px;
+  padding: 0 8px;
+  margin-left: -8px;
   color: var(--foreground);
   font: inherit;
   font-size: 14px;
@@ -192,69 +249,33 @@
 .field-select {
   width: 100%;
   height: var(--h-control);
-  border: 1px solid var(--primary);
-  border-radius: var(--radius);
-  background: var(--background);
-  padding: 0 6px;
-  margin-left: -6px;
+  border: 1px solid var(--foreground);
+  border-radius: 10px;
+  background: var(--card);
+  padding: 0 8px;
+  margin-left: -8px;
   color: var(--foreground);
   font: inherit;
   font-size: 14px;
   outline: none;
+  box-shadow: 0 0 0 3px rgba(38, 38, 38, 0.08);
+  animation: crm-veil-in var(--motion-fast) var(--ease) both;
 }
 
 .field-textarea {
   width: 100%;
   min-height: 60px;
-  border: 1px solid var(--primary);
-  border-radius: var(--radius);
-  background: var(--background);
-  padding: 5px 6px;
-  margin-left: -6px;
+  border: 1px solid var(--foreground);
+  border-radius: 12px;
+  background: var(--card);
+  padding: 6px 8px;
+  margin-left: -8px;
   color: var(--foreground);
   font: inherit;
   font-size: 14px;
   resize: vertical;
   outline: none;
+  box-shadow: 0 0 0 3px rgba(38, 38, 38, 0.08);
 }
 
-.field-saving { opacity: 0.6; pointer-events: none; }
-
-/* ---- движение общих поверхностей ---- */
-
-@keyframes crm-veil-in { from { opacity: 0; } to { opacity: 1; } }
-
-@keyframes crm-dialog-in {
-  from { opacity: 0; transform: translateY(6px) scale(0.98); }
-  to { opacity: 1; transform: none; }
-}
-
-@keyframes crm-panel-in {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
-}
-
-.motion-veil { animation: crm-veil-in var(--motion-fast) var(--ease); }
-
-.motion-dialog { animation: crm-dialog-in var(--motion) var(--ease); }
-
-.motion-panel { animation: crm-panel-in var(--motion-slow) var(--ease); }
-
-@media (prefers-reduced-motion: reduce) {
-  .sk,
-  .motion-veil,
-  .motion-dialog,
-  .motion-panel {
-      animation: none;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .field-value { transition: none; }
-}
-
-@keyframes route-progress-run {
-  0% { transform: scaleX(0); }
-  60% { transform: scaleX(0.82); }
-  100% { transform: scaleX(1); }
-}
+.field-saving { opacity: 0.6; pointer-events: none; transition: opacity var(--motion) var(--ease); }
