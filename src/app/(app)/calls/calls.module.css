@@ -242,7 +242,7 @@
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
+  grid-template-columns: minmax(0, 1fr) clamp(300px, 26vw, 380px);
   gap: var(--gap-module);
   padding: 0 var(--px-cell) var(--px-cell);
 }
@@ -303,10 +303,11 @@
 
 /* Колонки: контакту — больше места, дата и числа — по содержимому.
    Ожидание выровнено вправо, как его заголовок; у иконки ссылки нет многоточия. */
-.table thead th:nth-child(3) { width: 24%; }
+.table thead th:nth-child(3) { width: 18%; }
+.table thead th:nth-child(7) { width: 128px; }
 .table thead th:nth-child(5),
-.table thead th:nth-child(6) { width: 72px; }
-.table thead th:nth-child(9) { width: 104px; }
+.table thead th:nth-child(6) { width: 60px; }
+.table thead th:nth-child(9) { width: 96px; }
 .table tbody td:nth-child(5) { text-align: right; }
 .table tbody td:nth-child(8) { text-overflow: clip; padding: 0; text-align: center; }
 
