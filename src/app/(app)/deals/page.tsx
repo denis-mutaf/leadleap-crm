@@ -6,6 +6,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import Form from "next/form";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -142,11 +143,11 @@ function FilterBar({
         </div>
       </details>
       <span className="separator" />
-      <details className="filter-popover">
+      <details className="filter-popover" key={`${sort}|${mine ? "mine" : owner ?? ""}|${project ?? ""}|${tag ?? ""}|${source ?? ""}|${flag ?? ""}`}>
         <summary className="filter-button">
           <ListFilter size={14} /> Фильтр <ChevronDown size={13} />
         </summary>
-        <form className="filter-menu filter-form" method="get">
+        <Form className="filter-menu filter-form" action="/deals">
           <input type="hidden" name="sort" value={sort} />
           <label>
             Ответственный
@@ -189,7 +190,7 @@ function FilterBar({
           </label>
           <button className="btn filter-submit" type="submit">Применить</button>
           <span className="filter-help">Мои сделки фильтруются по текущему пользователю</span>
-        </form>
+        </Form>
       </details>
       <div className="filter-chips">
         {activeChips.map((chip) => <FilterChip key={chip.label} label={chip.label} href={withQuery(query, chip.changes)} />)}
@@ -227,23 +228,17 @@ export default async function DealsPage({
   const mine = one(query.mine) === "1" && !ownerParam;
   const owner = mine ? profile.id : ownerParam || null;
   const supabase = await createClient();
-  const boardResult = await supabase.rpc("crm_board", {
-    p_page: page,
-    p_page_size: PAGE_SIZE,
-    p_owner: owner,
-    p_project: one(query.project) || null,
-    p_tag: one(query.tag) || null,
-    p_source: one(query.source) || null,
-    p_flag: flag,
-    p_sort: sort,
-  });
-  if (boardResult.error) throw new Error("Доска сделок: " + boardResult.error.message);
-  const board = (boardResult.data ?? {
-    columns: {},
-    counters: { no_next_step: 0, overdue: 0, today: 0 },
-    total: 0,
-  }) as BoardResponse;
-  const [stagesResponse, sourcesResponse, projectsResponse, tagsResponse, ownersResponse, lostReasonsResponse, taskTypesResponse] = await Promise.all([
+  const [boardResult, stagesResponse, sourcesResponse, projectsResponse, tagsResponse, ownersResponse, lostReasonsResponse, taskTypesResponse] = await Promise.all([
+    supabase.rpc("crm_board", {
+      p_page: page,
+      p_page_size: PAGE_SIZE,
+      p_owner: owner,
+      p_project: one(query.project) || null,
+      p_tag: one(query.tag) || null,
+      p_source: one(query.source) || null,
+      p_flag: flag,
+      p_sort: sort,
+    }),
     supabase.from("stages").select("id, name, position, kind, requires_next_step, requires_qualification_tag").eq("is_active", true).order("position"),
     supabase.from("sources").select("id, name").eq("is_active", true).order("name"),
     supabase.from("projects").select("id, code, name").eq("is_active", true).order("position"),
@@ -252,6 +247,12 @@ export default async function DealsPage({
     supabase.from("lost_reasons").select("id, name").eq("is_active", true).order("position"),
     supabase.from("task_types").select("id, name").eq("is_active", true).order("name"),
   ]);
+  if (boardResult.error) throw new Error("Доска сделок: " + boardResult.error.message);
+  const board = (boardResult.data ?? {
+    columns: {},
+    counters: { no_next_step: 0, overdue: 0, today: 0 },
+    total: 0,
+  }) as BoardResponse;
   const responses = [stagesResponse, sourcesResponse, projectsResponse, tagsResponse, ownersResponse, lostReasonsResponse, taskTypesResponse];
   const failed = responses.find((item) => item.error);
   if (failed?.error) throw new Error("Справочники воронки: " + failed.error.message);
@@ -296,6 +297,7 @@ export default async function DealsPage({
       <FilterBar query={query} owners={owners} projects={projects} tags={tags} sources={sources} counters={board.counters} />
       <div className="applied-summary">Страница {page + 1} · показано {columns.reduce((sum, column) => sum + column.deals.length, 0)} из {board.total}</div>
       <DealsBoard
+        key={`${page}|${sort}|${flag ?? ""}|${mine ? "mine" : ownerParam ?? ""}|${one(query.project) ?? ""}|${one(query.tag) ?? ""}|${one(query.source) ?? ""}`}
         columns={columns}
         lost={lost}
         currentUserId={profile.id}

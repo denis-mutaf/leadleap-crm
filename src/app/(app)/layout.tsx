@@ -66,6 +66,32 @@ const NAV: NavEntry[] = [
   },
 ];
 
+async function loadNavBadges(profile: {
+  role: string;
+}): Promise<{ inbox: number; calls: number }> {
+  if (profile.role === "builder") {
+    return { inbox: 0, calls: 0 };
+  }
+  const supabase = await createClient();
+  const [conversations, calls] = await Promise.all([
+    supabase
+      .from("conversations")
+      .select("id", { count: "exact", head: true })
+      .eq("last_direction", "in"),
+    // Пропущенные без обратного звонка — счётчик пункта «Звонки».
+    supabase
+      .from("calls")
+      .select("id", { count: "exact", head: true })
+      .eq("direction", "in")
+      .or("duration_sec.is.null,duration_sec.eq.0")
+      .is("called_back_at", null),
+  ]);
+  return {
+    inbox: conversations.count ?? 0,
+    calls: calls.count ?? 0,
+  };
+}
+
 export default async function AppLayout({
   children,
 }: {
@@ -76,35 +102,14 @@ export default async function AppLayout({
 
   // Диалоги, где последним написал клиент. Счёт идёт под RLS, поэтому
   // менеджер видит только то, что ему и так доступно.
-  let unanswered = 0;
-  let missedCalls = 0;
-  if (profile.role !== "builder") {
-    const supabase = await createClient();
-    const { count } = await supabase
-      .from("conversations")
-      .select("id", { count: "exact", head: true })
-      .eq("last_direction", "in");
-    unanswered = count ?? 0;
-    // Пропущенные без обратного звонка — счётчик пункта «Звонки».
-    const { count: missed } = await supabase
-      .from("calls")
-      .select("id", { count: "exact", head: true })
-      .eq("direction", "in")
-      .or("duration_sec.is.null,duration_sec.eq.0")
-      .is("called_back_at", null);
-    missedCalls = missed ?? 0;
-  }
+  const badges = loadNavBadges(profile);
 
   const visibleNav = NAV.filter((item) =>
     item.roles.includes(profile.role),
   ).map((item) =>
     profile.role === "builder" && item.href === "/reports"
       ? { ...item, label: "Дашборд" }
-      : item.href === "/inbox"
-        ? { ...item, badge: unanswered }
-        : item.href === "/calls"
-          ? { ...item, badge: missedCalls }
-          : item,
+      : item,
   );
 
   return (
@@ -115,7 +120,7 @@ export default async function AppLayout({
       <aside className="nav">
         <div className="nav-brand">ISRAGRUP</div>
         {profile.role !== "builder" && <GlobalSearch />}
-        <AppNav items={visibleNav} />
+        <AppNav items={visibleNav} badges={badges} />
         <div className="nav-foot">
           <span className="avatar">
             {profile.full_name.slice(0, 2).toUpperCase()}

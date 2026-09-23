@@ -182,6 +182,7 @@ function initials(name: string): string {
 
 function formatTranscriptDate(value: string): string {
   return new Intl.DateTimeFormat("ru-RU", {
+    timeZone: "Europe/Chisinau",
     day: "numeric",
     month: "long",
     hour: "2-digit",

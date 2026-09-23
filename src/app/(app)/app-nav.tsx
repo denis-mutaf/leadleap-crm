@@ -12,14 +12,13 @@ import {
 } from "lucide-react";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { Suspense, use, useEffect } from "react";
 import { setRouteProgress } from "./route-progress";
 
 export type AppNavItem = {
   href: string;
   label: string;
   icon: AppNavIcon;
-  badge?: number;
 };
 
 export type AppNavIcon =
@@ -48,14 +47,33 @@ function isActivePath(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function NavBadge({
+  badges,
+  kind,
+}: {
+  badges: Promise<{ inbox: number; calls: number }>;
+  kind: "inbox" | "calls";
+}) {
+  const { inbox, calls } = use(badges);
+  const badge = kind === "inbox" ? inbox : calls;
+  if (!badge) return null;
+  return (
+    <span className="nav-item-badge" aria-label={`${badge} без ответа`}>
+      {badge > 99 ? "99+" : badge}
+    </span>
+  );
+}
+
 function NavLinkContent({
   Icon,
   label,
-  badge,
+  badges,
+  badgeKind,
 }: {
   Icon: typeof LayoutDashboard;
   label: string;
-  badge?: number;
+  badges?: Promise<{ inbox: number; calls: number }>;
+  badgeKind?: "inbox" | "calls";
 }) {
   const { pending } = useLinkStatus();
 
@@ -74,24 +92,32 @@ function NavLinkContent({
       {label}
       {/* Число неотвеченных видно из любого раздела: иначе про инбокс
           вспоминают, только когда клиент звонит сам. */}
-      {badge ? (
-        <span className="nav-item-badge" aria-label={`${badge} без ответа`}>
-          {badge > 99 ? "99+" : badge}
-        </span>
+      {badges && badgeKind ? (
+        <Suspense fallback={null}>
+          <NavBadge badges={badges} kind={badgeKind} />
+        </Suspense>
       ) : null}
       {pending && <span className="nav-item-pending" aria-hidden="true" />}
     </>
   );
 }
 
-export function AppNav({ items }: { items: AppNavItem[] }) {
+export function AppNav({
+  items,
+  badges,
+}: {
+  items: AppNavItem[];
+  badges: Promise<{ inbox: number; calls: number }>;
+}) {
   const pathname = usePathname();
 
   return (
     <nav aria-label="Основная навигация">
-      {items.map(({ href, label, icon, badge }) => {
+      {items.map(({ href, label, icon }) => {
         const Icon = ICONS[icon];
         const active = isActivePath(pathname, href);
+        const badgeKind =
+          href === "/inbox" ? ("inbox" as const) : href === "/calls" ? ("calls" as const) : undefined;
         return (
           <Link
             className={`nav-item ${active ? "is-active" : ""}`}
@@ -100,7 +126,12 @@ export function AppNav({ items }: { items: AppNavItem[] }) {
             aria-current={active ? "page" : undefined}
             style={{ position: "relative" }}
           >
-            <NavLinkContent Icon={Icon} label={label} badge={badge} />
+            <NavLinkContent
+              Icon={Icon}
+              label={label}
+              badges={badges}
+              badgeKind={badgeKind}
+            />
           </Link>
         );
       })}

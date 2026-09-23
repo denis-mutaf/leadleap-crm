@@ -21,6 +21,7 @@ function formatDate(value: string | null) {
     ? new Intl.DateTimeFormat("ru-RU", {
         dateStyle: "medium",
         timeStyle: "short",
+        timeZone: "Europe/Chisinau",
       }).format(new Date(value))
     : "Не входил";
 }

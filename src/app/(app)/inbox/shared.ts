@@ -60,15 +60,15 @@ export function time(value: string | null) {
   const minutes = Math.floor((now.getTime() - date.getTime()) / 60000);
   if (minutes < 60) return `${Math.max(1, minutes)} мин`;
   if (date.toDateString() === now.toDateString())
-    return new Intl.DateTimeFormat("ru-RU", { hour: "2-digit", minute: "2-digit" }).format(date);
+    return new Intl.DateTimeFormat("ru-RU", { timeZone: "Europe/Chisinau", hour: "2-digit", minute: "2-digit" }).format(date);
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);
   if (date.toDateString() === yesterday.toDateString()) return "вчера";
-  return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short" }).format(date);
+  return new Intl.DateTimeFormat("ru-RU", { timeZone: "Europe/Chisinau", day: "numeric", month: "short" }).format(date);
 }
 
 export function clock(value: string) {
-  return new Intl.DateTimeFormat("ru-RU", { hour: "2-digit", minute: "2-digit" }).format(
+  return new Intl.DateTimeFormat("ru-RU", { timeZone: "Europe/Chisinau", hour: "2-digit", minute: "2-digit" }).format(
     new Date(value),
   );
 }
@@ -81,6 +81,7 @@ export function daySeparator(value: string) {
   yesterday.setDate(now.getDate() - 1);
   if (date.toDateString() === yesterday.toDateString()) return "Вчера";
   return new Intl.DateTimeFormat("ru-RU", {
+    timeZone: "Europe/Chisinau",
     day: "numeric",
     month: "long",
     year: date.getFullYear() === now.getFullYear() ? undefined : "numeric",

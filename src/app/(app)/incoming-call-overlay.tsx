@@ -114,7 +114,20 @@ export function IncomingCallOverlay({
   useEffect(() => {
     if (!active) return;
     void poll();
-    const timer = window.setInterval(() => void poll(), 1200);
+    const channel = supabase
+      .channel(`incoming-call-${actorId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${actorId}`,
+        },
+        () => void poll(),
+      )
+      .subscribe();
+    const timer = window.setInterval(() => void poll(), 15000);
     const onVisibility = () => {
       if (document.visibilityState === "visible") void poll();
     };
@@ -122,9 +135,10 @@ export function IncomingCallOverlay({
     return () => {
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisibility);
+      void supabase.removeChannel(channel);
       request.current += 1;
     };
-  }, [active, poll]);
+  }, [active, actorId, poll, supabase]);
 
   useEffect(() => {
     if (!notice) {

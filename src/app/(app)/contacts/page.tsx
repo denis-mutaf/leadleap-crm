@@ -136,7 +136,7 @@ function initials(name: string): string {
 function formatDate(value: string | null | undefined, empty = "—"): string {
   if (!value) return empty;
   const date = new Date(value);
-  return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", ...(date.getFullYear() === new Date().getFullYear() ? {} : { year: "numeric" }) }).format(date);
+  return new Intl.DateTimeFormat("ru-RU", { timeZone: "Europe/Chisinau", day: "numeric", month: "short", ...(date.getFullYear() === new Date().getFullYear() ? {} : { year: "numeric" }) }).format(date);
 }
 
 function decodeHtmlEntities(value: string): string {

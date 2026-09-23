@@ -293,7 +293,7 @@ export function GlobalSearch() {
                           kind: "task" as const,
                           title: row.title,
                           meta: row.due_at
-                            ? new Date(row.due_at).toLocaleDateString("ru-RU")
+                            ? new Date(row.due_at).toLocaleDateString("ru-RU", { timeZone: "Europe/Chisinau" })
                             : undefined,
                           href: row.deal_id
                             ? `/deals/${row.deal_id}`
@@ -425,7 +425,7 @@ export function GlobalSearch() {
               kind: "task",
               title: row.title,
               meta: row.due_at
-                ? new Date(row.due_at).toLocaleDateString("ru-RU")
+                ? new Date(row.due_at).toLocaleDateString("ru-RU", { timeZone: "Europe/Chisinau" })
                 : undefined,
               href: row.deal_id ? `/deals/${row.deal_id}` : "/tasks",
             })),

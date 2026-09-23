@@ -1,9 +1,11 @@
 import Link from "next/link";
+import Form from "next/form";
 import { redirect } from "next/navigation";
 import { CheckSquare, Search, X } from "lucide-react";
 import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { EmptyState } from "@/components/crm/empty-state";
+import { AutoSubmitForm } from "../auto-submit-form";
 import { TaskRow } from "./task-row";
 import styles from "./tasks.module.css";
 
@@ -353,7 +355,7 @@ export default async function TasksPage({
           <span className="view-switch-active">Список</span>
         </div>
         <span className="header-spacer" />
-        <form method="get" className={styles.searchForm}>
+        <Form action="/tasks" className={styles.searchForm} key={`search|${query}|${assignee}|${typeId}|${fromDate}|${toDate}`}>
           {assignee !== "all" && <input type="hidden" name="assignee" value={assignee} />}
           {typeId && <input type="hidden" name="type" value={typeId} />}
           {fromDate && <input type="hidden" name="from" value={fromDate} />}
@@ -361,9 +363,9 @@ export default async function TasksPage({
           <Search size={14} />
           <input name="q" defaultValue={query} placeholder="Поиск по задачам" aria-label="Поиск по задачам" />
           <button className="task-icon-button" type="submit" aria-label="Найти"><Search size={14} /></button>
-        </form>
+        </Form>
       </div>
-      <form method="get" className="tasks-filterbar">
+      <AutoSubmitForm action="/tasks" className="tasks-filterbar" key={`filters|${assignee}|${typeId}|${fromDate}|${toDate}|${query}`}>
         <label className={styles.filterField}>
           <span>Ответственный</span>
           <select name="assignee" defaultValue={assignee}>
@@ -402,7 +404,7 @@ export default async function TasksPage({
           <i />
           Завтра {tomorrowTotal}
         </span>
-      </form>
+      </AutoSubmitForm>
       <main className="task-list">
         {groups.map((group) => (
           <section className="task-group" key={group.key}>

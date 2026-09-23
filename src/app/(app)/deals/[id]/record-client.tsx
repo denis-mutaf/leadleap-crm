@@ -40,18 +40,18 @@ export type DealRecordData = {
 const labels: Record<string, string> = { open: "В работе", postponed: "Отложена", won: "Выиграна", lost: "Проиграна", cash: "Наличные", mortgage: "Ипотека", installment: "Рассрочка", local: "Местный", diaspora: "Диаспора", living: "Для жизни", investment: "Инвестиция" };
 const attributionLabels: Record<keyof Attribution, string> = { utm_source: "utm_source", utm_medium: "utm_medium", utm_campaign: "utm_campaign", utm_content: "utm_content", utm_term: "utm_term", UTM_ID: "UTM_ID", fbclid: "fbclid", FORMNAME: "Форма", TRANID: "TRANID", _ym_uid: "_ym_uid" };
 const fmtMoney = (value: number | null | undefined, currency = "EUR") => value == null ? null : `${new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(value)} ${currency}`;
-const fmtDate = (value: string) => new Date(value).toLocaleString("ru-RU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+const fmtDate = (value: string) => new Date(value).toLocaleString("ru-RU", { timeZone: "Europe/Chisinau", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 // «Следующий шаг: Позвонить» без срока бесполезен: весь смысл шага в том, когда
 // он наступит. Сегодня и завтра называются словом, дальше — датой.
 const fmtDue = (value: string) => {
   const due = new Date(value);
-  const time = due.toLocaleString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  const time = due.toLocaleString("ru-RU", { timeZone: "Europe/Chisinau", hour: "2-digit", minute: "2-digit" });
   const day = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
   const shift = Math.round((day(due) - day(new Date())) / 86400000);
   if (shift === 0) return `сегодня ${time}`;
   if (shift === 1) return `завтра ${time}`;
   if (shift === -1) return `вчера ${time}`;
-  return `${due.toLocaleString("ru-RU", { day: "2-digit", month: "short" })}, ${time}`;
+  return `${due.toLocaleString("ru-RU", { timeZone: "Europe/Chisinau", day: "2-digit", month: "short" })}, ${time}`;
 };
 
 // Самая заметная плашка карточки говорила «Не назначен» — и на этом всё. Теперь
@@ -77,7 +77,7 @@ function NextStep({ tasks, onPlan }: { tasks: Task[]; onPlan: () => void }) {
     </div>
   );
 }
-const dayLabel = (value: string) => new Date(value).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
+const dayLabel = (value: string) => new Date(value).toLocaleDateString("ru-RU", { timeZone: "Europe/Chisinau", day: "numeric", month: "long", year: "numeric" });
 const initials = (value: string) => value.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
 
 // Иконка у подписи означает ТИП атрибута (text/number/select/date/user),

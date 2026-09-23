@@ -1,4 +1,3 @@
-import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
@@ -15,26 +14,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const response = await updateSession(request);
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll() {
-          // Куки уже обновлены в updateSession, здесь только читаем.
-        },
-      },
-    },
-  );
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { response, userId } = await updateSession(request);
 
   const isLoginPage = pathname === "/login";
 
@@ -46,7 +26,7 @@ export async function proxy(request: NextRequest) {
     return redirect;
   }
 
-  if (!user && pathname.startsWith("/api/")) {
+  if (!userId && pathname.startsWith("/api/")) {
     const unauthorized = NextResponse.json(
       { error: "Unauthorized" },
       { status: 401 },
@@ -57,11 +37,11 @@ export async function proxy(request: NextRequest) {
     return unauthorized;
   }
 
-  if (!user && !isLoginPage) {
+  if (!userId && !isLoginPage) {
     return redirectWithSession("/login");
   }
 
-  if (user && isLoginPage) {
+  if (userId && isLoginPage) {
     return redirectWithSession("/deals");
   }
 

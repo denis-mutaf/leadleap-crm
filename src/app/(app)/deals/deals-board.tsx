@@ -108,7 +108,7 @@ function initials(name: string) {
 }
 
 function time(value: string) {
-  return new Date(value).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  return new Date(value).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Chisinau" });
 }
 
 function relative(value: string | null | undefined) {

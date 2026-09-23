@@ -350,7 +350,7 @@ function initials(name: string): string {
 }
 
 function formatDate(value: string): string {
-  return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short" }).format(new Date(value));
+  return new Intl.DateTimeFormat("ru-RU", { timeZone: "Europe/Chisinau", day: "numeric", month: "short" }).format(new Date(value));
 }
 
 function plural(value: number, one: string, few: string, many: string): string {

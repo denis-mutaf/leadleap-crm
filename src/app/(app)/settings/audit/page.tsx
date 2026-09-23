@@ -1,4 +1,5 @@
 import { Filter, History } from "lucide-react";
+import Form from "next/form";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -105,7 +106,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
   ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, 100);
   return <div className={styles.page}>
     <header className={styles.header}><div><h1>Журнал изменений</h1><p className={styles.subtitle}>Переходы этапов и изменения записей</p></div></header>
-    <form className={styles.auditFilters} method="get"><Filter size={15} aria-hidden="true" /><select name="person" defaultValue={actorId ?? ""}><option value="">Все люди</option>{(profiles.data ?? []).map((row) => <option key={row.id} value={row.id}>{row.full_name}</option>)}</select><input type="date" name="from" defaultValue={params.from ?? ""} aria-label="С даты" /><input type="date" name="to" defaultValue={params.to ?? ""} aria-label="По дату" /><label className={styles.auditSystem}><input type="checkbox" name="system" value="1" defaultChecked={showSystem} /> Системные</label><button className={styles.filterButton}>Показать</button></form>
-    <div className={styles.auditList}>{events.length ? events.map((event) => <article className={styles.auditRow} key={event.id}><History size={15} /><div><strong>{event.text}</strong><p>{event.actor} · {new Intl.DateTimeFormat("ru-RU", { dateStyle: "medium", timeStyle: "short" }).format(new Date(event.at))}</p></div></article>) : <p className={styles.auditEmpty}>{showSystem ? "За выбранный период изменений нет." : "Люди пока ничего не меняли за этот период. Массовые правки импорта показывает галочка «Системные»."}</p>}</div>
+    <Form className={styles.auditFilters} action="/settings/audit" key={`${actorId ?? ""}|${params.from ?? ""}|${params.to ?? ""}|${showSystem}`}><Filter size={15} aria-hidden="true" /><select name="person" defaultValue={actorId ?? ""}><option value="">Все люди</option>{(profiles.data ?? []).map((row) => <option key={row.id} value={row.id}>{row.full_name}</option>)}</select><input type="date" name="from" defaultValue={params.from ?? ""} aria-label="С даты" /><input type="date" name="to" defaultValue={params.to ?? ""} aria-label="По дату" /><label className={styles.auditSystem}><input type="checkbox" name="system" value="1" defaultChecked={showSystem} /> Системные</label><button className={styles.filterButton}>Показать</button></Form>
+    <div className={styles.auditList}>{events.length ? events.map((event) => <article className={styles.auditRow} key={event.id}><History size={15} /><div><strong>{event.text}</strong><p>{event.actor} · {new Intl.DateTimeFormat("ru-RU", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Chisinau" }).format(new Date(event.at))}</p></div></article>) : <p className={styles.auditEmpty}>{showSystem ? "За выбранный период изменений нет." : "Люди пока ничего не меняли за этот период. Массовые правки импорта показывает галочка «Системные»."}</p>}</div>
   </div>;
 }

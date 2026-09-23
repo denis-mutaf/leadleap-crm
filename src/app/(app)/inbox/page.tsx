@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Form from "next/form";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { Inbox, MessageCircle, Search } from "lucide-react";
@@ -209,7 +210,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Search
             </Link>
           ))}
         </nav>
-        <form className={styles.search} method="get">
+        <Form className={styles.search} action="/inbox" key={`${view}|${query}`}>
           {view !== "all" && <input type="hidden" name="view" value={view} />}
           <Search size={14} />
           <input
@@ -218,7 +219,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Search
             placeholder="Поиск по переписке"
             aria-label="Поиск по переписке"
           />
-        </form>
+        </Form>
       </div>
       <div className="inbox-grid">
         <aside className="inbox-list" aria-label="Диалоги">

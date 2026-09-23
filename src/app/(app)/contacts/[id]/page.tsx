@@ -195,15 +195,15 @@ export default async function ContactPage({
 }
 
 function initials(name: string): string { return decodeHtmlEntities(name).split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase(); }
-function formatDate(value: string): string { const date = new Date(value); return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", ...(date.getFullYear() === new Date().getFullYear() ? {} : { year: "numeric" }) }).format(date); }
-function formatDateTime(value: string): string { return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", year: "numeric" }).format(new Date(value)); }
-function formatTime(value: string): string { return new Intl.DateTimeFormat("ru-RU", { hour: "2-digit", minute: "2-digit" }).format(new Date(value)); }
+function formatDate(value: string): string { const date = new Date(value); return new Intl.DateTimeFormat("ru-RU", { timeZone: "Europe/Chisinau", day: "numeric", month: "short", ...(date.getFullYear() === new Date().getFullYear() ? {} : { year: "numeric" }) }).format(date); }
+function formatDateTime(value: string): string { return new Intl.DateTimeFormat("ru-RU", { timeZone: "Europe/Chisinau", day: "numeric", month: "long", year: "numeric" }).format(new Date(value)); }
+function formatTime(value: string): string { return new Intl.DateTimeFormat("ru-RU", { timeZone: "Europe/Chisinau", hour: "2-digit", minute: "2-digit" }).format(new Date(value)); }
 function fieldValue(field: AmoField | undefined): string | null { if (!field) return null; return (field.values ?? []).map((item) => typeof item.value === "string" || typeof item.value === "number" ? String(item.value) : item.enum ?? item.enum_code ?? "").filter(Boolean).join(", ") || null; }
 function customValueText(value: unknown): string | null { if (value === null || value === undefined || value === "") return null; if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value); if (Array.isArray(value)) return value.map(String).join(", "); return JSON.stringify(value); }
 function decodeHtmlEntities(value: string): string { return value.replace(/&lt;|&gt;|&amp;|&quot;|&#39;/g, (entity) => ({ "&lt;": "<", "&gt;": ">", "&amp;": "&", "&quot;": '"', "&#39;": "'" })[entity] ?? entity); }
 function findField(fields: AmoField[], pattern: RegExp): AmoField | undefined { return fields.find((field) => pattern.test(`${field.field_name ?? ""} ${field.field_code ?? ""}`)); }
 function groupByDay<T extends { at: string }>(items: T[]): Array<[string, T[]]> {
   const groups = new Map<string, T[]>();
-  for (const item of items) { const key = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", year: "numeric" }).format(new Date(item.at)); groups.set(key, [...(groups.get(key) ?? []), item]); }
+  for (const item of items) { const key = new Intl.DateTimeFormat("ru-RU", { timeZone: "Europe/Chisinau", day: "numeric", month: "long", year: "numeric" }).format(new Date(item.at)); groups.set(key, [...(groups.get(key) ?? []), item]); }
   return [...groups.entries()];
 }

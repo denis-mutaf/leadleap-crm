@@ -10,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import Form from "next/form";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { StageIndicator } from "@/components/crm/stage-indicator";
@@ -67,6 +68,7 @@ function href(params: Record<string, string | number | undefined>) {
 function displayDate(value: string | null, withTime = true) {
   if (!value) return "Нет даты";
   return new Intl.DateTimeFormat("ru-RU", {
+    timeZone: "Europe/Chisinau",
     day: "2-digit",
     month: "2-digit",
     ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {}),
@@ -309,7 +311,7 @@ export function DealsTableView(p: Props) {
 
   return (
     <div className={styles.wrap}>
-      <form className={styles.filters} method="get">
+      <Form className={styles.filters} action="/deals/table" key={`${p.query}|${p.owner}|${p.stage}|${p.sort}|${p.direction}`}>
         <input name="q" defaultValue={p.query} placeholder="Поиск по сделкам" aria-label="Поиск по сделкам" />
         <select name="owner" defaultValue={p.owner} aria-label="Ответственный">
           <option value="">Все ответственные</option>
@@ -336,7 +338,7 @@ export function DealsTableView(p: Props) {
             </Link>
           )}
         </span>
-      </form>
+      </Form>
       {p.rows.length === 0 ? (
         <div className={styles.empty}>
           <strong>Сделки не найдены</strong>

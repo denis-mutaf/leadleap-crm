@@ -103,5 +103,5 @@ export function CallNoteForm({
 
 function formatNoteDate(value: string): string {
   const d = new Date(value);
-  return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(d);
+  return new Intl.DateTimeFormat("ru-RU", { timeZone: "Europe/Chisinau", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(d);
 }

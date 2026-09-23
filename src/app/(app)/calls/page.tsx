@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Form from "next/form";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import {
@@ -250,15 +251,15 @@ export default async function CallsPage({ searchParams }: { searchParams: Promis
             </Link>
           ))}
         </span>
-        <form className={styles.searchForm} method="get" role="search">
+        <Form className={styles.searchForm} action="/calls" role="search" key={`search|${seg}|${q}`}>
           {seg !== "all" && <input type="hidden" name="seg" value={seg} />}
           <Search size={14} aria-hidden="true" />
           <input name="q" defaultValue={q} placeholder="Поиск по номеру или имени" aria-label="Поиск по номеру или имени" />
-        </form>
+        </Form>
       </div>
 
       <div className={styles.filterbar}>
-        <AutoSubmitForm>
+        <AutoSubmitForm action="/calls" key={`filters|${seg}|${q}|${period}|${userFilter}|${dir}|${sort}|${onlyRec}|${selectedId ?? ""}`}>
           {seg !== "all" && <input type="hidden" name="seg" value={seg} />}
           {q && <input type="hidden" name="q" value={q} />}
           {selectedId && <input type="hidden" name="call" value={selectedId} />}

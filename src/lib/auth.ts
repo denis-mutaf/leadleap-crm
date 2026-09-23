@@ -10,28 +10,27 @@ export const getCurrentProfile = cache(
   async function getCurrentProfile(): Promise<Profile | null> {
     const supabase = await createClient();
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { data } = await supabase.auth.getClaims();
+    const userId = data?.claims?.sub;
 
-    if (!user) {
+    if (!userId) {
       return null;
     }
 
-    const { data } = await supabase
+    const { data: profile } = await supabase
       .from("profiles")
       .select("*")
-      .eq("id", user.id)
+      .eq("id", userId)
       .single();
 
-    if (!data) {
+    if (!profile) {
       return null;
     }
 
-    if (!(data as Profile).is_active) {
+    if (!(profile as Profile).is_active) {
       return null;
     }
 
-    return data as Profile;
+    return profile as Profile;
   },
 );
