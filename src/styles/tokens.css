@@ -182,6 +182,9 @@
   --hue-magenta-dot: #cb56e4;
   --hue-grey-dot: #a3a3a3; --hue-grey-bg: #efefef; --hue-grey-tx: #4a4a4a;
 
+  /* Графит бренда ISRAGRUP — арт входа. */
+  --graphite: #242424; --graphite-hi: #474747; --graphite-deep: #121212;
+
   /* Источник заявки — плитка SourceIcon: цвет бренда + светлый верх для объёма. */
   --brand-facebook: #1467d8; --brand-facebook-hi: #3d8ef6;
   --brand-meta: #0070e0; --brand-meta-hi: #2c9bff;

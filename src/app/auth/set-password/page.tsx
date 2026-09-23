@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { dbErrorText } from "@/lib/db-errors";
+import { AuthShell } from "@/components/crm/auth-shell";
 
 const EXPIRED_LINK =
   "Ссылка устарела или уже использована. Попросите администратора прислать приглашение заново.";
@@ -109,36 +109,25 @@ export default function SetPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4" style={{ background: "var(--page)" }}>
-      <div className="module motion-dialog w-full max-w-sm" style={{ borderRadius: 28, padding: 28 }}>
-        <Image src="/brand/logo.svg" alt="ISRAGRUP" width={120} height={28} />
-        <h1 className="mt-4 text-xl font-medium" style={{ color: "var(--foreground)" }}>
-          {mode === "recovery" ? "Новый пароль" : "Добро пожаловать в ISRAGRUP CRM"}
-        </h1>
-        <p className="mt-1 text-sm" style={{ color: "var(--secondary-text)" }}>
-          {mode === "recovery"
-            ? "Придумайте новый пароль для входа."
-            : "Придумайте пароль, чтобы войти в систему."}
-        </p>
+    <AuthShell>
+      <h1>{mode === "recovery" ? "Новый пароль" : "Добро пожаловать"}</h1>
+      <p className="auth-lead">
+        {mode === "recovery"
+          ? "Придумайте новый пароль для входа."
+          : "Придумайте пароль — с ним вы будете входить в CRM."}
+      </p>
 
-        {!ready ? (
-          <p className="mt-6 text-sm" style={{ color: "var(--secondary-text)" }}>
-            Проверяем ссылку…
-          </p>
-        ) : linkError ? (
-          <p role="alert" className="motion-fade-up mt-6 text-sm" style={{ color: "var(--destructive)" }}>
-            {linkError}
-          </p>
-        ) : (
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            <div>
-              <label
-                htmlFor="password"
-                className="mb-1 block text-sm font-medium"
-                style={{ color: "var(--secondary-text)" }}
-              >
-                Новый пароль
-              </label>
+      {!ready ? (
+        <p className="auth-lead" role="status">Проверяем ссылку…</p>
+      ) : linkError ? (
+        <p role="alert" className="auth-error motion-fade-up">
+          {linkError}
+        </p>
+      ) : (
+        <form onSubmit={handleSubmit} className="auth-fields" noValidate>
+          <div className="auth-field">
+            <label htmlFor="password">Новый пароль</label>
+            <div className="auth-control">
               <input
                 id="password"
                 type="password"
@@ -146,24 +135,15 @@ export default function SetPasswordPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
-                className="input w-full"
-                placeholder="••••••••"
+                placeholder="Не короче 8 символов"
               />
-              {passwordHint && (
-                <p className="mt-1 text-sm" style={{ color: "var(--secondary-text)" }}>
-                  {passwordHint}
-                </p>
-              )}
             </div>
+            {passwordHint && <p className="auth-hint">{passwordHint}</p>}
+          </div>
 
-            <div>
-              <label
-                htmlFor="confirm"
-                className="mb-1 block text-sm font-medium"
-                style={{ color: "var(--secondary-text)" }}
-              >
-                Повторите пароль
-              </label>
+          <div className="auth-field">
+            <label htmlFor="confirm">Повторите пароль</label>
+            <div className="auth-control">
               <input
                 id="confirm"
                 type="password"
@@ -171,32 +151,23 @@ export default function SetPasswordPage() {
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 disabled={loading}
-                className="input w-full"
-                placeholder="••••••••"
+                placeholder="Ещё раз"
               />
-              {confirmHint && (
-                <p className="mt-1 text-sm" style={{ color: "var(--secondary-text)" }}>
-                  {confirmHint}
-                </p>
-              )}
             </div>
+            {confirmHint && <p className="auth-hint">{confirmHint}</p>}
+          </div>
 
-            {error && (
-              <p role="alert" className="motion-fade-up text-sm" style={{ color: "var(--destructive)" }}>
-                {error}
-              </p>
-            )}
+          {error && (
+            <p role="alert" className="auth-error motion-fade-up">
+              {error}
+            </p>
+          )}
 
-            <button
-              type="submit"
-              disabled={!canSubmit}
-              className="btn btn-primary w-full"
-            >
-              {loading ? "Сохраняем…" : "Сохранить и войти"}
-            </button>
-          </form>
-        )}
-      </div>
-    </div>
+          <button type="submit" disabled={!canSubmit} className="btn btn-primary auth-submit">
+            {loading ? "Сохраняем…" : "Сохранить и войти"}
+          </button>
+        </form>
+      )}
+    </AuthShell>
   );
 }

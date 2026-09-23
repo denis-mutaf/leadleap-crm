@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -10,6 +11,8 @@ import { IncomingCallOverlay } from "./incoming-call-overlay";
 import { Toaster } from "@/components/ui/sonner";
 import { Suspense } from "react";
 import { RouteProgress } from "./route-progress";
+import { NAV_COOKIE } from "@/lib/nav-cookie";
+import { NavShell, NavToggle } from "./nav-collapse";
 
 type NavEntry = AppNavItem & {
   roles: string[];
@@ -112,15 +115,19 @@ export default async function AppLayout({
       : item,
   );
 
+  const navCollapsed = (await cookies()).get(NAV_COOKIE)?.value === "collapsed";
   return (
-    <div className="app-shell">
+    <NavShell initialCollapsed={navCollapsed}>
       <Suspense fallback={null}>
         <RouteProgress />
       </Suspense>
       <aside className="nav">
         <div className="nav-brand">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/logo.svg" alt="ISRAGRUP" />
+          <img className="nav-logo" src="/brand/logo.svg" alt="ISRAGRUP" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="nav-mark" src="/brand/mark.svg" alt="ISRAGRUP" />
+          <NavToggle />
         </div>
         {profile.role !== "builder" && <GlobalSearch />}
         <AppNav items={visibleNav} badges={badges} />
@@ -141,6 +148,6 @@ export default async function AppLayout({
         {children}
       </main>
       <Toaster position="bottom-right" />
-    </div>
+    </NavShell>
   );
 }

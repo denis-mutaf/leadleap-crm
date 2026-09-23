@@ -1,0 +1,200 @@
+/* ===== Вход и смена пароля: AuthShell ===== */
+
+.auth-page {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--page);
+}
+
+.auth-frame {
+  width: min(100%, 980px);
+  min-height: 600px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 8px;
+  padding: 8px;
+  border-radius: var(--radius-island);
+  background: var(--module-card);
+  box-shadow: var(--shadow-overlay);
+}
+
+/* Арт: графит, лаймовое свечение, тёплый блик и тонкая чертёжная сетка. */
+.auth-art {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 28px;
+  border-radius: var(--radius-module);
+  background:
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--card) 5%, transparent) 0 1px, transparent 1px 40px),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--card) 5%, transparent) 0 1px, transparent 1px 40px),
+    linear-gradient(160deg, var(--graphite-hi), var(--graphite) 55%, var(--graphite-deep));
+  color: var(--card);
+  isolation: isolate;
+}
+
+.auth-art-glow {
+  position: absolute;
+  inset: -20%;
+  z-index: -1;
+  background:
+    radial-gradient(38% 34% at 32% 58%, color-mix(in srgb, var(--primary) 85%, transparent), transparent 70%),
+    radial-gradient(30% 28% at 74% 30%, color-mix(in srgb, var(--card) 38%, transparent), transparent 72%),
+    radial-gradient(26% 24% at 64% 82%, color-mix(in srgb, var(--primary) 40%, transparent), transparent 70%);
+  filter: blur(28px);
+  animation: auth-drift 16s var(--ease) infinite alternate;
+}
+
+@keyframes auth-drift {
+  from { transform: translate3d(-3%, 2%, 0) scale(1); }
+  to { transform: translate3d(4%, -3%, 0) scale(1.08); }
+}
+
+.auth-art-logo { width: 132px; height: auto; filter: invert(1) brightness(2); }
+
+.auth-art-copy span {
+  display: block;
+  margin-bottom: 10px;
+  color: color-mix(in srgb, var(--card) 70%, transparent);
+  font-size: var(--text-body);
+}
+
+.auth-art-copy p {
+  max-width: 340px;
+  margin: 0;
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+/* Та же чертёжная сетка, что в арте, — графитом, растворяется к форме. */
+.auth-frame { position: relative; isolation: isolate; }
+
+.auth-frame::before {
+  content: "";
+  position: absolute;
+  inset: 8px 8px 8px 50%;
+  z-index: -1;
+  border-radius: var(--radius-module);
+  background:
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--foreground) 7%, transparent) 0 1px, transparent 1px 40px),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--foreground) 7%, transparent) 0 1px, transparent 1px 40px);
+  mask-image: radial-gradient(70% 60% at 50% 50%, transparent 30%, #000 100%);
+  pointer-events: none;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: min(100%, 360px);
+  margin: 0 auto;
+  padding: 40px 8px;
+}
+
+.auth-form-logo { display: none; width: 120px; height: auto; margin-bottom: 28px; }
+
+.auth-form h1 {
+  margin: 0;
+  color: var(--foreground);
+  font-size: var(--text-title);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: var(--text-title-lh);
+}
+
+.auth-lead {
+  margin: 6px 0 28px;
+  color: var(--secondary-text);
+  font-size: var(--text-body);
+  line-height: 1.45;
+}
+
+.auth-fields { display: grid; gap: 16px; }
+
+.auth-field label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--foreground);
+  font-size: var(--text-body);
+  font-weight: 500;
+}
+
+.auth-control { position: relative; }
+
+.auth-control input {
+  width: 100%;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius-control);
+  background: var(--field);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+  transition:
+    border-color var(--motion-fast) var(--ease),
+    box-shadow var(--motion) var(--ease);
+}
+
+.auth-control input::placeholder { color: var(--field-placeholder); }
+
+.auth-control input:hover { border-color: var(--field-border-hover); }
+
+.auth-control input:focus { border-color: var(--foreground); box-shadow: 0 0 0 3px var(--ghost); }
+
+.auth-control input:disabled { opacity: 0.6; }
+
+.auth-control:has(.auth-eye) input { padding-right: 44px; }
+
+.auth-eye {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  width: 30px;
+  height: 30px;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: background-color var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease);
+}
+
+.auth-eye:hover { background: var(--ghost); color: var(--foreground); }
+
+.auth-hint { margin: 6px 0 0; color: var(--secondary-text); font-size: var(--text-small); }
+
+.auth-error { margin: 0; color: var(--destructive); font-size: var(--text-body); }
+
+.auth-submit.btn { width: 100%; height: 40px; margin-top: 8px; justify-content: center; font-size: 14px; }
+
+.auth-foot {
+  margin: 24px 0 0;
+  color: var(--secondary-text);
+  font-size: var(--text-small);
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  .auth-page { padding: 12px; align-items: start; }
+  .auth-frame { min-height: 0; grid-template-columns: minmax(0, 1fr); border-radius: var(--radius-module); }
+  .auth-art { display: none; }
+  .auth-frame::before { inset: 0; }
+  .auth-form { padding: 28px 12px; }
+  .auth-form-logo { display: block; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-art-glow { animation: none; }
+}

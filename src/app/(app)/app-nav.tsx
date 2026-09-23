@@ -13,6 +13,7 @@ import {
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, use, useEffect } from "react";
+import { useNavCollapsed } from "./nav-collapse";
 import { setRouteProgress } from "./route-progress";
 
 export type AppNavItem = {
@@ -89,7 +90,7 @@ function NavLinkContent({
   return (
     <>
       <Icon size={16} />
-      {label}
+      <span className="nav-label">{label}</span>
       {/* Число неотвеченных видно из любого раздела: иначе про инбокс
           вспоминают, только когда клиент звонит сам. */}
       {badges && badgeKind ? (
@@ -110,6 +111,7 @@ export function AppNav({
   badges: Promise<{ inbox: number; calls: number }>;
 }) {
   const pathname = usePathname();
+  const collapsed = useNavCollapsed();
 
   return (
     <nav aria-label="Основная навигация">
@@ -124,6 +126,7 @@ export function AppNav({
             href={href}
             key={href}
             aria-current={active ? "page" : undefined}
+            title={collapsed ? label : undefined}
             style={{ position: "relative" }}
           >
             <NavLinkContent

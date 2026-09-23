@@ -78,6 +78,61 @@ body { letter-spacing: -0.005em; -webkit-font-smoothing: antialiased; }
 
 .nav-brand img { height: 22px; width: auto; display: block; }
 
+.nav-brand .nav-mark { display: none; }
+
+.nav-toggle {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  margin-left: auto;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: background-color var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease), transform var(--motion-fast) var(--ease);
+}
+
+.nav-toggle:hover { background: var(--sidebar-accent); color: var(--foreground); }
+
+.nav-toggle:active { transform: scale(var(--press-scale)); }
+
+.nav-signout { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ---- свёрнутый остров: колонка иконок, подписи — в подсказке ---- */
+@media (min-width: 601px) {
+  .app-shell[data-nav="collapsed"] { grid-template-columns: 64px minmax(0, 1fr); }
+
+  .app-shell[data-nav="collapsed"] .nav { padding: 18px 8px; align-items: stretch; }
+
+  .app-shell[data-nav="collapsed"] :is(.nav-label, .nav-logo, .nav-person, .global-search-trigger span, .global-search-trigger kbd) { display: none; }
+
+  .app-shell[data-nav="collapsed"] .nav-brand { height: auto; flex-direction: column; gap: 10px; padding: 4px 0; }
+
+  .app-shell[data-nav="collapsed"] .nav-brand .nav-mark { display: block; height: 24px; }
+
+  .app-shell[data-nav="collapsed"] .nav-toggle { margin-left: 0; }
+
+  .app-shell[data-nav="collapsed"] :is(.nav-item, .global-search-trigger) { justify-content: center; padding: 0; }
+
+  .app-shell[data-nav="collapsed"] .nav-item-badge {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    font-size: 9px;
+    line-height: 16px;
+  }
+
+  .app-shell[data-nav="collapsed"] .nav-foot { flex-direction: column; gap: 6px; }
+
+  .app-shell[data-nav="collapsed"] .nav-signout { width: 36px; height: 36px; justify-content: center; padding: 0; }
+}
+
 .nav-item {
   position: relative;
   height: 36px;
@@ -249,6 +304,7 @@ body { letter-spacing: -0.005em; -webkit-font-smoothing: antialiased; }
     border-radius: 0; box-shadow: none; border-bottom: 1px solid var(--border);
   }
   .nav-brand { flex: none; height: 28px; margin: 0 4px 0 0; padding: 0 6px; }
+  .nav-toggle { display: none; }
   .nav nav {
     display: flex; flex: 1 1 auto; gap: 2px; min-width: 0; width: auto;
     overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: thin;

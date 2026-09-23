@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { dbErrorText } from "@/lib/db-errors";
 import { createClient } from "@/lib/supabase/client";
+import { useNavCollapsed } from "./nav-collapse";
 
 type Result = {
   id: string;
@@ -33,6 +34,7 @@ const highlight = (value: string, query: string): ReactNode => {
 };
 
 export function GlobalSearch() {
+  const navCollapsed = useNavCollapsed();
   const [open, setOpen] = useState(false),
     [query, setQuery] = useState(""),
     [groups, setGroups] = useState<
@@ -212,6 +214,7 @@ export function GlobalSearch() {
         className="global-search-trigger"
         onClick={() => setOpen(true)}
         aria-label="Открыть поиск"
+        title={navCollapsed ? "Поиск" : undefined}
       >
         <Search size={15} />
         <span>Поиск</span>

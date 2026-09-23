@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import { Eye, EyeOff } from "lucide-react";
+import { AuthShell } from "@/components/crm/auth-shell";
 import { createClient } from "@/lib/supabase/client";
 
 function humanError(message: string): string {
@@ -27,6 +28,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -81,23 +83,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4" style={{ background: "var(--page)" }}>
-      <div className="module motion-dialog w-full max-w-sm" style={{ borderRadius: 28, padding: 28 }}>
-        <Image src="/brand/logo.svg" alt="ISRAGRUP" width={120} height={28} />
-        <h1 className="mt-4 text-xl font-medium" style={{ color: "var(--foreground)" }}>Вход в CRM</h1>
-        <p className="mt-1 text-sm" style={{ color: "var(--secondary-text)" }}>
-          Сотрудников заводит руководитель. Регистрации здесь нет.
-        </p>
+    <AuthShell>
+      <h1>Вход в CRM</h1>
+      <p className="auth-lead">Почта и пароль, которые выдал руководитель.</p>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <div>
-            <label
-              htmlFor="email"
-              className="mb-1 block text-sm font-medium"
-              style={{ color: "var(--secondary-text)" }}
-            >
-              Почта
-            </label>
+      <form onSubmit={handleSubmit} className="auth-fields" noValidate>
+        <div className="auth-field">
+          <label htmlFor="email">Почта</label>
+          <div className="auth-control">
             <input
               id="email"
               type="email"
@@ -105,46 +98,47 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
-              className="input w-full"
-              placeholder="manager@example.com"
+              placeholder="name@gmail.com"
             />
           </div>
+        </div>
 
-          <div>
-            <label
-              htmlFor="password"
-              className="mb-1 block text-sm font-medium"
-              style={{ color: "var(--secondary-text)" }}
-            >
-              Пароль
-            </label>
+        <div className="auth-field">
+          <label htmlFor="password">Пароль</label>
+          <div className="auth-control">
             <input
               id="password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
-              className="input w-full"
-              placeholder="••••••••"
+              placeholder="Пароль"
             />
+            <button
+              type="button"
+              className="auth-eye"
+              onClick={() => setShowPassword((value) => !value)}
+              aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}
+              aria-pressed={showPassword}
+            >
+              {showPassword ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
+            </button>
           </div>
+        </div>
 
-          {error && (
-            <p role="alert" className="motion-fade-up text-sm" style={{ color: "var(--destructive)" }}>
-              {error}
-            </p>
-          )}
+        {error && (
+          <p role="alert" className="auth-error motion-fade-up">
+            {error}
+          </p>
+        )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn btn-primary w-full"
-          >
-            {loading ? "Входим…" : "Войти"}
-          </button>
-        </form>
-      </div>
-    </div>
+        <button type="submit" disabled={loading} className="btn btn-primary auth-submit">
+          {loading ? "Входим…" : "Войти"}
+        </button>
+      </form>
+
+      <p className="auth-foot">Нет доступа? Попросите руководителя прислать приглашение.</p>
+    </AuthShell>
   );
 }
