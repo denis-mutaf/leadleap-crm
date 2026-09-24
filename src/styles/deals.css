@@ -209,7 +209,9 @@
   /* Колонка листается сама: шапка стоит, скругление рамки не рвётся.
      Поля по бокам — чтобы кольцо и тень карточки не срезались. */
   overflow-y: auto;
-  overscroll-behavior: contain;
+  /* Только по вертикали: горизонтальный свайп тачпада уходит доске.
+     contain по обеим осям запирал его в колонке — доска не листалась вбок. */
+  overscroll-behavior-y: contain;
   margin: 0 -4px;
   padding: 2px 4px 20px;
   border-radius: var(--radius-tile);
