@@ -16,7 +16,6 @@ type Candidate = {
   source: string | null;
 };
 type Props = { current: Candidate };
-const esc = (v: string) => v.replace(/[\\%_]/g, "\\$&");
 
 async function loadCandidate(id: string, fullName: string, createdAt: string, customFields: unknown): Promise<Candidate> {
   const db = createClient();
@@ -80,18 +79,16 @@ export default function ContactMergeButton({ current }: Props) {
       void (async () => {
         setLoading(true);
         try {
-          const response = await createClient()
-            .from("contacts")
-              .select("id, full_name, created_at, amo_custom_fields")
-            .ilike("full_name", `%${esc(term)}%`)
-            .neq("id", current.id)
-            .is("merged_into", null)
-            .order("full_name")
-            .limit(8);
+          // Поиск без учёта регистра и диакритики: «taran» находит «Țăran».
+          const response = await createClient().rpc("crm_search_contacts", {
+            p_q: term,
+            p_exclude: current.id,
+            p_limit: 8,
+          });
           if (id !== requestRef.current) return;
           if (response.error) throw new Error(response.error.message);
           const rows = await Promise.all(
-            (response.data ?? []).map((r) => loadCandidate(r.id, r.full_name, r.created_at, r.amo_custom_fields)),
+            ((response.data ?? []) as Array<{ id: string; full_name: string; created_at: string; amo_custom_fields: unknown }>).map((r) => loadCandidate(r.id, r.full_name, r.created_at, r.amo_custom_fields)),
           );
           if (id === requestRef.current) setResults(rows);
         } catch (e) {

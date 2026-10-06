@@ -155,15 +155,31 @@ export async function processLeadgen(
 }
 
 // Имя в переписке — единственное, что Meta отдаёт о собеседнике: телефона нет.
-async function threadName(threadId: string, token: string): Promise<string | null> {
-  try {
-    const res = await fetch(`${GRAPH}/${threadId}?fields=name,username&access_token=${encodeURIComponent(token)}`);
-    if (!res.ok) return null;
-    const body = (await res.json()) as Json;
-    return str(body.name) ?? str(body.username);
-  } catch {
-    return null;
+// Набор полей зависит от канала: у Messenger-профиля (PSID) есть name,
+// first_name, last_name, но нет username — запрос с лишним полем целиком
+// отвечает ошибкой, и контакт оставался «facebook:<номер>».
+const PROFILE_FIELDS: Record<MetaChannel, string[]> = {
+  facebook: ["name", "first_name,last_name"],
+  instagram: ["name,username", "username"],
+  whatsapp: [],
+};
+
+export async function threadName(threadId: string, channel: MetaChannel, token: string): Promise<string | null> {
+  for (const fields of PROFILE_FIELDS[channel]) {
+    try {
+      const res = await fetch(`${GRAPH}/${threadId}?fields=${fields}&access_token=${encodeURIComponent(token)}`);
+      if (!res.ok) continue;
+      const body = (await res.json()) as Json;
+      const found =
+        str(body.name) ||
+        [str(body.first_name), str(body.last_name)].filter(Boolean).join(" ") ||
+        str(body.username);
+      if (found) return found;
+    } catch {
+      // следующий набор полей
+    }
   }
+  return null;
 }
 
 const SOURCE_BY_CHANNEL: Record<MetaChannel, string> = {
@@ -187,7 +203,7 @@ async function ensureConversation(
   if (existing) return existing.id as string;
 
   // Новая переписка — это новый лид: заводим контакт и сделку, как на звонке.
-  const name = (await threadName(event.threadId, token)) ?? `${event.channel}:${event.threadId}`;
+  const name = (await threadName(event.threadId, event.channel, token)) ?? `${event.channel}:${event.threadId}`;
   const { data: contact, error: contactError } = await admin
     .from("contacts")
     .insert({ full_name: name })

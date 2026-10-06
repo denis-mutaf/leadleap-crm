@@ -7,8 +7,12 @@ import { toast } from "sonner";
 import { DateField } from "@/components/crm/date-field";
 import { createClient } from "@/lib/supabase/client";
 import { dbErrorText } from "@/lib/db-errors";
+import { normalizePhone, phoneError } from "@/lib/phone";
 import styles from "./contacts.module.css";
 import { useDismiss } from "@/lib/use-dismiss";
+
+// Та же проверка, что contact_emails_email_format в базе.
+const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/;
 
 type Phone = { id: string; phone: string; is_primary: boolean };
 type Email = { ordinal: number; email: string };
@@ -52,13 +56,24 @@ export function ContactPhones({
   async function addPhone() {
     const phone = draft.trim();
     if (!phone || busy) return;
+    const invalid = phoneError(phone);
+    if (invalid) {
+      toast.error(`Телефон не добавлен: ${invalid}`);
+      return;
+    }
+    const normalized = normalizePhone(phone);
+    if (phones.some((item) => item.phone === normalized)) {
+      toast.error("Этот номер уже есть у контакта");
+      return;
+    }
     setBusy("add");
     const result = await createClient().from("contact_phones").insert({
       contact_id: contactId,
-      phone,
+      phone: normalized,
       is_primary: phones.length === 0,
     });
-    if (result.error) toast.error(`Телефон не добавлен: ${dbErrorText(result.error)}`);
+    if (result.error?.code === "23505") toast.error("Телефон не добавлен: этот номер уже записан у другого контакта. Найдите его в контактах и объедините карточки");
+    else if (result.error) toast.error(`Телефон не добавлен: ${dbErrorText(result.error)}`);
     else {
       toast.success("Телефон добавлен");
       setDraft("");
@@ -178,6 +193,14 @@ export function ContactEmails({
   async function addEmail() {
     const email = draft.trim();
     if (!email || busy) return;
+    if (!EMAIL_PATTERN.test(email)) {
+      toast.error("Почта не добавлена: проверьте адрес, например name@example.com");
+      return;
+    }
+    if (emails.some((item) => item.email.toLowerCase() === email.toLowerCase())) {
+      toast.error("Эта почта уже есть у контакта");
+      return;
+    }
     setBusy("add");
     const ordinal = Math.max(-1, ...emails.map((item) => item.ordinal)) + 1;
     const result = await createClient().from("contact_emails").insert({ contact_id: contactId, ordinal, email });

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { dbErrorText } from "@/lib/db-errors";
+import { phoneError } from "@/lib/phone";
 import { useDismiss } from "@/lib/use-dismiss";
 type Option = { id: string; name: string };
 type Stage = Option & { kind: "open" | "won" | "lost" };
@@ -116,24 +117,20 @@ export function CreateDealModal({
   function toggle(xs: string[], id: string) {
     return xs.includes(id) ? xs.filter((x) => x !== id) : [...xs, id];
   }
-  function pluralDigits(n: number) {
-    const mod10 = n % 10;
-    const mod100 = n % 100;
-    if (mod10 === 1 && mod100 !== 11) return "цифра";
-    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "цифры";
-    return "цифр";
-  }
-  const phoneTouched = phone.length > 0;
-  const phoneInvalid = phoneTouched && digits.length < 8;
+  const phoneProblem = phone.length > 0 ? phoneError(phone) : null;
+  const phoneInvalid = phoneProblem !== null;
+  const filteredTags = tags.filter((tag) =>
+    tag.name.toLocaleLowerCase().includes(tagSearch.trim().toLocaleLowerCase()),
+  );
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (phoneInvalid) {
-      setError("Проверьте номер телефона: нужно минимум 8 цифр.");
+    if (phoneProblem) {
+      setError(`Проверьте номер телефона: ${phoneProblem}.`);
       return;
     }
     if (
       !fullName.trim() ||
-      digits.length < 8 ||
+      !phone.trim() ||
       !sourceId ||
       !projectIds.length ||
       !stageId ||
@@ -176,8 +173,11 @@ export function CreateDealModal({
       return;
     }
     if (payload.kind === "duplicate") {
+      const visible = (result as { visible_count?: unknown }).visible_count;
       setError(
-        "Найден существующий контакт. Выберите его ниже, чтобы добавить сделку.",
+        visible === 0
+          ? "Контакт с таким номером уже есть, но он ведётся другим менеджером — создать для него сделку отсюда нельзя. Обратитесь к руководителю."
+          : "Такой номер уже есть в базе. Нажмите «Добавить сделку этому контакту» в карточке совпадения выше.",
       );
       setSaving(false);
       const n = ++request.current;
@@ -262,7 +262,7 @@ export function CreateDealModal({
                     />
                     {phoneInvalid && (
                       <span id="create-deal-phone-error" className="create-deal-hint motion-fade-up" role="alert">
-                        В номере сейчас {digits.length} {pluralDigits(digits.length)} — нужно минимум 8 цифр.
+                        {phoneProblem}.
                       </span>
                     )}
                   </label>
@@ -305,6 +305,7 @@ export function CreateDealModal({
                             onClick={() => {
                               setSelectedContact(c.contact_id);
                               setFullName(c.full_name);
+                              setError(null);
                             }}
                           >
                             Добавить сделку этому контакту
@@ -423,14 +424,19 @@ export function CreateDealModal({
                           placeholder="Поиск меток"
                           value={tagSearch}
                           onChange={(e) => setTagSearch(e.target.value)}
+                          onKeyDown={(e) => {
+                            // Enter в поиске выбирает метку, а не отправляет форму.
+                            if (e.key !== "Enter") return;
+                            e.preventDefault();
+                            const first = filteredTags[0];
+                            if (first && !tagIds.includes(first.id)) {
+                              setTagIds([...tagIds, first.id]);
+                              setTagSearch("");
+                            }
+                          }}
                         />
                         <div className="create-deal-tag-options">
-                          {tags
-                            .filter((tag) =>
-                              tag.name
-                                .toLocaleLowerCase()
-                                .includes(tagSearch.toLocaleLowerCase()),
-                            )
+                          {filteredTags
                             .map((tag) => (
                               <button
                                 className="create-deal-tag-option"

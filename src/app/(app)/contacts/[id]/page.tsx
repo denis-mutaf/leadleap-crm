@@ -20,6 +20,9 @@ import styles from "../contacts.module.css";
 import { countWord } from "@/lib/plural";
 
 const LIMIT = 50;
+const CHANNEL_NAMES: Record<string, string> = { facebook: "Facebook", instagram: "Instagram", whatsapp: "WhatsApp", viber: "Viber" };
+// Источники, которые одновременно являются каналом связи.
+const CHANNEL_SOURCE_CODES = new Set(["phone", "whatsapp", "viber", "instagram", "facebook", "web_form", "lead_ads"]);
 type AmoField = {
   field_id?: number | string;
   field_name?: string;
@@ -52,7 +55,7 @@ export default async function ContactPage({
   ]);
   if (customDefsResult.error || customValuesResult.error) throw new Error(`Поля контакта: ${(customDefsResult.error ?? customValuesResult.error)?.message}`);
 
-  const [phoneRows, importedRows, emailRows, channelRows, tagLinks, directDeals, linkedDeals, conversations] = await Promise.all([
+  const [phoneRows, importedRows, emailRows, channelRows, tagLinks, directDeals, linkedDeals, conversations, firstDeal] = await Promise.all([
     db.from("contact_phones").select("id, phone, is_primary").eq("contact_id", id).order("is_primary", { ascending: false }).order("created_at").limit(LIMIT),
     db.from("imported_contact_phones").select("raw_phone, ordinal, label").eq("contact_id", id).order("ordinal").limit(LIMIT),
     db.from("contact_emails").select("email, ordinal, label").eq("contact_id", id).order("ordinal").limit(LIMIT),
@@ -61,8 +64,10 @@ export default async function ContactPage({
     db.from("deals").select("id").eq("contact_id", id).order("created_at", { ascending: false }).limit(LIMIT),
     db.from("deal_contacts").select("deal_id").eq("contact_id", id).limit(LIMIT),
     db.from("conversations").select("id, channel").eq("contact_id", id).limit(LIMIT),
+    // Источник и канал контакта берутся из его первой сделки: своих полей у контакта нет.
+    db.from("deals").select("source:sources(code, name)").eq("contact_id", id).is("deleted_at", null).not("source_id", "is", null).order("created_at", { ascending: true }).limit(1).maybeSingle(),
   ]);
-  for (const result of [phoneRows, importedRows, emailRows, channelRows, tagLinks, directDeals, linkedDeals, conversations]) {
+  for (const result of [phoneRows, importedRows, emailRows, channelRows, tagLinks, directDeals, linkedDeals, conversations, firstDeal]) {
     if (result.error) throw new Error(`Данные контакта: ${result.error.message}`);
   }
 
@@ -112,7 +117,14 @@ export default async function ContactPage({
   const emails = emailRows.data ?? [];
   const customSource = findField(fields, /source|источник|канал/i);
   const normalizedSource = customDefinitions.find((definition) => /source|источник|канал/i.test(`${definition.key} ${definition.label}`));
-  const firstSource = normalizedSource ? customValueText(customValues.get(normalizedSource.id)?.value) : fieldValue(customSource);
+  const firstDealSource = (firstDeal.data as { source: { code: string; name: string } | null } | null)?.source ?? null;
+  const firstSource = (normalizedSource ? customValueText(customValues.get(normalizedSource.id)?.value) : fieldValue(customSource)) ?? firstDealSource?.name ?? null;
+  // Канал — профили в мессенджерах; если их нет, то канал, которым пришла первая сделка.
+  const channelLabels = [...new Set([
+    ...(channelRows.data ?? []).map((row) => row.handle || row.channel),
+    ...(conversations.data ?? []).map((row) => CHANNEL_NAMES[row.channel] ?? row.channel),
+  ])];
+  const channelText = channelLabels.length ? channelLabels.join(", ") : firstDealSource && CHANNEL_SOURCE_CODES.has(firstDealSource.code) ? firstDealSource.name : null;
   const stageMap = new Map((stages.data ?? []).map((row) => [row.id, row.name]));
   const ownerMap = new Map((owners.data ?? []).map((row) => [row.id, row.full_name]));
   const statusLabels: Record<string, string> = { open: "В работе", postponed: "Отложена", won: "Выиграна", lost: "Проиграна" };
@@ -151,7 +163,7 @@ export default async function ContactPage({
             <div className={styles.collectionField}><span>Телефоны</span><ContactPhones contactId={id} phones={phones} /></div>
             {importedPhones.map((phone) => <ReadField key={`${phone.ordinal}-${phone.raw_phone}`} label={phone.label || `Импортированный телефон ${phone.ordinal + 1}`} value={phone.raw_phone} />)}
             <div className={styles.collectionField}><span>Почта</span><ContactEmails contactId={id} emails={emails} /></div>
-            <ReadField label="Каналы" value={channelRows.data?.length ? channelRows.data.map((row) => row.handle || row.channel).join(", ") : null} />
+            <ReadField label="Каналы" value={channelText} />
           </section>
           <section>
             <p className={styles.groupHead}>Источник</p>
