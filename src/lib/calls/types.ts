@@ -218,12 +218,23 @@ export function formatWait(sec: number | null): string {
   return `${sec} с`;
 }
 
+const CALL_DATE_FORMAT = new Intl.DateTimeFormat("ru-RU", {
+  timeZone: "Europe/Chisinau",
+  day: "2-digit",
+  month: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+// Список рендерится на сервере (UTC), панель — в браузере: без явной зоны
+// одно и то же время показывалось по-разному. Всегда Кишинёв.
 export function formatCallDate(value: string | null): string {
   if (!value) return "—";
   const d = new Date(value);
-  const day = String(d.getDate()).padStart(2, "0");
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  return `${day}.${month} ${hh}:${mm}`;
+  if (Number.isNaN(d.getTime())) return "—";
+  const parts = Object.fromEntries(
+    CALL_DATE_FORMAT.formatToParts(d).map((p) => [p.type, p.value]),
+  );
+  return `${parts.day}.${parts.month} ${parts.hour}:${parts.minute}`;
 }

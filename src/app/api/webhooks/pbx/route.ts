@@ -518,11 +518,11 @@ export async function POST(req: NextRequest) {
 
       if (type === "CANCELLED") {
         // CANCELLED на входящем — пропущенный: задача «Перезвонить».
+        // Незнакомый номер сразу получает контакт и сделку в общем котле,
+        // у известного контакта без открытой сделки сделка заводится так же.
+        // Задача одна на контакт: повторный пропущенный сдвигает срок.
         if (direction === "in") {
-          const found = await findContactByPhone(db, body.phone);
-          const contactId =
-            found?.contactId ??
-            (await ensureContactAndDeal(db, body.phone)).contactId;
+          const { contactId } = await ensureContactAndDeal(db, body.phone);
           const deals = await openDeals(db, contactId);
           const assignee =
             deals.find((d) => d.owner_id)?.owner_id ??
@@ -530,16 +530,16 @@ export async function POST(req: NextRequest) {
             staffId;
           if (!assignee) return fail(400, INVALID_PARAMS);
           const typeId = await callTaskTypeId(db);
-          const taskInsert = await db.from("tasks").insert({
-            deal_id: deals[0]?.id ?? null,
-            contact_id: contactId,
-            assignee_id: assignee,
-            type_id: typeId,
-            title: "Перезвонить",
-            due_at: nextFullHour(),
-            is_auto: true,
+          // Точка расширения: эскалацию просрочки руководителю (тикет 39)
+          // строить на public.overdue_callback_tasks(), здесь её нет.
+          const taskUpsert = await db.rpc("upsert_callback_task", {
+            p_contact_id: contactId,
+            p_deal_id: deals[0]?.id ?? null,
+            p_assignee_id: assignee,
+            p_type_id: typeId,
+            p_due_at: nextFullHour(),
           });
-          if (taskInsert.error) throw taskInsert.error;
+          if (taskUpsert.error) throw taskUpsert.error;
         }
         return done({});
       }
