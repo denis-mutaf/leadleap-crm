@@ -29,7 +29,7 @@ import { StageGateDialog } from "@/components/crm/stage-gate-dialog";
 import { createClient } from "@/lib/supabase/client";
 import { dbErrorText } from "@/lib/db-errors";
 import { initialsOf } from "@/lib/initials";
-import { closeOpenTasks, emptyGateForm, loadGateSnapshot, planGate, targetHasGates, tomorrowMorning, transitionDeal, unqualifiedBlocks, type GateForm, type GatePlan, type GateStage } from "@/lib/stage-gate";
+import { closeOpenTasks, emptyGateForm, loadGateSnapshot, planGate, targetHasGates, tomorrowMorning, transitionDeal, transitionErrorText, unqualifiedBlocks, type GateForm, type GatePlan, type GateStage } from "@/lib/stage-gate";
 import { startRouteProgress } from "../route-progress";
 import { useDismiss } from "@/lib/use-dismiss";
 import { SourceIcon } from "@/components/crm/source-icon";
@@ -405,29 +405,39 @@ export function DealsBoard(props: Props) {
     const taskDueAt = plan.needsTask ? new Date(gateForm.taskDueAt) : null;
     if (taskDueAt && (!Number.isFinite(taskDueAt.getTime()) || taskDueAt.getTime() <= Date.now())) { setGateError("Дата следующего шага должна быть в будущем"); return; }
     setPending(true); setGateError(null);
-    const db = createClient();
-    const result = await transitionDeal(db, { dealId: gate.deal.id, stageId: gate.stage.id, ownerId: plan.lost ? gate.deal.owner_id : gate.deal.owner_id ?? props.currentUserId, lostReasonId: plan.lost ? gateForm.reasonId : null, lostComment: plan.lost ? gateForm.comment : null, qualification: gateForm.qualification, task: plan.needsTask && taskDueAt ? { title: gateForm.taskTitle.trim(), dueAt: taskDueAt.toISOString(), typeId: gateForm.taskTypeId, assigneeId: gateForm.taskAssigneeId } : null });
-    if (!result.ok) { setGateError(result.message); setPending(false); return; }
-    // 200 без смены этапа — это не перенос: не рисуем сделку в новой колонке.
-    if (result.data.stage_id !== gate.stage.id) { setGateError("Сервер не перенёс сделку на этот этап. Обновите страницу и повторите"); setPending(false); return; }
-    let tasksClosed = false;
-    if (plan.lost && plan.openTasks > 0 && gateForm.closeTasks) {
-      const closed = await closeOpenTasks(db, gate.deal.id, props.currentUserId);
-      tasksClosed = !closed.failed;
-      if (closed.failed) setFeedback("Сделка закрыта, но открытые задачи закрыть не удалось");
+    try {
+      const db = createClient();
+      const result = await transitionDeal(db, { dealId: gate.deal.id, stageId: gate.stage.id, ownerId: plan.lost ? gate.deal.owner_id : gate.deal.owner_id ?? props.currentUserId, lostReasonId: plan.lost ? gateForm.reasonId : null, lostComment: plan.lost ? gateForm.comment : null, qualification: gateForm.qualification, task: plan.needsTask && taskDueAt ? { title: gateForm.taskTitle.trim(), dueAt: taskDueAt.toISOString(), typeId: gateForm.taskTypeId, assigneeId: gateForm.taskAssigneeId } : null });
+      if (!result.ok) { setGateError(result.message); return; }
+      // 200 без смены этапа — это не перенос: не рисуем сделку в новой колонке.
+      if (result.data.stage_id !== gate.stage.id) { setGateError("Сервер не перенёс сделку на этот этап. Обновите страницу и повторите"); return; }
+      // Отказ закрывает открытые задачи, пока менеджер не снял галочку. Число из снимка не ждём:
+      // задачу могли поставить после того, как модалка прочитала сделку.
+      let closedTasks = 0;
+      let tasksClosed = false;
+      if (plan.lost && gateForm.closeTasks) {
+        const closed = await closeOpenTasks(db, gate.deal.id, props.currentUserId);
+        closedTasks = closed.closed;
+        tasksClosed = !closed.failed;
+      }
+      const transition = result.data;
+      const qualificationTag = gateForm.qualification ? [{ name: gateForm.qualification }] : [];
+      const confirmed: BoardCard = { ...gate.deal, stage_id: transition.stage_id, owner_id: transition.owner_id, status: transition.status as BoardCard["status"], tags: qualificationTag.length ? [...gate.deal.tags.filter((tag) => tag.name !== "КВАЛ" && tag.name !== "неквал"), ...qualificationTag] : gate.deal.tags, next_task: tasksClosed ? null : plan.needsTask && taskDueAt ? { title: gateForm.taskTitle.trim(), due_at: taskDueAt.toISOString() } : gate.deal.next_task };
+      setColumns((current) => {
+        const removed = current.map((column) => column.deals.some((item) => item.id === gate.deal.id) ? dropDeal(column, gate.deal) : column);
+        const targetId = plan.lost ? "lost" : gate.target.id;
+        return removed.map((column) => column.id === targetId ? addDeal(column, confirmed) : column);
+      });
+      // Счётчики над доской («Без следующего шага» и др.) считает сервер: после
+      // перехода просим пересчитать, доска при этом остаётся как есть.
+      router.refresh();
+      setGate(null);
+      setFeedback(plan.lost && gateForm.closeTasks && !tasksClosed ? "Сделка закрыта, но открытые задачи закрыть не удалось" : plan.lost && closedTasks > 0 ? `Сделка закрыта, задач закрыто: ${closedTasks}` : "Сделка перемещена");
+    } catch (cause) {
+      setGateError(transitionErrorText(cause));
+    } finally {
+      setPending(false);
     }
-    const transition = result.data;
-    const qualificationTag = gateForm.qualification ? [{ name: gateForm.qualification }] : [];
-    const confirmed: BoardCard = { ...gate.deal, stage_id: transition.stage_id, owner_id: transition.owner_id, status: transition.status as BoardCard["status"], tags: qualificationTag.length ? [...gate.deal.tags.filter((tag) => tag.name !== "КВАЛ" && tag.name !== "неквал"), ...qualificationTag] : gate.deal.tags, next_task: tasksClosed ? null : plan.needsTask && taskDueAt ? { title: gateForm.taskTitle.trim(), due_at: taskDueAt.toISOString() } : gate.deal.next_task };
-    setColumns((current) => {
-      const removed = current.map((column) => column.deals.some((item) => item.id === gate.deal.id) ? dropDeal(column, gate.deal) : column);
-      const targetId = plan.lost ? "lost" : gate.target.id;
-      return removed.map((column) => column.id === targetId ? addDeal(column, confirmed) : column);
-    });
-    // Счётчики над доской («Без следующего шага» и др.) считает сервер: после
-    // перехода просим пересчитать, доска при этом остаётся как есть.
-    router.refresh();
-    setGate(null); setPending(false); setFeedback(plan.lost && tasksClosed ? `Сделка закрыта, задач закрыто: ${plan.openTasks}` : "Сделка перемещена");
   }
   async function moveDeal(dealId: string, targetId: string, allowMobileConfirmation = false) {
     if (pending) return;
@@ -439,8 +449,9 @@ export function DealsBoard(props: Props) {
     const target = droppingLost ? (columns.find((column) => column.id === "lost") ?? props.lost!) : columns[targetIndex];
     const deal = source.deals.find((item) => item.id === dealId);
     if (!deal) return;
-    // Сделка уже в «Отказе»: сброс на ту же колонку — не переход (RPC ответил бы 200 без записи в историю).
-    if (droppingLost && (source.id === "lost" || deal.stage_id === props.query.lostKey)) return;
+    // Сброс на «Отказ» сделки, которая на доске уже там, — не переход. Но доска могла устареть
+    // (сделку вернули в другой вкладке): решает свежий этап из базы, он читается ниже.
+    const droppedOnSameLost = droppingLost && (source.id === "lost" || deal.stage_id === props.query.lostKey);
     const factualSource = columns.find((column) => column.id === deal.stage_id);
     const isForward = !droppingLost && (target.position ?? 0) > (factualSource?.position ?? 0);
     const markedUnqualified = isForward && deal.tags.some((tag) => tag.name === "неквал");
@@ -454,12 +465,14 @@ export function DealsBoard(props: Props) {
         // сделка уже на целевом этапе — не открываем модалку, а выравниваем доску по базе.
         if (snapshot.stageId && snapshot.stageId !== deal.stage_id) {
           const actual = columns.find((column) => !column.kettle && stageOf(column, props.query.lostKey).id === snapshot.stageId);
-          setColumns((current) => current.map((column) => column.deals.some((item) => item.id === dealId) ? dropDeal(column, deal) : column).map((column) => actual && column.id === actual.id ? addDeal(column, { ...deal, stage_id: snapshot.stageId as string, status: actual.kind === "lost" ? "lost" : actual.kind === "won" ? "won" : deal.status }) : column));
+          setColumns((current) => current.map((column) => column.deals.some((item) => item.id === dealId) ? dropDeal(column, deal) : column).map((column) => actual && column.id === actual.id ? addDeal(column, { ...deal, stage_id: snapshot.stageId as string, status: actual.kind === "lost" ? "lost" : actual.kind === "won" ? "won" : "open" }) : column));
           setFeedback(`Сделка уже на этапе «${actual?.title ?? "другом"}» — доска обновлена`);
           setPending(false);
           router.refresh();
           return;
         }
+        // В базе сделка тоже в «Отказе»: сброс на ту же колонку ничего не меняет.
+        if (droppedOnSameLost) { setPending(false); return; }
         const plan = planGate({ target: stage, source: factualSource ? stageOf(factualSource, props.query.lostKey) : undefined, stages: gateStages, snapshot, qualification: "" });
         if (plan.lost || plan.needsQualification || plan.needsTask || plan.missingFields.length > 0 || plan.blocked) {
           setGate({ deal, target, stage, plan });
@@ -483,7 +496,14 @@ export function DealsBoard(props: Props) {
     setPending(false); setFeedback("Сделка перемещена");
     router.refresh();
   }
-  function claimDeal(dealId: string) { const firstOpen = columns.find((column) => column.kind === "open"); if (firstOpen) void moveDeal(dealId, firstOpen.id, true); }
+  // Взять из котла — сменить ответственного, этап остаётся тот, что выбрали при создании.
+  // Первая открытая колонка — только если колонки этапа сделки на доске нет или сделка выиграна.
+  function claimDeal(dealId: string) {
+    const deal = maps.get(dealId);
+    const own = deal && deal.status !== "won" ? columns.find((column) => !column.kettle && column.kind === "open" && column.id === deal.stage_id) : undefined;
+    const target = own ?? columns.find((column) => column.kind === "open");
+    if (target) void moveDeal(dealId, target.id, true);
+  }
   // Догрузка одной колонки: crm_board отдаёт страницу только нужной колонки
   // (p_column). Страница считается по числу уже загруженных карточек; повторы
   // из-за переносов между колонками отбрасываем по id. Ключ «Отказа» — id этапа, а не "lost".

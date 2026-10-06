@@ -197,15 +197,21 @@ function StageField({ data, stageId, onStageChanged }: { data: DealRecordData; s
     const due = plan.needsTask ? new Date(form.taskDueAt) : null;
     if (due && (!Number.isFinite(due.getTime()) || due.getTime() <= Date.now())) { setGateError("Дата следующего шага должна быть в будущем"); return; }
     setBusy(true); setGateError(null);
-    const db = createClient();
-    const result = await transitionDeal(db, { dealId: data.deal.id, stageId: target.id, ownerId: data.deal.owner_id, lostReasonId: plan.lost ? form.reasonId : null, lostComment: plan.lost ? form.comment : null, qualification: form.qualification, task: plan.needsTask && due ? { title: form.taskTitle.trim(), dueAt: due.toISOString(), typeId: form.taskTypeId, assigneeId: form.taskAssigneeId } : null });
-    if (!result.ok) { setGateError(result.message); setBusy(false); return; }
-    if (plan.lost && plan.openTasks > 0 && form.closeTasks) {
-      const closed = await closeOpenTasks(db, data.deal.id, data.currentUser.id);
-      if (closed.failed) toast.error("Сделка закрыта, но открытые задачи закрыть не удалось");
+    try {
+      const db = createClient();
+      const result = await transitionDeal(db, { dealId: data.deal.id, stageId: target.id, ownerId: data.deal.owner_id, lostReasonId: plan.lost ? form.reasonId : null, lostComment: plan.lost ? form.comment : null, qualification: form.qualification, task: plan.needsTask && due ? { title: form.taskTitle.trim(), dueAt: due.toISOString(), typeId: form.taskTypeId, assigneeId: form.taskAssigneeId } : null });
+      if (!result.ok) { setGateError(result.message); return; }
+      // Число задач из снимка не ждём: задачу могли поставить после того, как модалка прочитала сделку.
+      if (plan.lost && form.closeTasks) {
+        const closed = await closeOpenTasks(db, data.deal.id, data.currentUser.id);
+        if (closed.failed) toast.error("Сделка закрыта, но открытые задачи закрыть не удалось");
+      }
+      await finish(target, result.data, plan.lost ? { reasonName: data.allLostReasons.find((reason) => reason.id === form.reasonId)?.name ?? null, comment: form.comment.trim() || null } : null);
+    } catch (cause) {
+      setGateError(transitionErrorText(cause));
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
-    await finish(target, result.data, plan.lost ? { reasonName: data.allLostReasons.find((reason) => reason.id === form.reasonId)?.name ?? null, comment: form.comment.trim() || null } : null);
   }
   const stageName = data.stage?.name ?? currentStage?.name ?? "—";
   return <div className="field-row"><span><TypeIcon kind="select" />Этап</span>{editing ? <select className="field-input" autoFocus disabled={busy} defaultValue={stageId} onChange={(event) => void pickStage(event.target.value)} onBlur={() => setEditing(false)}>{data.allStages.map((stage) => <option key={stage.id} value={stage.id}>{stage.name}</option>)}</select> : <button type="button" className="field-value" disabled={busy} onClick={() => setEditing(true)}>{currentStage ? <StageIndicator stage={currentStage} stages={data.allStages} name={stageName} variant="inline" /> : stageName}</button>}
