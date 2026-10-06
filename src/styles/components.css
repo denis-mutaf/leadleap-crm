@@ -1028,3 +1028,14 @@ html { scrollbar-color: #c9c9c9 transparent; }
   color: var(--foreground);
   box-shadow: var(--shadow-source), inset 0 0 0 1px var(--field-border);
 }
+
+/* ===== Выбор месяца (MonthField): сетка 4×3 в поповере даты ===== */
+.month-pop { width: 252px; }
+.month-pop-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.month-pop-nav { width: 28px; height: 28px; display: inline-grid; place-content: center; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--muted-foreground); cursor: pointer; }
+.month-pop-nav:hover { background: var(--accent); color: var(--foreground); }
+.month-pop-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.month-pop-cell { height: 34px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--foreground); font: inherit; cursor: pointer; }
+.month-pop-cell:hover { background: var(--accent); }
+.month-pop-cell.is-today { box-shadow: inset 0 0 0 1px var(--field-border); }
+.month-pop-cell.is-selected { background: var(--foreground); color: var(--background); }

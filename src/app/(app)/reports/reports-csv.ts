@@ -28,7 +28,8 @@ const pct = (value: number, total: number) => {
 // CSV текущего отчёта: источники, проекты, менеджеры, когорты. Фильтры периода и разрезов
 // уже применены в БД; шапка файла называет период, чтобы выгрузку можно было узнать потом.
 export function buildReportCsv(params: ReportParams, data: PeriodReportData) {
-  const { report, cohorts } = data;
+  const { report } = data;
+  const cohorts = data.cohorts ?? [];
   const name = (list: { id: string; name: string }[], id: string | null, none: string) =>
     id == null ? "все" : id === "none" ? none : (list.find((x) => x.id === id)?.name ?? id);
   const lines: string[] = [
@@ -97,27 +98,31 @@ export function buildReportCsv(params: ReportParams, data: PeriodReportData) {
     );
   }
 
-  lines.push(
-    "",
-    csvRow(["Когорты: доля лидов месяца создания, дошедших до «Резервации» и дальше"]),
-    csvRow([
-      "Месяц создания",
-      "Лидов",
-      "За 3 мес.",
-      "За 3 мес., %",
-      "За 6 мес.",
-      "За 6 мес., %",
-      "За 12 мес.",
-      "За 12 мес., %",
-      "Из них учтено только текущим этапом (нет истории переходов)",
-    ]),
-  );
-  for (const row of cohorts) {
-    const cells = ([row.r3, row.r6, row.r12] as (number | null)[]).flatMap((value) => [
-      value,
-      value == null ? null : pct(value, row.n),
-    ]);
-    lines.push(csvRow([monthLabel(row.month), row.n, ...cells, row.fallback]));
+  if (data.cohorts === null) {
+    lines.push("", csvRow(["Когорты: не удалось посчитать, в выгрузку не вошли"]));
+  } else {
+    lines.push(
+      "",
+      csvRow(["Когорты: доля лидов месяца создания, дошедших до «Резервации» и дальше"]),
+      csvRow([
+        "Месяц создания",
+        "Лидов",
+        "За 3 мес.",
+        "За 3 мес., %",
+        "За 6 мес.",
+        "За 6 мес., %",
+        "За 12 мес.",
+        "За 12 мес., %",
+        "Из них учтено только текущим этапом (нет истории переходов)",
+      ]),
+    );
+    for (const row of cohorts) {
+      const cells = ([row.r3, row.r6, row.r12] as (number | null)[]).flatMap((value) => [
+        value,
+        value == null ? null : pct(value, row.n),
+      ]);
+      lines.push(csvRow([monthLabel(row.month), row.n, ...cells, row.fallback]));
+    }
   }
   lines.push(
     "",
@@ -126,5 +131,5 @@ export function buildReportCsv(params: ReportParams, data: PeriodReportData) {
     ]),
   );
   // BOM — чтобы Excel открыл кириллицу как UTF-8.
-  return `﻿${lines.join("\r\n")}\r\n`;
+  return `\uFEFF${lines.join("\r\n")}\r\n`;
 }

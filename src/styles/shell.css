@@ -261,6 +261,19 @@ body { letter-spacing: -0.005em; -webkit-font-smoothing: antialiased; }
    области: запас под него резервируется один раз здесь. */
 .main-shell > * > header:first-child { padding-right: 44px; }
 
+/* Пока открыт drawer или модалка (aria-modal), колокольчик уходит: он висит
+   в углу рабочей области и по месту ложится на шапку drawer, а z-index тут
+   не спасает — drawer живёт в собственном контексте наложения страницы.
+   Правило общее: новому drawer или модалке достаточно aria-modal="true". */
+body:has([aria-modal="true"]) [data-notifications-root] {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition:
+    opacity var(--motion-fast) var(--ease),
+    visibility 0s linear var(--motion-fast);
+}
+
 .main-shell > * > header.page-header > span:first-of-type {
   font-size: var(--text-title);
   line-height: var(--text-title-lh);

@@ -450,6 +450,16 @@ export function DealsBoard(props: Props) {
       const stage = stageOf(target, props.query.lostKey);
       try {
         const snapshot = await loadGateSnapshot(createClient(), dealId, stage.requires_qualification === true && !droppingLost);
+        // Доска могла устареть (переход сделали в другой вкладке или карточка не обновилась):
+        // сделка уже на целевом этапе — не открываем модалку, а выравниваем доску по базе.
+        if (snapshot.stageId && snapshot.stageId !== deal.stage_id) {
+          const actual = columns.find((column) => !column.kettle && stageOf(column, props.query.lostKey).id === snapshot.stageId);
+          setColumns((current) => current.map((column) => column.deals.some((item) => item.id === dealId) ? dropDeal(column, deal) : column).map((column) => actual && column.id === actual.id ? addDeal(column, { ...deal, stage_id: snapshot.stageId as string, status: actual.kind === "lost" ? "lost" : actual.kind === "won" ? "won" : deal.status }) : column));
+          setFeedback(`Сделка уже на этапе «${actual?.title ?? "другом"}» — доска обновлена`);
+          setPending(false);
+          router.refresh();
+          return;
+        }
         const plan = planGate({ target: stage, source: factualSource ? stageOf(factualSource, props.query.lostKey) : undefined, stages: gateStages, snapshot, qualification: "" });
         if (plan.lost || plan.needsQualification || plan.needsTask || plan.missingFields.length > 0 || plan.blocked) {
           setGate({ deal, target, stage, plan });

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { DateField } from "@/components/crm/date-field";
+import { MonthField } from "@/components/crm/month-field";
 import { createClient } from "@/lib/supabase/client";
 import { dbErrorText } from "@/lib/db-errors";
 import { useDealLock } from "@/components/crm/deal-lock";
@@ -215,12 +216,24 @@ export function InlineField({
             aria-label={label}
             placeholder={placeholder}
           />
+        ) : month ? (
+          <MonthField
+            value={draft}
+            aria-label={label}
+            defaultOpen
+            onChange={(next) => {
+              touched.current = true;
+              setDraft(next);
+              void commit(next);
+            }}
+            onClose={cancel}
+          />
         ) : (
           <>
             <input
               ref={inputRef as React.RefObject<HTMLInputElement>}
               className="field-input"
-              type={month ? "month" : type === "number" ? "number" : "text"}
+              type={type === "number" ? "number" : "text"}
               min={type === "number" ? min : undefined}
               list={suggestions ? `${id}-${column}-options` : undefined}
               value={draft}
@@ -229,8 +242,6 @@ export function InlineField({
                 setDraft(event.target.value);
                 setError(null);
                 touched.current = true;
-                // Выбор месяца из календаря — законченное действие, ждать blur незачем.
-                if (month && /^\d{4}-\d{2}$/.test(event.target.value)) void commit(event.target.value);
               }}
               onBlur={(event) => commit(event.target.value)}
               onKeyDown={(event) => {

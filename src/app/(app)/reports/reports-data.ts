@@ -205,7 +205,8 @@ function isPeriodReport(value: unknown): value is PeriodReport {
 export type Option = { id: string; name: string };
 export type PeriodReportData = {
   report: PeriodReport;
-  cohorts: CohortRow[];
+  /** null — когорты не посчитались (ошибка или таймаут); остальной отчёт при этом показывается. */
+  cohorts: CohortRow[] | null;
   sources: Option[];
   projects: Option[];
   managers: Option[];
@@ -244,11 +245,9 @@ export async function loadPeriodReport(
     throw new Error(`Отчёт за период: ${reportResult.error.message}`);
   if (!isPeriodReport(reportResult.data))
     throw new Error("Отчёт за период: неожиданный ответ базы");
-  if (cohortResult.error)
-    throw new Error(`Когорты: ${cohortResult.error.message}`);
   return {
     report: reportResult.data,
-    cohorts: (cohortResult.data ?? []) as CohortRow[],
+    cohorts: cohortResult.error ? null : ((cohortResult.data ?? []) as CohortRow[]),
     sources: (sourcesResult.data ?? []) as Option[],
     projects: (projectsResult.data ?? []) as Option[],
     managers: ((managersResult.data ?? []) as { id: string; full_name: string | null }[]).map(

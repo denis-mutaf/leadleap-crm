@@ -262,7 +262,7 @@ export function NotificationsPanel({ role }: { role: string }) {
     );
   };
   return (
-    <div className={styles.root} ref={rootRef}>
+    <div className={styles.root} ref={rootRef} data-notifications-root>
       <button
         ref={triggerRef}
         className={styles.bell}

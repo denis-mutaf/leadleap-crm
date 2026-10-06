@@ -31,6 +31,8 @@ export type GateForm = {
 
 // Срез сделки, нужный для решения «что спросить у менеджера».
 export type GateSnapshot = {
+  /** Этап сделки в базе прямо сейчас: карточка на доске могла устареть. */
+  stageId: string | null;
   tags: string[];
   hasFutureTask: boolean;
   openTasks: number;
@@ -78,7 +80,8 @@ export function missingQualificationFields(deal: Record<string, unknown>): strin
 
 /** Свежий срез сделки из базы: метки, будущие задачи, пустые поля. */
 export async function loadGateSnapshot(db: Db, dealId: string, withFields: boolean): Promise<GateSnapshot> {
-  const [tags, future, open, fields] = await Promise.all([
+  const [stage, tags, future, open, fields] = await Promise.all([
+    db.from("deals").select("stage_id").eq("id", dealId).maybeSingle(),
     db.from("deal_tags").select("tags(name)").eq("deal_id", dealId),
     db.from("tasks").select("id", { count: "exact", head: true }).eq("deal_id", dealId).is("done_at", null).is("deleted_at", null).gt("due_at", new Date().toISOString()),
     db.from("tasks").select("id", { count: "exact", head: true }).eq("deal_id", dealId).is("done_at", null).is("deleted_at", null),
@@ -86,12 +89,13 @@ export async function loadGateSnapshot(db: Db, dealId: string, withFields: boole
       ? db.from("deals").select("budget, payment, horizon, purchase_timing_text, residency, residency_detail, rooms, purpose").eq("id", dealId).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
   ]);
-  const error = tags.error ?? future.error ?? open.error ?? fields.error;
+  const error = stage.error ?? tags.error ?? future.error ?? open.error ?? fields.error;
   if (error) throw error;
   const names = ((tags.data ?? []) as unknown as { tags: { name: string } | { name: string }[] | null }[])
     .flatMap((row) => (Array.isArray(row.tags) ? row.tags : row.tags ? [row.tags] : []))
     .map((tag) => tag.name);
   return {
+    stageId: (stage.data as { stage_id: string } | null)?.stage_id ?? null,
     tags: names,
     hasFutureTask: (future.count ?? 0) > 0,
     openTasks: open.count ?? 0,

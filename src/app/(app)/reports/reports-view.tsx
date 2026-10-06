@@ -455,7 +455,21 @@ function CohortCell({ value, total }: { value: number | null; total: number }) {
   );
 }
 
-export function Cohorts({ rows }: { rows: CohortRow[] }) {
+export function Cohorts({ rows }: { rows: CohortRow[] | null }) {
+  if (rows === null) {
+    return (
+      <section className="report-section">
+        <h2>Когорты</h2>
+        <p className="section-subtitle">
+          Лиды по месяцу создания и доля тех, что дошли до «Резервации» или дальше за 3, 6 и 12 месяцев
+        </p>
+        <div className="reports-note" role="alert">
+          <CircleAlert size={16} className={styles.warn} /> Не удалось посчитать когорты. Остальной
+          отчёт показан полностью — обновите страницу, чтобы повторить.
+        </div>
+      </section>
+    );
+  }
   const fallbackTotal = rows.reduce((sum, row) => sum + row.fallback, 0);
   return (
     <section className="report-section">

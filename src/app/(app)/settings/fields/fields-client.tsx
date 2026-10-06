@@ -497,7 +497,15 @@ export default function FieldsClient({
         </p>
       )}
       {panel && (
-        <form className={styles.panel} ref={panelRef} onSubmit={submit} noValidate>
+        <form
+          className={styles.panel}
+          ref={panelRef}
+          onSubmit={submit}
+          noValidate
+          role="dialog"
+          aria-modal="true"
+          aria-label={panel === "create" ? "Новое поле" : "Изменить поле"}
+        >
           <div className={styles.panelHead}>
             <strong>
               {panel === "create" ? "Новое поле" : "Изменить поле"}
