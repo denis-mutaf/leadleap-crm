@@ -35,7 +35,7 @@ export function CreateDealModal({
     [fullName, setFullName] = useState(""),
     [phone, setPhone] = useState(""),
     [sourceId, setSourceId] = useState(""),
-    [projectIds, setProjectIds] = useState<string[]>([]),
+    [projectId, setProjectId] = useState(""),
     [stageId, setStageId] = useState(defaultStageId),
     [ownerId, setOwnerId] = useState(""),
     [title, setTitle] = useState(""),
@@ -94,7 +94,7 @@ export function CreateDealModal({
     setFullName("");
     setPhone("");
     setSourceId("");
-    setProjectIds([]);
+    setProjectId("");
     setStageId(defaultStageId);
     setOwnerId("");
     setTitle("");
@@ -132,7 +132,7 @@ export function CreateDealModal({
       !fullName.trim() ||
       !phone.trim() ||
       !sourceId ||
-      !projectIds.length ||
+      !projectId ||
       !stageId ||
       !title.trim()
     ) {
@@ -147,7 +147,7 @@ export function CreateDealModal({
       p_full_name: fullName.trim(),
       p_phone: phone,
       p_source_id: sourceId,
-      p_project_ids: projectIds,
+      p_project_ids: projectId ? [projectId] : [],
       p_stage_id: stageId,
       p_title: title.trim(),
       p_owner_id: ownerId || null,
@@ -346,23 +346,20 @@ export function CreateDealModal({
                     </select>
                   </label>
                 </div>
-                <fieldset>
-                  <legend>Проекты * — выберите хотя бы один</legend>
-                  <div className="create-deal-checks">
+                <label>
+                  Проект *
+                  <select
+                    value={projectId}
+                    onChange={(e) => setProjectId(e.target.value)}
+                  >
+                    <option value="">Выберите проект</option>
                     {projects.map((x) => (
-                      <label key={x.id}>
-                        <input
-                          type="checkbox"
-                          checked={projectIds.includes(x.id)}
-                          onChange={() =>
-                            setProjectIds(toggle(projectIds, x.id))
-                          }
-                        />
+                      <option key={x.id} value={x.id}>
                         {x.name}
-                      </label>
+                      </option>
                     ))}
-                  </div>
-                </fieldset>
+                  </select>
+                </label>
                 <label>
                   Название сделки *
                   <input

@@ -1,0 +1,13 @@
+/* Новые части карточки сделки: метки-комбобокс, лента изменений, форма задачи. */
+.typeIcon { flex: none; color: var(--muted-foreground); }
+.taskOverdue { color: var(--hue-red-tx); }
+.changeLine { display: block; font-weight: 500; }
+.changeAuthor { display: block; color: var(--secondary-text); font-size: 13px; line-height: 18px; }
+.taskMore { display: flex; flex: 1 1 100%; flex-wrap: wrap; align-items: center; gap: 6px; }
+.taskMore label { display: inline-flex; align-items: center; gap: 6px; color: var(--secondary-text); font-size: 13px; }
+.taskMore select { height: var(--h-control); padding: 0 10px; border: 1px solid var(--field-border); border-radius: var(--radius-control); background: var(--field); color: var(--foreground); font: inherit; font-size: 13px; }
+.noteForm { align-items: flex-start; }
+.noteForm textarea { min-width: 0; flex: 1; min-height: var(--h-control); max-height: 160px; box-sizing: border-box; resize: vertical; padding: 7px 12px; border: 1px solid var(--field-border); border-radius: var(--radius-control); background: var(--field); color: var(--foreground); font: inherit; font-size: 13px; line-height: 18px; }
+.noteForm textarea:focus { outline: none; border-color: var(--foreground); background: var(--card); box-shadow: 0 0 0 3px var(--ghost); }
+.noteHint { color: var(--muted-foreground); font-size: 12px; }
+.edited { color: var(--muted-foreground); font-size: 12px; }

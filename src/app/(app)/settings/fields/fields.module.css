@@ -44,7 +44,7 @@
 .menu button { display: block; width: 100%; border: 0; border-radius: 10px; background: transparent; color: var(--foreground); padding: 0 10px; min-height: 32px; text-align: left; font: inherit; font-size: var(--text-small); cursor: pointer; transition: background-color var(--motion-fast) var(--ease); }
 .menu button:hover, .menu button:focus-visible { background: var(--accent); }
 .danger, .dangerButton { color: var(--destructive); }
-.modalBackdrop { position: fixed; z-index: 10; inset: 0; display: grid; place-items: center; padding: 16px; background: var(--scrim); animation: crm-veil-in var(--motion) var(--ease) both; }
+.modalBackdrop { position: fixed; z-index: 42; inset: 0; display: grid; place-items: center; padding: 16px; background: var(--scrim); animation: crm-veil-in var(--motion) var(--ease) both; }
 .modal { width: min(420px, 100%); border: 0; border-radius: var(--radius-dialog); background: var(--module-card); padding: 20px; box-shadow: var(--shadow-overlay); animation: crm-dialog-in var(--motion-slow) var(--ease) both; }
 .modal h2 { margin: 0; font-size: 18px; font-weight: 500; }
 .modal p { margin: 10px 0 18px; color: var(--secondary-text); font-size: var(--text-body); line-height: 1.45; }
@@ -54,7 +54,7 @@
 .modalActions button:active { transform: scale(var(--press-scale)); }
 .modalActions .primary, .modalActions .dangerButton { height: var(--h-control); border-radius: var(--radius-control); padding: 0 14px; }
 .modalActions .dangerButton { background: var(--destructive); color: var(--card); border: 0; font-weight: 500; }
-.panel { position: fixed; z-index: 3; top: 0; right: 0; width: min(360px, 100vw); height: 100vh; padding: 18px; background: var(--module-card); box-shadow: var(--shadow-overlay); animation: crm-panel-in var(--motion-slow) var(--ease) both; }
+.panel { position: fixed; z-index: 41; top: 0; right: 0; width: min(360px, 100vw); height: 100vh; padding: 18px; background: var(--module-card); box-shadow: var(--shadow-overlay); animation: crm-panel-in var(--motion-slow) var(--ease) both; }
 .panelHead { display: flex; justify-content: space-between; margin-bottom: 22px; }
 .panelBody { height: calc(100vh - 112px); overflow-y: auto; padding-bottom: 18px; }
 .warning { margin: 0 0 14px; padding: 8px 10px; border-radius: var(--radius-tile); background: var(--muted); color: var(--secondary-text); font-size: var(--text-small); }

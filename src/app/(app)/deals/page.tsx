@@ -7,11 +7,16 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Form from "next/form";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { DateField } from "@/components/crm/date-field";
+import { DEALS_FILTERS_COOKIE, TAG_SEPARATOR, dealsFilterString, splitTags } from "@/lib/deals-filters";
 import { DealsBoard, BoardRefreshGuard, type BoardCard, type BoardColumn } from "./deals-board";
 import { CreateDealModal } from "./create-deal-modal";
+import { RememberDealsFilters } from "./remember-filters";
+import { TagMultiSelect } from "./tag-multi-select";
 
 const PAGE_SIZE = 24;
 const SORTS = [
@@ -62,6 +67,14 @@ function validFlag(value: string | undefined): (typeof FLAGS)[number][0] | null 
     : null;
 }
 
+const DATE_PARAM = /^\d{4}-\d{2}-\d{2}$/;
+
+function dateParam(value: string | undefined): string | null {
+  return value && DATE_PARAM.test(value) ? value : null;
+}
+
+// Пустой адрес «/deals» значит «вернуть сохранённые фильтры», поэтому снятие
+// последнего фильтра ведёт на «/deals?reset=1»: это осознанный пустой выбор.
 function withQuery(
   current: Record<string, string | string[] | undefined>,
   changes: Record<string, string | null | undefined>,
@@ -69,14 +82,19 @@ function withQuery(
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(current)) {
     const item = one(value);
-    if (item !== undefined && item !== "") params.set(key, item);
+    if (key !== "reset" && item !== undefined && item !== "") params.set(key, item);
   }
   for (const [key, value] of Object.entries(changes)) {
     if (value === null || value === undefined || value === "") params.delete(key);
     else params.set(key, value);
   }
   const query = params.toString();
-  return query ? `/deals?${query}` : "/deals";
+  return query ? `/deals?${query}` : "/deals?reset=1";
+}
+
+function shortDate(value: string) {
+  const [, month, day] = value.split("-");
+  return `${day}.${month}`;
 }
 
 function FilterChip({ label, href }: { label: string; href: string }) {
@@ -107,18 +125,23 @@ function FilterBar({
   const flag = validFlag(one(query.flag));
   const owner = one(query.owner);
   const project = one(query.project);
-  const tag = one(query.tag);
+  const tagIds = splitTags(one(query.tag));
+  const from = dateParam(one(query.from));
+  const to = dateParam(one(query.to));
   const source = one(query.source);
   const mine = one(query.mine) === "1" && !owner;
   const ownerName = !mine ? owners.find((item) => item.id === owner)?.full_name : undefined;
   const projectName = projects.find((item) => item.id === project)?.name;
-  const tagName = tags.find((item) => item.id === tag)?.name;
+  const tagNames = tagIds.map((id) => tags.find((item) => item.id === id)?.name).filter(Boolean) as string[];
+  const tagLabel = tagNames.length > 2 ? `${tagNames.slice(0, 2).join(", ")} +${tagNames.length - 2}` : tagNames.join(", ");
+  const periodLabel = from && to ? `${shortDate(from)} – ${shortDate(to)}` : from ? `с ${shortDate(from)}` : to ? `по ${shortDate(to)}` : null;
   const sourceName = sources.find((item) => item.id === source)?.name;
   const activeChips = [
     mine ? { label: "Только мои", changes: { mine: null } } : null,
     ownerName ? { label: `Ответственный: ${ownerName}`, changes: { owner: null } } : null,
     projectName ? { label: `Проект: ${projectName}`, changes: { project: null } } : null,
-    tagName ? { label: `Метка: ${tagName}`, changes: { tag: null } } : null,
+    tagNames.length ? { label: `${tagNames.length > 1 ? "Метки" : "Метка"}: ${tagLabel}`, changes: { tag: null } } : null,
+    periodLabel ? { label: `Создана: ${periodLabel}`, changes: { from: null, to: null } } : null,
     sourceName ? { label: `Источник: ${sourceName}`, changes: { source: null } } : null,
     flag ? { label: FLAGS.find(([key]) => key === flag)?.[1] ?? flag, changes: { flag: null } } : null,
   ].filter(Boolean) as unknown as { label: string; changes: Record<string, string | null | undefined> }[];
@@ -143,7 +166,7 @@ function FilterBar({
         </div>
       </details>
       <span className="separator" />
-      <details className="filter-popover" key={`${sort}|${mine ? "mine" : owner ?? ""}|${project ?? ""}|${tag ?? ""}|${source ?? ""}|${flag ?? ""}`}>
+      <details className="filter-popover" key={`${sort}|${mine ? "mine" : owner ?? ""}|${project ?? ""}|${tagIds.join(TAG_SEPARATOR)}|${source ?? ""}|${flag ?? ""}|${from ?? ""}|${to ?? ""}`}>
         <summary className="filter-button">
           <ListFilter size={14} /> Фильтр <ChevronDown size={13} />
         </summary>
@@ -163,13 +186,7 @@ function FilterBar({
               {projects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
             </select>
           </label>
-          <label>
-            Метка
-            <select name="tag" defaultValue={tag ?? ""}>
-              <option value="">Все метки</option>
-              {tags.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-            </select>
-          </label>
+          <TagMultiSelect name="tag" tags={tags} defaultSelected={tagIds} />
           <label>
             Источник
             <select name="source" defaultValue={source ?? ""}>
@@ -177,6 +194,11 @@ function FilterBar({
               {sources.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
             </select>
           </label>
+          <div className="filter-period">
+            <span>Создана</span>
+            <DateField name="from" defaultValue={from ?? ""} aria-label="Создана с" placeholder="с" clearable />
+            <DateField name="to" defaultValue={to ?? ""} aria-label="Создана по" placeholder="по" clearable />
+          </div>
           <label>
             Состояние
             <select name="flag" defaultValue={flag ?? ""}>
@@ -220,11 +242,36 @@ export default async function DealsPage({
   if (!profile) redirect("/login");
   if (profile.role === "builder") redirect("/reports");
   const query = await searchParams;
+  // Зашли без единого параметра (пункт меню, закладка) — возвращаем фильтры,
+  // с которыми менеджер ушёл из воронки. «Сбросить» ведёт на ?reset=1 и cookie стирает.
+  if (Object.keys(query).length === 0) {
+    const saved = (await cookies()).get(DEALS_FILTERS_COOKIE)?.value;
+    if (saved) {
+      const params = new URLSearchParams(saved);
+      const restored = dealsFilterString((key) => params.get(key));
+      if (restored) redirect(`/deals?${restored}`);
+    }
+  }
   const sort = validSort(one(query.sort));
   const flag = validFlag(one(query.flag));
+  const tagIds = splitTags(one(query.tag));
+  const createdFrom = dateParam(one(query.from));
+  const createdTo = dateParam(one(query.to));
   const ownerParam = one(query.owner);
   const mine = one(query.mine) === "1" && !ownerParam;
   const owner = mine ? profile.id : ownerParam || null;
+  const effective: Record<string, string | undefined> = {
+    owner: ownerParam,
+    project: one(query.project),
+    tag: tagIds.join(TAG_SEPARATOR),
+    source: one(query.source),
+    flag: flag ?? undefined,
+    sort: one(query.sort) ? sort : undefined,
+    mine: mine ? "1" : undefined,
+    from: createdFrom ?? undefined,
+    to: createdTo ?? undefined,
+  };
+  const savedFilters = dealsFilterString((key) => effective[key]);
   const supabase = await createClient();
   const [boardResult, stagesResponse, sourcesResponse, projectsResponse, tagsResponse, ownersResponse, lostReasonsResponse, taskTypesResponse] = await Promise.all([
     supabase.rpc("crm_board", {
@@ -232,7 +279,9 @@ export default async function DealsPage({
       p_page_size: PAGE_SIZE,
       p_owner: owner,
       p_project: one(query.project) || null,
-      p_tag: one(query.tag) || null,
+      p_tags: tagIds.length ? tagIds : null,
+      p_created_from: createdFrom,
+      p_created_to: createdTo,
       p_source: one(query.source) || null,
       p_flag: flag,
       p_sort: sort,
@@ -294,15 +343,16 @@ export default async function DealsPage({
       <FilterBar query={query} owners={owners} projects={projects} tags={tags} sources={sources} counters={board.counters} />
       <div className="applied-summary">Показано {columns.reduce((sum, column) => sum + column.deals.length, 0)} из {board.total}</div>
       <BoardRefreshGuard serverFlag={flag ?? ""} />
+      <RememberDealsFilters value={savedFilters} />
       <DealsBoard
-        key={`${sort}|${flag ?? ""}|${mine ? "mine" : ownerParam ?? ""}|${one(query.project) ?? ""}|${one(query.tag) ?? ""}|${one(query.source) ?? ""}`}
+        key={`${sort}|${flag ?? ""}|${mine ? "mine" : ownerParam ?? ""}|${one(query.project) ?? ""}|${tagIds.join(TAG_SEPARATOR)}|${one(query.source) ?? ""}|${createdFrom ?? ""}|${createdTo ?? ""}`}
         columns={columns}
         lost={lost}
         currentUserId={profile.id}
         lostReasons={(lostReasonsResponse.data ?? []) as LostReason[]}
         taskTypes={(taskTypesResponse.data ?? []) as TaskType[]}
         activeAssignees={owners.map((item) => ({ id: item.id, name: item.full_name }))}
-        query={{ pageSize: PAGE_SIZE, owner, project: one(query.project) || null, tag: one(query.tag) || null, source: one(query.source) || null, flag, sort, lostKey: lostStage?.id ?? null }}
+        query={{ pageSize: PAGE_SIZE, owner, project: one(query.project) || null, tags: tagIds.length ? tagIds : null, createdFrom, createdTo, source: one(query.source) || null, flag, sort, lostKey: lostStage?.id ?? null }}
       />
     </div>
   );

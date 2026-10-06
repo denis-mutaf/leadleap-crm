@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { buildStageHueMap } from "@/lib/stage-colors";
 import { createClient } from "@/lib/supabase/server";
+import { normalizeOptions } from "@/lib/deal-fields";
 import { DealsTableView, type TableDeal } from "./table-view";
 
 const PAGE_SIZE = 50;
@@ -18,9 +19,11 @@ const SORT_FIELDS = new Set([
 ]);
 const firstString = (value: string | string[] | undefined) =>
   Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
+// «_» и «%» остаются в запросе: crm_deals_table сама экранирует их для ILIKE,
+// иначе поиск «TEST_Сделка» превращался в «TESTСделка» и не находил ничего.
 const clean = (value: string) =>
   value
-    .replace(/[^\p{L}\p{N}\s-]/gu, "")
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 const isUuid = (value: string) =>
@@ -52,6 +55,22 @@ export default async function DealsTablePage({
   const owner = isUuid(ownerParam) ? ownerParam : "";
   const stage = isUuid(stageParam) ? stageParam : "";
   const supabase = await createClient();
+  // Пользовательские поля сделки в фильтре: поле (cf) и значение (cfv).
+  const fieldDefs = await supabase
+    .from("custom_field_defs")
+    .select("id, label, field_type, options")
+    .eq("entity", "deal")
+    .eq("is_active", true)
+    .order("position");
+  const customFields = (fieldDefs.data ?? []).map((field) => ({
+    id: field.id as string,
+    label: field.label as string,
+    type: field.field_type as string,
+    options: normalizeOptions(field.options),
+  }));
+  const cfParam = firstString(params.cf);
+  const customField = customFields.some((field) => field.id === cfParam) ? cfParam : "";
+  const customValue = customField ? clean(firstString(params.cfv)).slice(0, 120) : "";
 
   const flagParam = firstString(params.flag);
   const flag = ["overdue", "today", "no_next_step"].includes(flagParam) ? flagParam : "";
@@ -63,6 +82,8 @@ export default async function DealsTablePage({
     p_owner: owner || null,
     p_stage: stage || null,
     p_flag: flag || null,
+    p_cf: customField && customValue ? customField : null,
+    p_cfv: customField && customValue ? customValue : null,
     p_sort: sort,
     p_dir: direction,
     p_offset: offset,
@@ -335,6 +356,7 @@ export default async function DealsTablePage({
     return {
       id: deal.id,
       contact: contact?.full_name ?? "Без имени",
+      title: deal.title?.trim() ?? "",
       stage: stageRow?.name ?? "Без этапа",
       stageKind: stageRow?.kind ?? "open",
       stageHue: stageHueMap.get(deal.stage_id) ?? "grey",
@@ -399,6 +421,9 @@ export default async function DealsTablePage({
         owner={owner}
         stage={stage}
         flag={flag}
+        customFields={customFields}
+        customField={customField}
+        customValue={customValue}
         owners={owners.data ?? []}
         stages={stages.data ?? []}
         tags={tags.data ?? []}

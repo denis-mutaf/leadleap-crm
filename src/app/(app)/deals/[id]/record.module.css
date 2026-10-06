@@ -113,3 +113,10 @@
 @media (max-width: 900px) { .body { grid-template-columns: 300px minmax(0, 1fr); } .highlights { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 600px) { .main { overflow: visible; } .highlights { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding-bottom: 8px; } .highlight { height: 56px; padding: 7px 9px; } .body { display: flex; flex-direction: column; overflow: visible; } .left { flex: none; max-height: none; overflow: visible; } .right { flex: none; min-height: 520px; overflow: visible; padding: 10px 0 0; } .feed { overflow: visible; } .quickActions { flex-direction: column; } .quickActions form { flex: none; width: 100%; } .feedRow { grid-template-columns: 18px minmax(0, 1fr); } .feedRow time { grid-column: 2; } }
 @media (prefers-reduced-motion: reduce) { .sourcePanel, .modalBackdrop, .modal, .feedback { animation: none; transition: none; } }
+/* Оболочка RecordPanes: окно уже 1024 px — одна колонка, вторая за вкладкой. */
+@media (max-width: 1023px) {
+  .body { grid-template-columns: minmax(0, 1fr); }
+  .highlights { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  :global(.record-panes[data-pane="data"]) .right { display: none; }
+  :global(.record-panes[data-pane="feed"]) .left { display: none; }
+}

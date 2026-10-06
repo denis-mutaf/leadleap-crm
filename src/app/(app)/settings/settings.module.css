@@ -105,3 +105,6 @@
 .auditRow p { margin: 2px 0 0; color: var(--secondary-text); font-size: var(--text-body); }
 .auditEmpty { margin: 20px 0; color: var(--secondary-text); font-size: var(--text-body); }
 @media (max-width: 800px) { .workspace { flex-direction: column; } .sections { width: 100%; position: static; } .group a { font-size: var(--text-body); } }
+.auditRow > div { display: grid; gap: 1px; padding: 8px 0; min-width: 0; }
+.auditLink { color: var(--info); font-size: var(--text-body); text-decoration: none; }
+.auditLink:hover { text-decoration: underline; }

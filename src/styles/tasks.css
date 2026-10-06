@@ -557,6 +557,12 @@
   opacity: 0.6;
 }
 
+.task-completion-lead {
+  margin: 0 0 12px;
+  color: var(--secondary-text);
+  font-size: var(--text-body);
+}
+
 .task-completion-error {
   margin: 8px 0 0;
   color: var(--destructive);

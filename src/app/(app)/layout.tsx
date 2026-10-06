@@ -12,6 +12,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { Suspense } from "react";
 import { RouteProgress } from "./route-progress";
 import { NAV_COOKIE } from "@/lib/nav-cookie";
+import { initialsOf } from "@/lib/initials";
 import { NavShell, NavToggle } from "./nav-collapse";
 
 type NavEntry = AppNavItem & {
@@ -133,7 +134,7 @@ export default async function AppLayout({
         <AppNav items={visibleNav} badges={badges} />
         <div className="nav-foot">
           <span className="avatar">
-            {profile.full_name.slice(0, 2).toUpperCase()}
+            {initialsOf(profile.full_name)}
           </span>
           <span className="nav-person">
             <strong>{profile.full_name}</strong>

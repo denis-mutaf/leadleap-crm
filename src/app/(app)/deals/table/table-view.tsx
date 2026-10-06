@@ -6,7 +6,9 @@ import {
   ArrowUp,
   ChevronLeft,
   ChevronRight,
+  ExternalLink,
   MoreHorizontal,
+  Trash2,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -24,6 +26,7 @@ import { startRouteProgress } from "../../route-progress";
 export type TableDeal = {
   id: string;
   contact: string;
+  title?: string;
   stage: string;
   stageKind: string;
   stageHue: StageHue;
@@ -50,6 +53,9 @@ type Props = {
   owner: string;
   stage: string;
   flag: string;
+  customFields: CustomFieldFilter[];
+  customField: string;
+  customValue: string;
   owners: { id: string; full_name: string }[];
   stages: { id: string; name: string; kind: string; position: number }[];
   tags: Option[];
@@ -57,6 +63,43 @@ type Props = {
   canExport: boolean;
   canDelete: boolean;
 };
+
+export type CustomFieldFilter = { id: string; label: string; type: string; options: { value: string; label: string }[] };
+
+// Фильтр по пользовательскому полю: выбор поля, затем значение нужного вида.
+function CustomFilter({ fields, field, value }: { fields: CustomFieldFilter[]; field: string; value: string }) {
+  const [selected, setSelected] = useState(field);
+  const definition = fields.find((item) => item.id === selected);
+  if (fields.length === 0) return null;
+  return (
+    <>
+      <select name="cf" value={selected} onChange={(event) => setSelected(event.target.value)} aria-label="Поле сделки">
+        <option value="">Любое поле</option>
+        {fields.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+      </select>
+      {definition && (definition.type === "select" ? (
+        <select key={definition.id} name="cfv" defaultValue={value} aria-label={`Значение: ${definition.label}`}>
+          <option value="">Любое значение</option>
+          {definition.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </select>
+      ) : definition.type === "checkbox" ? (
+        <select key={definition.id} name="cfv" defaultValue={value} aria-label={`Значение: ${definition.label}`}>
+          <option value="">Любое значение</option>
+          <option value="true">Да</option>
+        </select>
+      ) : (
+        <input
+          key={definition.id}
+          name="cfv"
+          type={definition.type === "number" ? "number" : definition.type === "date" ? "date" : "text"}
+          defaultValue={value}
+          placeholder={`Значение: ${definition.label}`}
+          aria-label={`Значение: ${definition.label}`}
+        />
+      ))}
+    </>
+  );
+}
 
 type Action = "stage" | "owner" | "tag";
 
@@ -183,7 +226,9 @@ export function DealsTableView(p: Props) {
   const [failedRows, setFailedRows] = useState<{ id: string; contact: string; reason: string }[]>([]);
   const [deleteRow, setDeleteRow] = useState<TableDeal | null>(null);
   const [deletePending, setDeletePending] = useState(false);
+  const [menu, setMenu] = useState<{ row: TableDeal; top: number; right: number } | null>(null);
   const header = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const rowsIds = p.rows.map((row) => row.id);
   const allSelected = rowsIds.length > 0 && rowsIds.every((id) => selected.has(id));
   const count = selected.size;
@@ -192,6 +237,8 @@ export function DealsTableView(p: Props) {
     owner: p.owner,
     stage: p.stage,
     flag: p.flag,
+    cf: p.customField,
+    cfv: p.customValue,
     sort: p.sort,
     dir: p.direction,
   };
@@ -208,6 +255,42 @@ export function DealsTableView(p: Props) {
   useEffect(() => {
     if (header.current) header.current.indeterminate = count > 0 && !allSelected;
   }, [allSelected, count]);
+
+  // Меню строки висит в окне (position: fixed), а не в ячейке: ячейка таблицы
+  // обрезает всё, что выходит за неё. Поэтому при прокрутке и смене размера
+  // закрываем — иначе меню осталось бы на месте, а строка уехала.
+  useEffect(() => {
+    if (!menu) return;
+    const close = () => setMenu(null);
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as HTMLElement;
+      if (menuRef.current?.contains(target) || target.closest("[data-row-menu-trigger]")) return;
+      close();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close();
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("keydown", onKeyDown);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    menuRef.current?.querySelector<HTMLElement>("a, button")?.focus();
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [menu]);
+
+  function toggleMenu(row: TableDeal, button: HTMLElement) {
+    if (menu?.row.id === row.id) {
+      setMenu(null);
+      return;
+    }
+    const box = button.getBoundingClientRect();
+    setMenu({ row, top: box.bottom + 4, right: Math.max(8, window.innerWidth - box.right) });
+  }
 
   function toggle(id: string) {
     setSelected((current) => {
@@ -250,7 +333,7 @@ export function DealsTableView(p: Props) {
     setFailedRows(failures);
     setMessage(
       failures.length
-        ? `Не прошло ${failures.length} из ${success + failures.length}, остальные обновлены (${success}):`
+        ? `Не прошло ${failures.length} из ${success + failures.length}${success ? `, остальные обновлены (${success})` : ""}`
         : `Готово: ${success} сделок обновлено`,
     );
     router.refresh();
@@ -276,11 +359,12 @@ export function DealsTableView(p: Props) {
     if (!p.canExport || count === 0) return;
     const selectedRows = p.rows.filter((row) => selected.has(row.id));
     const lines = [
-      ["ID", "Контакт", "Этап", "Метки", "Следующий шаг", "Последняя активность", "Создана", "Ответственный"].join(","),
+      ["ID", "Контакт", "Название сделки", "Этап", "Метки", "Следующий шаг", "Последняя активность", "Создана", "Ответственный"].join(","),
       ...selectedRows.map((row) =>
         [
           row.id,
           row.contact,
+          row.title ?? "",
           row.stage,
           row.tags.join(" · "),
           row.task,
@@ -314,7 +398,7 @@ export function DealsTableView(p: Props) {
 
   return (
     <div className={styles.wrap}>
-      <Form className={styles.filters} action="/deals/table" key={`${p.query}|${p.owner}|${p.stage}|${p.sort}|${p.direction}`}>
+      <Form className={styles.filters} action="/deals/table" key={`${p.query}|${p.owner}|${p.stage}|${p.customField}|${p.customValue}|${p.sort}|${p.direction}`}>
         <input name="q" defaultValue={p.query} placeholder="Поиск по сделкам" aria-label="Поиск по сделкам" />
         <select name="owner" defaultValue={p.owner} aria-label="Ответственный">
           <option value="">Все ответственные</option>
@@ -324,6 +408,7 @@ export function DealsTableView(p: Props) {
           <option value="">Все этапы</option>
           {p.stages.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
         </select>
+        <CustomFilter fields={p.customFields} field={p.customField} value={p.customValue} />
         <input type="hidden" name="sort" value={p.sort} />
         <input type="hidden" name="dir" value={p.direction} />
         {p.flag ? <input type="hidden" name="flag" value={p.flag} /> : null}
@@ -334,14 +419,14 @@ export function DealsTableView(p: Props) {
             <X size={12} aria-hidden="true" />
           </Link>
         ) : null}
-        {(p.query || p.owner || p.stage || p.flag) && <Link href="/deals/table">Сбросить</Link>}
+        {(p.query || p.owner || p.stage || p.flag || p.customValue) && <Link href="/deals/table">Сбросить</Link>}
         <span className={styles.sortChip} title="Активная сортировка">
           <ArrowDownUp size={12} aria-hidden="true" />
           Сортировка: {SORT_LABELS[p.sort] ?? p.sort}
           {p.direction === "asc" ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
           {(p.sort !== DEFAULT_SORT || p.direction !== DEFAULT_DIRECTION) && (
             <Link
-              href={href({ q: p.query, owner: p.owner, stage: p.stage, sort: DEFAULT_SORT, dir: DEFAULT_DIRECTION })}
+              href={href({ q: p.query, owner: p.owner, stage: p.stage, cf: p.customField, cfv: p.customValue, sort: DEFAULT_SORT, dir: DEFAULT_DIRECTION })}
               aria-label="Сбросить сортировку"
             >
               <X size={12} />
@@ -389,7 +474,7 @@ export function DealsTableView(p: Props) {
                   }}
                 >
                   <td className={styles.selectCell} onClick={(event) => event.stopPropagation()}><input type="checkbox" checked={selected.has(row.id)} onChange={() => toggle(row.id)} aria-label={`Выбрать сделку ${row.contact}`} /></td>
-                  <td><Link className={styles.contact} href={`/deals/${row.id}`} onClick={(event) => event.stopPropagation()} title={row.contact}><span className={styles.contactCell}><ContactAvatar name={row.contact} /><span className={styles.truncate}>{row.contact}</span></span></Link></td>
+                  <td><Link className={styles.contact} href={`/deals/${row.id}`} onClick={(event) => event.stopPropagation()} title={row.title ? `${row.contact} · ${row.title}` : row.contact}><span className={styles.contactCell}><ContactAvatar name={row.contact} /><span className={styles.contactText}><span className={styles.truncate}>{row.contact}</span>{row.title && row.title !== row.contact && <span className={styles.dealTitle}>{row.title}</span>}</span></span></Link></td>
                   <td title={row.stage}><StageIndicator hue={row.stageHue} name={row.stage} variant="inline" /></td>
                   <td><TagCell tags={row.tags} /></td>
                   <td className={styles.truncate} title={row.task}>{row.task && <>{row.task} · {displayDate(row.taskDueAt)}</>}</td>
@@ -397,7 +482,7 @@ export function DealsTableView(p: Props) {
                   <td className={styles.muted}>{displayDate(row.created, false)}</td>
                   <td className={styles.truncate} title={row.owner}>{row.owner}</td>
                   <td className={styles.menuCell} onClick={(event) => event.stopPropagation()}>
-                    {p.canDelete && <button type="button" className={styles.menuButton} aria-label={`Удалить сделку ${row.contact}`} onClick={() => setDeleteRow(row)}><MoreHorizontal size={14} /></button>}
+                    <button type="button" className={styles.menuButton} data-row-menu-trigger aria-label={`Действия со сделкой ${row.contact}`} aria-haspopup="menu" aria-expanded={menu?.row.id === row.id} onClick={(event) => toggleMenu(row, event.currentTarget)}><MoreHorizontal size={14} /></button>
                   </td>
                 </tr>
               ))}
@@ -420,10 +505,12 @@ export function DealsTableView(p: Props) {
         </span>
       </nav>
       {count > 0 && <div className={styles.bulkSpacer} aria-hidden="true" />}
-      {message && <div className={styles.message} role="status">
-        {message}
-        {failedRows.length > 0 && <ul className={styles.failures}>{failedRows.map((item) => <li key={item.id}><Link href={`/deals/${item.id}`}>{item.contact || "Без имени"}</Link> — {item.reason}</li>)}</ul>}
-      </div>}
+      {message && failedRows.length === 0 && <div className={styles.message} role="status">{message}</div>}
+      {failedRows.length > 0 && <div className={`${styles.dialogBackdrop} motion-veil`} role="presentation"><div className={`${styles.dialog} motion-dialog`} role="alertdialog" aria-modal="true" aria-labelledby="bulk-failures-title">
+        <h2 id="bulk-failures-title">{message}</h2>
+        <ul className={styles.failures}>{failedRows.map((item) => <li key={item.id}><Link href={`/deals/${item.id}`}>{item.contact || "Без имени"}</Link> — {item.reason}</li>)}</ul>
+        <div className={styles.dialogActions}><button type="button" autoFocus onClick={() => { setFailedRows([]); setMessage(null); }}>Понятно</button></div>
+      </div></div>}
       {count > 0 && <div className={styles.bulk} role="toolbar" aria-label="Массовые действия">
         <strong>Выбрано {count}</strong>
         <button type="button" disabled={pending} onClick={() => setAction("stage")}>Этап</button>
@@ -438,6 +525,14 @@ export function DealsTableView(p: Props) {
         <select autoFocus value={choice} onChange={(event) => setChoice(event.target.value)}><option value="">Выберите…</option>{actionOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
         <div className={styles.dialogActions}><button type="button" onClick={() => setAction(null)}>Отмена</button><button type="button" disabled={!choice || pending} onClick={() => void runAction()}>Подтвердить</button></div>
       </div></div>}
+      {menu && <div ref={menuRef} className={`menu motion-popover ${styles.rowMenu}`} role="menu" style={{ top: menu.top, right: menu.right }}>
+        <Link role="menuitem" href={`/deals/${menu.row.id}`} onClick={() => { setMenu(null); startRouteProgress(); }}>Открыть сделку</Link>
+        <a role="menuitem" href={`/deals/${menu.row.id}`} target="_blank" rel="noopener" onClick={() => setMenu(null)}>В новой вкладке <ExternalLink size={13} aria-hidden="true" /></a>
+        {p.canDelete && <>
+          <span className={styles.menuSeparator} role="separator" />
+          <button type="button" role="menuitem" className={styles.menuDanger} onClick={() => { setDeleteRow(menu.row); setMenu(null); }}>Удалить сделку… <Trash2 size={13} aria-hidden="true" /></button>
+        </>}
+      </div>}
       {deleteRow && <div className={`${styles.dialogBackdrop} motion-veil`} role="presentation"><div className={`${styles.dialog} motion-dialog`} role="dialog" aria-modal="true" aria-labelledby="delete-deal-title">
         <h2 id="delete-deal-title">Удалить сделку?</h2>
         <p>Сделка «{deleteRow.contact}» будет перемещена в корзину.</p>

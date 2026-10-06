@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { UserRole } from "@/lib/types";
 import { USER_ROLE_LABELS } from "@/lib/types";
 import { dbErrorText } from "@/lib/db-errors";
+import { initialsOf } from "@/lib/initials";
 import styles from "./users.module.css";
 
 type Row = {
@@ -13,7 +14,7 @@ type Row = {
   role: UserRole;
   is_active: boolean;
   email: string;
-  lastSignIn: string | null;
+  lastSeen: string | null;
   dealCount: number;
 };
 const roles: UserRole[] = ["manager", "head", "admin", "builder"];
@@ -24,15 +25,7 @@ function formatDate(value: string | null) {
         timeStyle: "short",
         timeZone: "Europe/Chisinau",
       }).format(new Date(value))
-    : "Не входил";
-}
-function initials(name: string) {
-  return name
-    .split(/\s+/)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+    : "Нет данных";
 }
 
 export default function UsersClient({
@@ -94,6 +87,15 @@ export default function UsersClient({
   async function submitInvite(event: React.FormEvent) {
     event.preventDefault();
     if (pendingRef.current) return;
+    // Проверка своя: браузерные подсказки («Please fill in this field») идут на языке браузера.
+    if (!invite.full_name.trim()) {
+      setError("Укажите имя пользователя.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(invite.email.trim())) {
+      setError("Укажите почту в виде name@example.com.");
+      return;
+    }
     pendingRef.current = true;
     setBusy("invite");
     setError("");
@@ -131,7 +133,7 @@ export default function UsersClient({
           <button
             className="btn btn-primary"
             ref={inviteButtonRef}
-            onClick={() => setInviteOpen(true)}
+            onClick={() => { setError(""); setInviteOpen(true); }}
           >
             Пригласить
           </button>
@@ -151,7 +153,7 @@ export default function UsersClient({
                 <th>Почта</th>
                 <th>Роль</th>
                 <th>Сделок</th>
-                <th>Последний вход</th>
+                <th>Последняя активность</th>
                 <th>Состояние</th>
               </tr>
             </thead>
@@ -165,7 +167,7 @@ export default function UsersClient({
                   >
                     <td>
                       <span className={styles.avatar}>
-                        {initials(row.full_name)}
+                        {initialsOf(row.full_name)}
                       </span>
                       <strong>{row.full_name}</strong>
                     </td>
@@ -193,7 +195,7 @@ export default function UsersClient({
                       )}
                     </td>
                     <td className={styles.number}>{row.dealCount}</td>
-                    <td>{formatDate(row.lastSignIn)}</td>
+                    <td>{formatDate(row.lastSeen)}</td>
                     <td>
                       <button
                         className={
@@ -240,12 +242,12 @@ export default function UsersClient({
             ref={dialogRef}
             className={styles.dialog}
             onSubmit={submitInvite}
+            noValidate
           >
             <h2 id="invite-title">Пригласить пользователя</h2>
             <label>
               Имя
               <input
-                required
                 value={invite.full_name}
                 onChange={(event) =>
                   setInvite({ ...invite, full_name: event.target.value })
@@ -255,7 +257,6 @@ export default function UsersClient({
             <label>
               Почта
               <input
-                required
                 type="email"
                 value={invite.email}
                 onChange={(event) =>
@@ -278,6 +279,11 @@ export default function UsersClient({
                 ))}
               </select>
             </label>
+            {error && (
+              <p className={styles.error} role="alert">
+                {error}
+              </p>
+            )}
             <div className={styles.dialogActions}>
               <button type="button" onClick={() => setInviteOpen(false)}>
                 Отмена

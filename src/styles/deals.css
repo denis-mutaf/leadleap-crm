@@ -1301,6 +1301,81 @@
   }
 }
 
+/* ===== Подгрузка колонки прокруткой, сумма без бюджетов ===== */
+
+.column-tail {
+  min-height: 28px;
+  display: grid;
+  place-items: center;
+  color: var(--muted-foreground);
+  font-size: var(--text-small);
+}
+
+.column-sum.is-empty {
+  font-family: inherit;
+  font-weight: 400;
+  font-size: var(--text-small);
+  color: var(--muted-foreground);
+}
+
+/* ===== Фильтр воронки: мультивыбор меток и период ===== */
+
+.tag-pick {
+  display: grid;
+  gap: 6px;
+}
+
+.tag-pick-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--secondary-text);
+  font-size: var(--text-small);
+}
+
+.tag-pick-list {
+  max-height: 168px;
+  overflow-y: auto;
+  display: grid;
+  gap: 1px;
+  padding: 4px;
+  border-radius: var(--radius-control);
+  background: var(--module);
+}
+
+.filter-form .tag-pick-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 0 8px;
+  border-radius: 8px;
+  color: var(--foreground);
+  font-size: var(--text-body);
+  cursor: pointer;
+  transition: background-color var(--motion-fast) var(--ease);
+}
+
+.filter-form .tag-pick-row:hover { background: var(--accent); }
+
+.tag-pick-row input { accent-color: var(--foreground); }
+
+.tag-pick-empty {
+  padding: 6px 8px;
+  color: var(--muted-foreground);
+  font-size: var(--text-small);
+}
+
+.filter-period {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 8px;
+  color: var(--secondary-text);
+  font-size: var(--text-small);
+}
+
+.filter-period > span { grid-column: 1 / -1; }
+
 @media (prefers-reduced-motion: reduce) {
   .deal-card,
   .deal-card-overlay,

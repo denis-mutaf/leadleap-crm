@@ -378,6 +378,29 @@
   transform: scale(var(--press-scale));
 }
 
+/* Меню строки: глобальный .menu (components.css) в окне, а не в ячейке. */
+.rowMenu {
+  position: fixed;
+  left: auto;
+  min-width: 200px;
+  transform-origin: top right;
+}
+
+.menuSeparator {
+  display: block;
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--border);
+}
+
+.rowMenu .menuDanger {
+  color: var(--destructive);
+}
+
+.rowMenu .menuDanger:hover {
+  background: var(--hue-red-bg);
+}
+
 .empty {
   display: flex;
   flex: 1;
@@ -582,6 +605,26 @@
   background: transparent;
 }
 
+/* Узкое окно (меню уже свёрнуто само): колонки ужимаются, чтобы «Последняя
+   активность» и «Ответственный» не прятались за правым краем. На 1100 и уже
+   уходит «Создана» — дата есть в карточке. */
+@media (max-width: 1279px) {
+  .table { width: 100%; }
+  .table th:nth-child(2), .table td:nth-child(2) { width: 150px; }
+  .table th:nth-child(3), .table td:nth-child(3) { width: 150px; }
+  .table th:nth-child(4), .table td:nth-child(4) { width: 120px; }
+  .table th:nth-child(5), .table td:nth-child(5) { width: 150px; }
+  .table th:nth-child(6), .table td:nth-child(6) { width: 150px; }
+  .table th:nth-child(7), .table td:nth-child(7) { width: 70px; }
+  .table th:nth-child(8), .table td:nth-child(8) { width: 110px; }
+}
+
+@media (max-width: 1100px) {
+  .table th:nth-child(7), .table td:nth-child(7) { display: none; }
+  .table th:nth-child(2), .table td:nth-child(2),
+  .table th:nth-child(3), .table td:nth-child(3) { width: 140px; }
+}
+
 @media (max-width: 700px) {
   .filters {
     min-height: auto;
@@ -611,4 +654,21 @@
     transition: none;
     animation: none;
   }
+}
+
+/* Название сделки — второй строкой под контактом: три сделки одного контакта различимы. */
+.contactText {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.dealTitle {
+  overflow: hidden;
+  color: var(--secondary-text);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

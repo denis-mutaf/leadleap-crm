@@ -2,29 +2,15 @@
 
 import { useEffect } from "react";
 
-// Две вещи, которые должны случиться сами при открытии переписки: лента встаёт
-// на последнее сообщение, а диалог перестаёт числиться непрочитанным. Страницу
-// при этом не перезагружаем — иначе открытие диалога дёргало бы весь экран.
-export function ThreadOpen({
-  conversationId,
-  unread,
-}: {
-  conversationId: string;
-  unread: boolean;
-}) {
+// При открытии переписки лента встаёт на последнее сообщение. Диалог при этом
+// НЕ помечается прочитанным: менеджер мог открыть его мельком, и тихая отметка
+// стирала бы «непрочитанное». Прочитанным диалог становится кнопкой
+// «Прочитано» (ThreadActions) или ответом клиенту. Страницу не перезагружаем.
+export function ThreadOpen({ conversationId }: { conversationId: string }) {
   useEffect(() => {
     const list = document.querySelector<HTMLElement>(".inbox-messages");
     if (list) list.scrollTop = list.scrollHeight;
   }, [conversationId]);
-
-  useEffect(() => {
-    if (!unread) return;
-    void fetch("/api/inbox/conversation", {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ conversationId, read: true }),
-    });
-  }, [conversationId, unread]);
 
   return null;
 }

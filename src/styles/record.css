@@ -13,6 +13,8 @@
 
 .record-separator { color: var(--muted-foreground); }
 
+.record-subtitle { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--secondary-text); font-size: 13px; }
+
 .record-main { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0 12px 12px; overflow: hidden; }
 
 .record-highlights { display: grid; grid-template-columns: 1.4fr 1.1fr .75fr .75fr; gap: var(--gap-module); padding-bottom: 12px; flex: none; }
@@ -256,4 +258,39 @@ button.record-highlight:active { transform: translateY(0) scale(.99); transition
 
 @media (max-width: 600px) {
   .record-modal { padding: 14px; }
+}
+
+/* Окно уже 1024 px: одна колонка карточки и вкладки «Данные / Лента»
+   (RecordPanes). Скрытие колонок — в record.module.css, где живут их классы. */
+.record-panes { display: contents; }
+
+.record-pane-tabs { display: none; }
+
+@media (max-width: 1023px) {
+  .record-pane-tabs {
+    flex: none;
+    display: inline-flex;
+    align-self: flex-start;
+    gap: 2px;
+    margin: 0 12px 12px;
+  }
+
+  .record-pane-tabs button {
+    height: var(--h-control);
+    padding: 0 14px;
+    border: 0;
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--secondary-text);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background-color var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease), box-shadow var(--motion) var(--ease), transform var(--motion-fast) var(--ease);
+  }
+
+  .record-pane-tabs button:hover { background: var(--ghost); color: var(--foreground); }
+
+  .record-pane-tabs button:active { transform: scale(var(--press-scale)); }
+
+  .record-pane-tabs button.is-active { background: var(--card); color: var(--foreground); font-weight: 500; box-shadow: var(--shadow-pill); }
 }

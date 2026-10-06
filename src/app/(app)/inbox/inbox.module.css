@@ -39,6 +39,11 @@
   box-shadow: var(--shadow-pill);
 }
 
+.channelFilter {
+  display: flex;
+  align-items: center;
+}
+
 .search {
   min-width: 240px;
   height: var(--h-control);

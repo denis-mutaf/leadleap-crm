@@ -258,6 +258,15 @@ export default function FieldsClient({
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (busyRef.current) return;
+    // Проверка своя: браузерная подсказка «Please fill in this field» идёт на языке браузера.
+    if (!form.label.trim()) {
+      setError("Укажите название поля.");
+      return;
+    }
+    if (form.field_type === "select" && form.options.some((option) => !option.trim())) {
+      setError("Заполните все варианты списка или удалите пустые.");
+      return;
+    }
     busyRef.current = true;
     setBusy(true);
     try {
@@ -327,6 +336,7 @@ export default function FieldsClient({
       options: row.options?.length ? row.options : [""],
       is_required: row.is_required,
     });
+    setError("");
     setPanel(row);
     setMenu(null);
   }
@@ -364,6 +374,7 @@ export default function FieldsClient({
             className={styles.primary}
             onClick={() => {
               setForm(blank);
+              setError("");
               setPanel("create");
             }}
           >
@@ -465,6 +476,7 @@ export default function FieldsClient({
             className={styles.addRow}
             onClick={() => {
               setForm(blank);
+              setError("");
               setPanel("create");
             }}
           >
@@ -485,7 +497,7 @@ export default function FieldsClient({
         </p>
       )}
       {panel && (
-        <form className={styles.panel} ref={panelRef} onSubmit={submit}>
+        <form className={styles.panel} ref={panelRef} onSubmit={submit} noValidate>
           <div className={styles.panelHead}>
             <strong>
               {panel === "create" ? "Новое поле" : "Изменить поле"}
@@ -509,7 +521,6 @@ export default function FieldsClient({
             <label>
               Название
               <input
-                required
                 maxLength={120}
                 value={form.label}
                 onChange={(event) =>
@@ -539,7 +550,6 @@ export default function FieldsClient({
                 {form.options.map((option, index) => (
                   <span className={styles.option} key={index}>
                     <input
-                      required
                       value={option}
                       onChange={(event) =>
                         setForm({
@@ -586,6 +596,11 @@ export default function FieldsClient({
               />{" "}
               Обязательное
             </label>
+            {error && (
+              <p className={styles.error} role="alert">
+                {error}
+              </p>
+            )}
           </div>
           <div className={styles.panelFoot}>
             <button type="button" onClick={() => setPanel(null)}>

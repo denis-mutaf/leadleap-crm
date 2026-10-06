@@ -434,72 +434,30 @@ export async function POST(req: NextRequest) {
       if (type === "INCOMING") {
         const found = await findContactByPhone(db, body.phone);
         if (found) {
-          const deals = await openDeals(db, found.contactId);
-          const owners = [
-            ...new Set(deals.map((d) => d.owner_id).filter(Boolean)),
-          ] as string[];
-          const recipients =
-            owners.length > 0 ? owners : staffId ? [staffId] : [];
-          const dealTitles =
-            deals.map((d) => d.title ?? "Без названия").join(", ") ||
-            "сделок нет";
-          for (const recipient of recipients) {
-            const {
-              data: existingNotification,
-              error: notificationLookupError,
-            } = await db
-              .from("notifications")
-              .select("id")
-              .eq("user_id", recipient)
-              .eq("kind", "incoming_call")
-              .contains("payload", { callid: body.callid })
-              .maybeSingle();
-            if (notificationLookupError) throw notificationLookupError;
-            if (existingNotification) continue;
-            const notificationInsert = await db.from("notifications").insert({
-              user_id: recipient,
-              kind: "incoming_call",
-              title: `Входящий звонок: ${found.fullName}`,
-              body: `Сделки: ${dealTitles}`,
-              contact_id: found.contactId,
-              deal_id: deals.length === 1 ? deals[0].id : null,
-              payload: {
-                phone: body.phone,
-                callid: body.callid,
-                deals: deals.map((d) => d.id),
-              },
-            });
-            if (notificationInsert.error) throw notificationInsert.error;
-          }
+          // Кому показать звонок, решает база: ответственному по сделке,
+          // а если его нет — оператору и общему котлу.
+          const notify = await db.rpc("notify_incoming_call", {
+            p_contact_id: found.contactId,
+            p_phone: body.phone,
+            p_callid: body.callid,
+            p_staff_id: staffId,
+          });
+          if (notify.error) throw notify.error;
         } else {
+          // Новый лид в котёл всем разослал триггер на deals; оператору
+          // добавляем карточку со звонком для окна входящего.
           const { contactId, dealId } = await ensureContactAndDeal(
             db,
             body.phone,
           );
-          if (staffId) {
-            const {
-              data: existingNotification,
-              error: notificationLookupError,
-            } = await db
-              .from("notifications")
-              .select("id")
-              .eq("user_id", staffId)
-              .eq("kind", "new_lead")
-              .contains("payload", { callid: body.callid })
-              .maybeSingle();
-            if (notificationLookupError) throw notificationLookupError;
-            if (existingNotification) return done({});
-            const notificationInsert = await db.from("notifications").insert({
-              user_id: staffId,
-              kind: "new_lead",
-              title: `Новый лид: звонок с ${body.phone}`,
-              body: "Контакт и сделка созданы автоматически из входящего звонка.",
-              contact_id: contactId,
-              deal_id: dealId,
-              payload: { phone: body.phone, callid: body.callid },
-            });
-            if (notificationInsert.error) throw notificationInsert.error;
-          }
+          const attach = await db.rpc("attach_call_to_new_lead", {
+            p_deal_id: dealId,
+            p_contact_id: contactId,
+            p_phone: body.phone,
+            p_callid: body.callid,
+            p_staff_id: staffId,
+          });
+          if (attach.error) throw attach.error;
         }
         return done({});
       }

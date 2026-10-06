@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { dbErrorText } from "@/lib/db-errors";
+import { initialsOf } from "@/lib/initials";
+import { DEAL_STATUS_LABELS, type DealStatus } from "@/lib/types";
 import { ChannelIcon, channelTitle } from "./channel-icon";
 import { Composer } from "./composer";
 import { ThreadActions } from "./thread-actions";
@@ -129,7 +131,7 @@ export async function ThreadPanels({
       <main className="inbox-thread">
         <header className="inbox-thread-header">
           <span className="inbox-avatar-wrap">
-            <span className="inbox-avatar">{name.slice(0, 2).toUpperCase()}</span>
+            <span className="inbox-avatar">{initialsOf(name)}</span>
             <span className="inbox-channel-badge">
               <ChannelIcon channel={conversation.channel} size={11} />
             </span>
@@ -184,7 +186,7 @@ export async function ThreadPanels({
             </>
           )}
         </div>
-        <ThreadOpen conversationId={conversation.id} unread={unread(conversation)} />
+        <ThreadOpen conversationId={conversation.id} />
         <Composer conversationId={conversation.id} disabledReason={blocked} />
       </main>
       <aside className="inbox-context">
@@ -213,7 +215,7 @@ export async function ThreadPanels({
           <div className="inbox-deal">
             <span>Последняя сделка</span>
             <strong>{data.deal.title || data.deal.object_text || "Без названия"}</strong>
-            <small>Статус: {data.deal.status}</small>
+            <small>Статус: {DEAL_STATUS_LABELS[data.deal.status as DealStatus] ?? data.deal.status}</small>
             <Link href={`/deals/${data.deal.id}`}>Открыть сделку</Link>
           </div>
         ) : (

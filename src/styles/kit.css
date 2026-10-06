@@ -294,3 +294,12 @@
 }
 
 .field-saving { opacity: 0.6; pointer-events: none; transition: opacity var(--motion) var(--ease); }
+
+/* Ошибка ввода под полем карточки (диапазон, число, месяц). */
+.field-row > .field-error {
+  grid-column: 2;
+  margin: 0;
+  color: var(--destructive);
+  font-size: 12px;
+  line-height: 16px;
+}

@@ -5,6 +5,7 @@ import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { DealFieldDefinition, DealFieldValue } from "@/lib/deal-fields";
 import { DealRecordClient, type DealRecordData } from "./record-client";
+import { RecordPanes } from "./record-panes";
 
 const FEED_LIMIT = 120;
 const emptyRows = <T,>() => ({ data: [] as T[], error: null, count: 0 });
@@ -69,6 +70,7 @@ export default async function DealRecordPage({
     allOwners,
     allSources,
     lostReasons,
+    changeFeed,
   ] = await Promise.all([
     supabase
       .from("contacts")
@@ -138,7 +140,7 @@ export default async function DealRecordPage({
     supabase
       .from("notes")
       .select(
-        "id, deal_id, author_id, body, created_at, amo_id, amo_note_type",
+        "id, deal_id, author_id, body, created_at, edited_at, amo_id, amo_note_type",
         { count: "exact" },
       )
       .eq("deal_id", id)
@@ -199,6 +201,7 @@ export default async function DealRecordPage({
       .eq("is_active", true)
       .order("position")
       .order("name"),
+    supabase.rpc("deal_change_feed", { p_deal_id: id }),
   ]);
   const [taskTypes, lostReason] = await Promise.all([
     supabase.from("task_types").select("id, name").eq("is_active", true).order("name"),
@@ -235,6 +238,9 @@ export default async function DealRecordPage({
   };
   for (const [label, response] of Object.entries(responses))
     if (response?.error) throw new Error(`${label}: ${response.error.message}`);
+  // Лента изменений — дополнение к карточке: её сбой не должен ронять страницу.
+  if (changeFeed.error) console.error("[deal] deal_change_feed", changeFeed.error.message);
+  const feedPayload = (changeFeed.data ?? { events: [], names: {} }) as DealRecordData["changes"];
   const ids = [
     ...new Set(
       [
@@ -242,6 +248,7 @@ export default async function DealRecordPage({
         ...(notes.data ?? []).map((row) => row.author_id),
         ...(calls.data ?? []).map((row) => row.user_id),
         ...(transitions.data ?? []).map((row) => row.changed_by),
+        ...feedPayload.events.map((event) => event.actor_id),
       ].filter((value): value is string => Boolean(value)),
     ),
   ];
@@ -300,6 +307,7 @@ export default async function DealRecordPage({
     transitions: transitions.data ?? [],
     people: people.data ?? [],
     transitionStages: transitionStages.data ?? [],
+    changes: feedPayload,
     currentUser: { id: profile.id, full_name: profile.full_name },
     feedCounts: {
       tasks: tasks.count ?? 0,
@@ -325,10 +333,15 @@ export default async function DealRecordPage({
           <ArrowLeft size={16} /> Сделки
         </Link>
         <span className="record-separator">/</span>
-        <strong>{contact.data?.full_name ?? "Сделка"}</strong>
+        <strong>{deal.title?.trim() || contact.data?.full_name || "Сделка"}</strong>
+        {deal.title?.trim() && contact.data?.full_name && deal.title.trim() !== contact.data.full_name && (
+          <span className="record-subtitle">{contact.data.full_name}</span>
+        )}
         <span className="header-spacer" />
       </header>
-      <DealRecordClient data={data} />
+      <RecordPanes>
+        <DealRecordClient data={data} />
+      </RecordPanes>
     </div>
   );
 }

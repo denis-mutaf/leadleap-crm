@@ -35,6 +35,12 @@ async function loadAllAuthUsers(admin: ReturnType<typeof createAdminClient>) {
   }
 }
 
+function latest(a: string | null | undefined, b: string | null | undefined): string | null {
+  if (!a) return b ?? null;
+  if (!b) return a;
+  return new Date(a) > new Date(b) ? a : b;
+}
+
 async function mapWithLimit<T, R>(
   items: T[],
   limit: number,
@@ -61,10 +67,17 @@ export default async function UsersPage() {
   if (current.role === "builder") redirect("/reports");
 
   const admin = createAdminClient();
-  const [profiles, authUsers] = await Promise.all([
+  const [profiles, authUsers, seen] = await Promise.all([
     loadAllProfiles(admin),
     loadAllAuthUsers(admin),
+    admin.rpc("crm_users_last_seen"),
   ]);
+  // Активность — по сессиям (обновление токена), а не по вводу пароля:
+  // last_sign_in_at у человека с открытой неделями вкладкой устаревает.
+  // Функцию создаёт миграция 20261006210000; пока её нет — остаётся дата входа.
+  const lastSeen = new Map<string, string>(
+    ((seen.data ?? []) as { user_id: string; last_seen_at: string }[]).map((item) => [item.user_id, item.last_seen_at]),
+  );
 
   const emails = new Map(
     authUsers.map((user) => [
@@ -91,7 +104,7 @@ export default async function UsersPage() {
   ).map((profile) => ({
     ...profile,
     email: emails.get(profile.id)?.email ?? "—",
-    lastSignIn: emails.get(profile.id)?.lastSignIn ?? null,
+    lastSeen: latest(lastSeen.get(profile.id), emails.get(profile.id)?.lastSignIn),
     dealCount: counts.get(profile.id) ?? 0,
   }));
 

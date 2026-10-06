@@ -11,10 +11,11 @@ import {
   Settings,
 } from "lucide-react";
 import Link, { useLinkStatus } from "next/link";
-import { usePathname } from "next/navigation";
-import { Suspense, use, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { Suspense, use, useEffect, type MouseEvent } from "react";
 import { useNavCollapsed } from "./nav-collapse";
-import { setRouteProgress } from "./route-progress";
+import { readSavedDealsFilters } from "@/lib/deals-filters";
+import { setRouteProgress, startRouteProgress } from "./route-progress";
 
 export type AppNavItem = {
   href: string;
@@ -111,7 +112,20 @@ export function AppNav({
   badges: Promise<{ inbox: number; calls: number }>;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const collapsed = useNavCollapsed();
+
+  // Пункт «Сделки» ведёт в воронку с теми фильтрами, с которыми из неё вышли.
+  // Адрес без параметров кэшируется роутером на минуту, поэтому подставляем
+  // сохранённые фильтры сами, а не ждём редиректа сервера.
+  const openDeals = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (pathname === "/deals" || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const saved = readSavedDealsFilters();
+    if (!saved) return;
+    event.preventDefault();
+    startRouteProgress();
+    router.push(`/deals?${saved}`);
+  };
 
   return (
     <nav aria-label="Основная навигация">
@@ -125,8 +139,13 @@ export function AppNav({
             className={`nav-item ${active ? "is-active" : ""}`}
             href={href}
             key={href}
+            // Восемь пунктов меню на каждой загрузке гнали пачку ?_rsc-запросов
+            // через прокси и раскладку; пачка периодически отдавала 503.
+            // Без prefetch в области видимости пункты не грузятся разом.
+            prefetch={false}
             aria-current={active ? "page" : undefined}
             title={collapsed ? label : undefined}
+            onClick={href === "/deals" ? openDeals : undefined}
             style={{ position: "relative" }}
           >
             <NavLinkContent

@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { DateField } from "@/components/crm/date-field";
 import { createClient } from "@/lib/supabase/client";
+import { dbErrorText } from "@/lib/db-errors";
+import { useDealLock } from "@/components/crm/deal-lock";
 
 export type InlineOption = { value: string; label: string };
 
@@ -23,6 +25,20 @@ type Base = {
   placeholder?: string;
   /** Как показать значение человеку (валюта, дата, словарь). */
   format?: (value: string | null) => string;
+  /** Проверка ввода до записи: текст ошибки или null. Ошибка остаётся под полем. */
+  validate?: (value: string) => string | null;
+  /** Нижняя граница числа (для type="number"). */
+  min?: number;
+  /** Колонка числовая, хотя поле — список: в базу уходит число, а не строка. */
+  numeric?: boolean;
+  /** Подсказки к текстовому вводу (готовые значения справочника), ввод остаётся свободным. */
+  suggestions?: string[];
+  /** Месяц вместо произвольного текста («2026-12»). */
+  month?: boolean;
+  /** Другие колонки той же строки, которые пишутся вместе с этой. */
+  extra?: Record<string, unknown>;
+  /** Что лежит в колонке, если `value` — показ с запасным значением из другой колонки. */
+  serverValue?: string | null;
 };
 
 type Props = Base &
@@ -49,13 +65,25 @@ export function InlineField({
   canEdit = true,
   placeholder = "—",
   format,
+  validate,
+  min,
+  numeric = false,
+  suggestions,
+  month = false,
+  extra,
+  serverValue,
 }: Props) {
   const router = useRouter();
+  const lock = useDealLock();
+  const [error, setError] = useState<string | null>(null);
   const [current, setCurrent] = useState<string | null>(value);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value ?? "");
   const [saving, setSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(null);
+  // Поле месяца не умеет показать старый текст («скоро»): пока человек ничего не
+  // выбрал, потеря фокуса не должна стирать то, что лежит в базе.
+  const touched = useRef(false);
 
   // Поле показывает своё значение сразу после правки, не дожидаясь ответа
   // сервера, поэтому серверное value и локальное current живут отдельно.
@@ -73,25 +101,59 @@ export function InlineField({
   function open() {
     if (!canEdit || saving) return;
     setDraft(current ?? "");
+    setError(null);
+    touched.current = false;
     setEditing(true);
   }
 
+  function cancel() {
+    setError(null);
+    setEditing(false);
+  }
+
   async function commit(next: string) {
+    if (month && !touched.current) {
+      cancel();
+      return;
+    }
     const cleaned = next.trim();
     const previous = current;
     const stored = cleaned === "" ? null : cleaned;
+    if (stored === previous) {
+      setError(null);
+      setEditing(false);
+      return;
+    }
+    const problem = stored === null ? null : (validate?.(stored) ?? null);
+    if (problem) {
+      // Ввод остаётся открытым: человек видит, что не так, и правит на месте.
+      setError(problem);
+      return;
+    }
+    setError(null);
     setEditing(false);
-    if (stored === previous) return;
     setCurrent(stored);
     setSaving(true);
-    const result = await createClient()
-      .from(table)
-      .update({ [column]: type === "number" && stored ? Number(stored) : stored })
-      .eq("id", id);
+    const columnValue = (type === "number" || numeric) && stored ? Number(stored) : stored;
+    const patch = { [column]: columnValue, ...extra };
+    let failure: unknown = null;
+    if (lock && table === "deals") {
+      const was = previous === value && serverValue !== undefined ? serverValue : previous;
+      const result = await lock.save(patch, { label, column, was, next: stored, format: (value) => (type === "select" ? (options?.find((option) => option.value === value)?.label ?? value ?? "") : format ? format(value) : (value ?? "")) });
+      if (result.status === "conflict") {
+        setSaving(false);
+        setCurrent(result.current);
+        router.refresh();
+        return;
+      }
+      if (result.status === "error") failure = result.error;
+    } else {
+      failure = (await createClient().from(table).update(patch).eq("id", id)).error;
+    }
     setSaving(false);
-    if (result.error) {
+    if (failure) {
       setCurrent(previous);
-      toast.error(`${label} не сохранилось. Попробуйте ещё раз.`);
+      toast.error(dbErrorText(failure, `${label} не сохранилось. Попробуйте ещё раз.`));
       return;
     }
     toast.success(`${label} — сохранено`);
@@ -117,8 +179,8 @@ export function InlineField({
             className="field-select"
             value={draft}
             onChange={(event) => commit(event.target.value)}
-            onBlur={() => setEditing(false)}
-            onKeyDown={(event) => event.key === "Escape" && setEditing(false)}
+            onBlur={cancel}
+            onKeyDown={(event) => event.key === "Escape" && cancel()}
           >
             <option value="">— не выбрано —</option>
             {options?.map((option) => (
@@ -135,7 +197,7 @@ export function InlineField({
             onChange={(event) => setDraft(event.target.value)}
             onBlur={(event) => commit(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === "Escape") setEditing(false);
+              if (event.key === "Escape") cancel();
               if (event.key === "Enter" && !event.shiftKey) {
                 event.preventDefault();
                 commit(draft);
@@ -147,25 +209,41 @@ export function InlineField({
             className="field-input"
             value={draft}
             onChange={commit}
-            onClose={() => setEditing(false)}
+            onClose={cancel}
             defaultOpen
             clearable
             aria-label={label}
             placeholder={placeholder}
           />
         ) : (
-          <input
-            ref={inputRef as React.RefObject<HTMLInputElement>}
-            className="field-input"
-            type={type === "number" ? "number" : "text"}
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            onBlur={(event) => commit(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") setEditing(false);
-              if (event.key === "Enter") commit(draft);
-            }}
-          />
+          <>
+            <input
+              ref={inputRef as React.RefObject<HTMLInputElement>}
+              className="field-input"
+              type={month ? "month" : type === "number" ? "number" : "text"}
+              min={type === "number" ? min : undefined}
+              list={suggestions ? `${id}-${column}-options` : undefined}
+              value={draft}
+              aria-invalid={error ? true : undefined}
+              onChange={(event) => {
+                setDraft(event.target.value);
+                setError(null);
+                touched.current = true;
+                // Выбор месяца из календаря — законченное действие, ждать blur незачем.
+                if (month && /^\d{4}-\d{2}$/.test(event.target.value)) void commit(event.target.value);
+              }}
+              onBlur={(event) => commit(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") cancel();
+                if (event.key === "Enter") commit(draft);
+              }}
+            />
+            {suggestions && (
+              <datalist id={`${id}-${column}-options`}>
+                {suggestions.map((item) => <option key={item} value={item} />)}
+              </datalist>
+            )}
+          </>
         )
       ) : (
         <button
@@ -178,6 +256,7 @@ export function InlineField({
           {shown ?? placeholder}
         </button>
       )}
+      {error && <p className="field-error" role="alert">{error}</p>}
     </div>
   );
 }

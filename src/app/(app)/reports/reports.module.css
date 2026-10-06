@@ -69,3 +69,265 @@
     animation: none;
   }
 }
+
+/* ===== Экран «За период»: полоса периода, фильтры, таблицы разрезов ===== */
+
+.frowTwo {
+  grid-template-columns: 260px minmax(0, 1fr);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  min-height: var(--h-toolbar);
+  margin-bottom: 8px;
+}
+
+.toolbar > :last-child {
+  margin-left: auto;
+}
+
+/* Сегмент периода: пилюли 30px, активная — белая с тенью (рецепт «Вкладки»). */
+.segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.segmentItem {
+  display: inline-flex;
+  align-items: center;
+  height: var(--h-control);
+  padding: 0 12px;
+  border-radius: var(--radius-control);
+  color: var(--secondary-text);
+  font-size: var(--text-body);
+  text-decoration: none;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
+}
+
+.segmentItem:hover {
+  background: var(--ghost);
+  color: var(--foreground);
+}
+
+.segmentItem:active {
+  transform: scale(var(--press-scale));
+}
+
+.segmentActive,
+.segmentActive:hover {
+  background: var(--card);
+  color: var(--foreground);
+  font-weight: 500;
+  box-shadow: var(--shadow-pill);
+}
+
+.filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  min-height: var(--h-filters);
+  margin-bottom: 8px;
+}
+
+.filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.updated {
+  margin-left: auto;
+}
+
+.quiet {
+  margin: 12px 0 0;
+  color: var(--secondary-text);
+  font-size: var(--text-small);
+}
+
+.toolbar .quiet,
+.filters .quiet {
+  margin: 0;
+}
+
+.warn {
+  flex: none;
+  color: var(--warning);
+}
+
+.metricIcon {
+  vertical-align: -2px;
+}
+
+/* Изменение к прошлому периоду: стрелка окрашена по смыслу, текст — вторичный. */
+.delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: var(--text-small);
+  color: var(--secondary-text);
+}
+
+.delta_up svg {
+  color: var(--success);
+}
+
+.delta_down svg {
+  color: var(--destructive);
+}
+
+.delta_flat svg {
+  color: var(--muted-foreground);
+}
+
+/* Таблица: плитка на модуле, шапка 36, строки 36, hover — --accent. */
+.tableTile {
+  overflow: hidden;
+  margin-top: 12px;
+  border-radius: var(--radius-tile);
+  background: var(--module-card);
+  box-shadow: var(--shadow-module);
+}
+
+.scroll {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-body);
+}
+
+.table th {
+  height: var(--h-row-header);
+  padding: 0 var(--px-cell);
+  color: var(--secondary-text);
+  font-size: var(--text-small);
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table td {
+  height: var(--h-row);
+  padding: 0 var(--px-cell);
+  border-top: 1px solid var(--border);
+}
+
+.table tbody tr {
+  transition: background-color var(--motion-fast) var(--ease);
+}
+
+.table tbody tr:hover {
+  background: var(--accent);
+}
+
+.table .right {
+  text-align: right;
+}
+
+.nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.muted {
+  color: var(--secondary-text);
+}
+
+.capitalize::first-letter {
+  text-transform: uppercase;
+}
+
+.asterisk {
+  margin-left: 4px;
+  color: var(--secondary-text);
+  cursor: help;
+}
+
+.matrix th,
+.matrix td {
+  padding: 0 8px;
+}
+
+.stageCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.stageNo {
+  flex: none;
+  width: 16px;
+  color: var(--secondary-text);
+  font-size: var(--text-small);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.matrixEmpty {
+  background: var(--module);
+}
+
+/* Причины отказа: название, полоса с числом, доля. Рост — transform. */
+.reasonRow {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr) 72px;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--h-row);
+  font-size: var(--text-body);
+}
+
+.reasonTrack {
+  position: relative;
+  height: 24px;
+  overflow: hidden;
+  border-radius: var(--radius-control);
+  background: var(--module-card);
+}
+
+.reasonTrack i {
+  position: absolute;
+  inset: 0;
+  background: var(--muted);
+  transform-origin: left;
+  animation: reason-grow var(--motion-slow) var(--ease) both;
+}
+
+@keyframes reason-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@media (max-width: 760px) {
+  .frowTwo {
+    grid-template-columns: 140px minmax(0, 1fr);
+  }
+
+  .reasonRow {
+    grid-template-columns: 140px minmax(0, 1fr) 56px;
+    gap: 8px;
+  }
+
+  .updated {
+    margin-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reasonTrack i {
+    animation: none;
+  }
+}

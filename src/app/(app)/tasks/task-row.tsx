@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { StageIndicator } from "@/components/crm/stage-indicator";
+import { initialsOf } from "@/lib/initials";
 import { TaskCompletion } from "./task-completion";
 import { TaskEdit } from "./task-edit";
 import { TaskReopen } from "./task-reopen";
@@ -63,10 +64,13 @@ export function TaskRow({
         role="link"
         tabIndex={0}
         onClick={(event) => {
-          if ((event.target as HTMLElement).closest("button, a")) return;
+          // Окна завершения и правки лежат внутри строки: клик и клавиши в них — не переход.
+          if ((event.target as HTMLElement).closest("button, a, dialog")) return;
           openDeal();
         }}
         onKeyDown={(event) => {
+          // Пробел и Enter в поле окна (результат задачи) иначе уводили в карточку сделки.
+          if (event.target !== event.currentTarget) return;
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
             openDeal();
@@ -76,7 +80,7 @@ export function TaskRow({
       {task.done_at ? (
         <TaskReopen taskId={task.id} />
       ) : (
-        <TaskCompletion taskId={task.id} actorId={actorId} />
+        <TaskCompletion taskId={task.id} actorId={actorId} dealId={task.deal_id} />
       )}
       {!task.done_at && (
         <TaskEdit
@@ -117,13 +121,7 @@ export function TaskRow({
         {task.overdueLabel ?? task.dueLabel}
       </span>
       <span className="task-avatar" title={task.assigneeName}>
-        {task.assigneeName
-          .split(/\s+/)
-          .filter(Boolean)
-          .slice(0, 2)
-          .map((part) => part[0])
-          .join("")
-          .toUpperCase() || "—"}
+        {initialsOf(task.assigneeName, "—")}
       </span>
       </div>
       {task.done_at && task.result_text && (

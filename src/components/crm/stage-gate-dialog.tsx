@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import type { Dispatch, SetStateAction } from "react";
+import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import { DateField } from "@/components/crm/date-field";
 import { UNQUALIFIED_BLOCK_TEXT, unqualifiedBlocks, type GateForm, type GatePlan, type GateStage } from "@/lib/stage-gate";
 
@@ -30,6 +30,23 @@ export function StageGateDialog({ plan, target, stages, form, setForm, lostReaso
   const blocked = plan.blocked ?? (unqualifiedPicked ? UNQUALIFIED_BLOCK_TEXT : null);
   const fieldsBlock = plan.missingFields.length > 0;
   const stuck = Boolean(blocked) || fieldsBlock;
+  const canSubmit = !fieldsBlock && !plan.blocked && !pending && !unqualifiedPicked;
+  // На кнопке подсказка ↵, значит Enter и есть основное действие. Исключения —
+  // элементы, у которых Enter свой: кнопки и ссылки (нажмутся сами), список,
+  // многострочное поле.
+  const submitRef = useRef({ canSubmit, onSubmit });
+  useEffect(() => { submitRef.current = { canSubmit, onSubmit }; });
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Enter" || event.shiftKey || event.isComposing || event.defaultPrevented) return;
+      if ((event.target as HTMLElement | null)?.closest("textarea, select, button, a, [role='listbox'], [role='option']")) return;
+      if (!submitRef.current.canSubmit) return;
+      event.preventDefault();
+      submitRef.current.onSubmit();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
   const title = plan.lost ? "Закрыть сделку как отказ" : fieldsBlock ? "Не заполнена квалификация" : blocked ? "Переход закрыт" : plan.needsQualification ? "Клиент квалифицирован?" : "Нужен следующий шаг";
   const lead = plan.lost
     ? "Укажите причину — история сделки сохранится."
@@ -58,7 +75,7 @@ export function StageGateDialog({ plan, target, stages, form, setForm, lostReaso
     <footer>
       <button className="btn" type="button" onClick={onCancel} disabled={pending}>Отмена <kbd>Esc</kbd></button>
       {fieldsBlock && onOpenDeal && <button className="gate-primary" type="button" onClick={onOpenDeal}>{openLabel}</button>}
-      {!fieldsBlock && !plan.blocked && <button className="gate-primary" type="button" onClick={onSubmit} disabled={pending || unqualifiedPicked}>{plan.lost ? "Закрыть как отказ" : plan.needsTask ? "Поставить задачу и перевести" : "Перевести"} <kbd>↵</kbd></button>}
+      {!fieldsBlock && !plan.blocked && <button className="gate-primary" type="button" onClick={onSubmit} disabled={!canSubmit}>{plan.lost ? "Закрыть как отказ" : plan.needsTask ? "Поставить задачу и перевести" : "Перевести"} <kbd>↵</kbd></button>}
     </footer>
   </div></div>;
 }

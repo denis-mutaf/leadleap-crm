@@ -28,6 +28,7 @@ import { monthlyAmount, shortAmount } from "@/lib/amo-amount";
 import { StageGateDialog } from "@/components/crm/stage-gate-dialog";
 import { createClient } from "@/lib/supabase/client";
 import { dbErrorText } from "@/lib/db-errors";
+import { initialsOf } from "@/lib/initials";
 import { closeOpenTasks, emptyGateForm, loadGateSnapshot, planGate, targetHasGates, tomorrowMorning, transitionDeal, unqualifiedBlocks, type GateForm, type GatePlan, type GateStage } from "@/lib/stage-gate";
 import { startRouteProgress } from "../route-progress";
 import { useDismiss } from "@/lib/use-dismiss";
@@ -90,7 +91,9 @@ export type BoardQuery = {
   pageSize: number;
   owner: string | null;
   project: string | null;
-  tag: string | null;
+  tags: string[] | null;
+  createdFrom: string | null;
+  createdTo: string | null;
   source: string | null;
   flag: "no_next_step" | "overdue" | "today" | null;
   sort: string;
@@ -109,8 +112,17 @@ function stageOf(column: BoardColumn, lostKey: string | null): GateStage {
   return { id: column.id === "lost" ? lostKey ?? column.id : column.id, name: column.title, kind: column.kind ?? "open", position: column.position ?? 0, requires_next_step: column.requires_next_step, requires_qualification_tag: column.requires_qualification_tag, requires_qualification: column.requires_qualification };
 }
 
-function initials(name: string) {
-  return name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+// Колонка знает свой итог и сумму бюджетов целиком (с сервера), а карточки
+// подгружаются порциями. Поэтому перенос правит обе цифры на месте, не дожидаясь
+// нового запроса.
+function addDeal(column: BoardColumn, deal: BoardCard): BoardColumn {
+  const budget = deal.budget ?? 0;
+  return { ...column, total: column.total + 1, sum: budget > 0 ? (column.sum ?? 0) + budget : column.sum, deals: [deal, ...column.deals] };
+}
+
+function dropDeal(column: BoardColumn, deal: BoardCard): BoardColumn {
+  const budget = deal.budget ?? 0;
+  return { ...column, total: Math.max(0, column.total - 1), sum: column.sum === null ? null : Math.max(0, column.sum - budget), deals: column.deals.filter((item) => item.id !== deal.id) };
 }
 
 function time(value: string) {
@@ -212,7 +224,7 @@ function PresentationalCard({
       {cardMoney(deal) && <div className="deal-money">{cardMoney(deal)}</div>}
       <div className="deal-footer">
         <span className="owner-mark">
-          <span className="avatar">{deal.owner_name ? initials(deal.owner_name) : "—"}</span>
+          <span className="avatar">{deal.owner_name ? initialsOf(deal.owner_name) : "—"}</span>
           {noNextStep && <span className="no-step-dot" title="Следующий шаг не назначен" />}
         </span>
         {overdue && <span className="task-state overdue">Просрочено</span>}
@@ -243,13 +255,23 @@ function KettleCard({ deal, onOpen, onClaim, index = 0 }: { deal: BoardCard; onO
   );
 }
 
-function ShowMoreButton({ total, shown, loading, onShowMore }: { total: number; shown: number; loading: boolean; onShowMore: () => void }) {
-  if (shown >= total) return null;
-  return (
-    <button className="btn-ghost column-show-more" type="button" onClick={onShowMore} disabled={loading}>
-      {loading ? "Загрузка…" : `Показать ещё (${total - shown})`}
-    </button>
-  );
+// Хвост колонки: когда он въезжает в видимую область, догружается следующая
+// порция. Кнопка остаётся только на случай ошибки — повторить руками.
+function ColumnTail({ total, shown, loading, failed, onMore }: { total: number; shown: number; loading: boolean; failed: boolean; onMore: () => void }) {
+  const sentinel = useRef<HTMLDivElement>(null);
+  const latest = useRef(onMore);
+  useEffect(() => { latest.current = onMore; });
+  const more = shown < total;
+  useEffect(() => {
+    const node = sentinel.current;
+    if (!node || !more || failed || loading || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver((entries) => { if (entries.some((entry) => entry.isIntersecting)) latest.current(); }, { root: node.closest(".column-track"), rootMargin: "0px 0px 240px 0px" });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [more, failed, loading, shown]);
+  if (!more) return null;
+  if (failed) return <button className="btn-ghost column-show-more" type="button" onClick={onMore}>Не загрузилось. Повторить</button>;
+  return <div ref={sentinel} className="column-tail" aria-live="polite">{loading ? "Загрузка…" : `Ещё ${total - shown}`}</div>;
 }
 
 // Клиентская навигация по счётчикам идёт через кэш роутера (staleTimes.dynamic),
@@ -268,6 +290,14 @@ export function BoardRefreshGuard({ serverFlag }: { serverFlag: string }) {
   return null;
 }
 
+// Сумма бюджетов сделок колонки. Бюджет заполнен не у всех сделок, поэтому
+// пустая сумма говорит об этом словами, а не пропадает.
+function ColumnSum({ column }: { column: BoardColumn }) {
+  if (column.sum !== null && column.sum > 0) return <div className="column-sum" title="Сумма бюджетов сделок этапа">€ {new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(column.sum)}</div>;
+  if (column.kettle) return null;
+  return <div className="column-sum is-empty">Бюджет не указан</div>;
+}
+
 function BoardColumn({
   column,
   stages,
@@ -277,6 +307,7 @@ function BoardColumn({
   onToggle,
   onShowMore,
   loadingMore,
+  loadFailed,
 }: {
   column: BoardColumn;
   stages: { id: string; kind: "open" | "won" | "lost"; position: number }[];
@@ -286,6 +317,7 @@ function BoardColumn({
   onToggle?: () => void;
   onShowMore: (columnId: string) => void;
   loadingMore: boolean;
+  loadFailed: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
   const [menuOpen, setMenuOpen] = useState(false);
@@ -303,21 +335,21 @@ function BoardColumn({
         <span className="pill">{column.total}</span>
         {!column.kettle && <div className="column-menu-wrap" ref={menuRef}><button className="column-more" type="button" aria-label={`Меню колонки ${column.title}`} onClick={() => setMenuOpen((open) => !open)}><MoreHorizontal size={15} /></button>{menuOpen && <div className="column-menu"><button type="button" onClick={() => { setHidden(true); setMenuOpen(false); }}>Скрыть колонку</button></div>}</div>}
       </div>
-      {column.sum !== null && column.sum > 0 && <div className="column-sum">€ {new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(column.sum)}</div>}
+      <ColumnSum column={column} />
       <div className="column-track motion-list">
       {column.deals.map((deal, index) => column.kettle ? <KettleCard key={deal.id} deal={deal} index={index} onOpen={(event) => onOpen(deal.id, event)} onClaim={() => onClaim(deal.id)} /> : <DraggableCard key={deal.id} deal={deal} index={index} onOpen={(event) => onOpen(deal.id, event)} />)}
       {column.deals.length === 0 && <div className="empty-column">Нет сделок</div>}
-      <ShowMoreButton total={column.total} shown={column.deals.length} loading={loadingMore} onShowMore={() => onShowMore(column.id)} />
+      <ColumnTail total={column.total} shown={column.deals.length} loading={loadingMore} failed={loadFailed} onMore={() => onShowMore(column.id)} />
       <button className="column-add-button" type="button" onClick={onCreate}><Plus size={14} /> Сделка</button>
       </div>
     </section>
   );
 }
 
-function LostColumn({ column, stages, expanded, onToggle, onOpen, onCreate, onShowMore, loadingMore }: { column: BoardColumn; stages: { id: string; kind: "open" | "won" | "lost"; position: number }[]; expanded: boolean; onToggle: () => void; onOpen: (id: string, event?: OpenEvent) => void; onCreate: () => void; onShowMore: (columnId: string) => void; loadingMore: boolean }) {
+function LostColumn({ column, stages, expanded, onToggle, onOpen, onCreate, onShowMore, loadingMore, loadFailed }: { column: BoardColumn; stages: { id: string; kind: "open" | "won" | "lost"; position: number }[]; expanded: boolean; onToggle: () => void; onOpen: (id: string, event?: OpenEvent) => void; onCreate: () => void; onShowMore: (columnId: string) => void; loadingMore: boolean; loadFailed: boolean }) {
   const { setNodeRef, isOver } = useDroppable({ id: "lost" });
   if (!expanded) return <button ref={setNodeRef} className={`closed-column ${isOver ? "drop-target" : ""}`} type="button" onClick={onToggle} aria-label={`Развернуть Отказ: ${column.total}`}><ChevronRight size={14} /><StageIndicator variant="dot" stage={{ id: column.id, kind: "lost", position: column.position ?? 0 }} stages={stages} /><span className="closed-column-label">Отказ</span><span className="pill">{column.total}</span></button>;
-  return <section ref={setNodeRef} className={`kanban-column lost-expanded ${isOver ? "drop-target" : ""}`}><div className="column-head"><button className="column-collapse" type="button" onClick={onToggle} aria-label="Свернуть Отказ"><ChevronDown size={14} /></button><StageIndicator stage={{ id: column.id, kind: "lost", position: column.position ?? 0 }} stages={stages} name={column.title} /><span className="pill">{column.total}</span></div><div className="column-track motion-list">{column.deals.map((deal, index) => <DraggableCard key={deal.id} deal={deal} index={index} onOpen={(event) => onOpen(deal.id, event)} />)}{column.deals.length === 0 && <div className="empty-column">Нет отказов</div>}<ShowMoreButton total={column.total} shown={column.deals.length} loading={loadingMore} onShowMore={() => onShowMore(column.id)} /><button className="column-add-button" type="button" onClick={onCreate}><Plus size={14} /> Сделка</button></div></section>;
+  return <section ref={setNodeRef} className={`kanban-column lost-expanded ${isOver ? "drop-target" : ""}`}><div className="column-head"><button className="column-collapse" type="button" onClick={onToggle} aria-label="Свернуть Отказ"><ChevronDown size={14} /></button><StageIndicator stage={{ id: column.id, kind: "lost", position: column.position ?? 0 }} stages={stages} name={column.title} /><span className="pill">{column.total}</span></div><div className="column-track motion-list">{column.deals.map((deal, index) => <DraggableCard key={deal.id} deal={deal} index={index} onOpen={(event) => onOpen(deal.id, event)} />)}{column.deals.length === 0 && <div className="empty-column">Нет отказов</div>}<ColumnTail total={column.total} shown={column.deals.length} loading={loadingMore} failed={loadFailed} onMore={() => onShowMore(column.id)} /><button className="column-add-button" type="button" onClick={onCreate}><Plus size={14} /> Сделка</button></div></section>;
 }
 
 export function DealsBoard(props: Props) {
@@ -332,13 +364,28 @@ export function DealsBoard(props: Props) {
   const [gateForm, setGateForm] = useState<GateForm>(() => emptyGateForm(props.taskTypes[0]?.id ?? "", props.currentUserId));
   const [gateError, setGateError] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState<Record<string, boolean>>({});
+  const [loadFailed, setLoadFailed] = useState<Record<string, boolean>>({});
   const lastDragAt = useRef(0);
   const maps = useMemo(() => new Map(columns.flatMap((column) => column.deals).map((deal) => [deal.id, deal])), [columns]);
   const lostKey = props.query.lostKey;
   const gateStages = useMemo(() => columns.filter((column) => !column.kettle).map((column) => stageOf(column, lostKey)), [columns, lostKey]);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(KeyboardSensor));
   useEffect(() => { if (!feedback) return; const timer = window.setTimeout(() => setFeedback(null), 2800); return () => window.clearTimeout(timer); }, [feedback]);
-  useEffect(() => { const onKey = (event: KeyboardEvent) => { if (event.key === "Escape" && !pending) { setGate(null); setMobileConfirmation(null); } }; window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey); }, [pending]);
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !pending) { setGate(null); setMobileConfirmation(null); }
+      // «Перевести ↵» в подтверждении переноса: Enter с кнопки сработает сам, с остального экрана — здесь.
+      if (event.key === "Enter" && mobileConfirmation && !pending && !(event.target as HTMLElement | null)?.closest("button, a")) {
+        event.preventDefault();
+        setMobileConfirmation(null);
+        void moveDeal(mobileConfirmation.dealId, mobileConfirmation.targetId, true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // moveDeal пересоздаётся на каждый рендер и читает свежее состояние через замыкание.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pending, mobileConfirmation, columns]);
   const openDeal = (id: string, event?: OpenEvent) => {
     if (Date.now() - lastDragAt.current <= 300) return;
     if (event && (event.metaKey || event.ctrlKey || event.button === 1)) { window.open(`/deals/${id}`, "_blank", "noopener"); return; }
@@ -361,6 +408,8 @@ export function DealsBoard(props: Props) {
     const db = createClient();
     const result = await transitionDeal(db, { dealId: gate.deal.id, stageId: gate.stage.id, ownerId: plan.lost ? gate.deal.owner_id : gate.deal.owner_id ?? props.currentUserId, lostReasonId: plan.lost ? gateForm.reasonId : null, lostComment: plan.lost ? gateForm.comment : null, qualification: gateForm.qualification, task: plan.needsTask && taskDueAt ? { title: gateForm.taskTitle.trim(), dueAt: taskDueAt.toISOString(), typeId: gateForm.taskTypeId, assigneeId: gateForm.taskAssigneeId } : null });
     if (!result.ok) { setGateError(result.message); setPending(false); return; }
+    // 200 без смены этапа — это не перенос: не рисуем сделку в новой колонке.
+    if (result.data.stage_id !== gate.stage.id) { setGateError("Сервер не перенёс сделку на этот этап. Обновите страницу и повторите"); setPending(false); return; }
     let tasksClosed = false;
     if (plan.lost && plan.openTasks > 0 && gateForm.closeTasks) {
       const closed = await closeOpenTasks(db, gate.deal.id, props.currentUserId);
@@ -370,7 +419,14 @@ export function DealsBoard(props: Props) {
     const transition = result.data;
     const qualificationTag = gateForm.qualification ? [{ name: gateForm.qualification }] : [];
     const confirmed: BoardCard = { ...gate.deal, stage_id: transition.stage_id, owner_id: transition.owner_id, status: transition.status as BoardCard["status"], tags: qualificationTag.length ? [...gate.deal.tags.filter((tag) => tag.name !== "КВАЛ" && tag.name !== "неквал"), ...qualificationTag] : gate.deal.tags, next_task: tasksClosed ? null : plan.needsTask && taskDueAt ? { title: gateForm.taskTitle.trim(), due_at: taskDueAt.toISOString() } : gate.deal.next_task };
-    setColumns((current) => { const removed = current.map((column) => column.id === (gate.deal.stage_id || "kettle") || column.deals.some((item) => item.id === gate.deal.id) ? { ...column, total: column.deals.some((item) => item.id === gate.deal.id) ? Math.max(0, column.total - 1) : column.total, deals: column.deals.filter((item) => item.id !== gate.deal.id) } : column); if (plan.lost) return removed.map((column) => column.id === "lost" ? { ...column, total: column.total + 1, deals: [confirmed, ...column.deals] } : column); return removed.map((column) => column.id === gate.target.id ? { ...column, total: column.total + 1, deals: [confirmed, ...column.deals] } : column); });
+    setColumns((current) => {
+      const removed = current.map((column) => column.deals.some((item) => item.id === gate.deal.id) ? dropDeal(column, gate.deal) : column);
+      const targetId = plan.lost ? "lost" : gate.target.id;
+      return removed.map((column) => column.id === targetId ? addDeal(column, confirmed) : column);
+    });
+    // Счётчики над доской («Без следующего шага» и др.) считает сервер: после
+    // перехода просим пересчитать, доска при этом остаётся как есть.
+    router.refresh();
     setGate(null); setPending(false); setFeedback(plan.lost && tasksClosed ? `Сделка закрыта, задач закрыто: ${plan.openTasks}` : "Сделка перемещена");
   }
   async function moveDeal(dealId: string, targetId: string, allowMobileConfirmation = false) {
@@ -383,6 +439,8 @@ export function DealsBoard(props: Props) {
     const target = droppingLost ? (columns.find((column) => column.id === "lost") ?? props.lost!) : columns[targetIndex];
     const deal = source.deals.find((item) => item.id === dealId);
     if (!deal) return;
+    // Сделка уже в «Отказе»: сброс на ту же колонку — не переход (RPC ответил бы 200 без записи в историю).
+    if (droppingLost && (source.id === "lost" || deal.stage_id === props.query.lostKey)) return;
     const factualSource = columns.find((column) => column.id === deal.stage_id);
     const isForward = !droppingLost && (target.position ?? 0) > (factualSource?.position ?? 0);
     const markedUnqualified = isForward && deal.tags.some((tag) => tag.name === "неквал");
@@ -408,38 +466,45 @@ export function DealsBoard(props: Props) {
     const update: Partial<BoardCard> = target.kettle ? { owner_id: null } : { stage_id: targetStage.id, owner_id: deal.owner_id ?? props.currentUserId };
     const nextDeal = { ...deal, ...update };
     const snapshot = columns;
-    setColumns(columns.map((column) => column.id === source.id ? { ...column, total: column.total - 1, deals: column.deals.filter((item) => item.id !== dealId) } : column.id === target.id ? { ...column, total: column.total + 1, deals: [nextDeal, ...column.deals] } : column));
+    setColumns(columns.map((column) => column.id === source.id ? dropDeal(column, deal) : column.id === target.id ? addDeal(column, nextDeal) : column));
     setPending(true);
     const result = await transitionDeal(createClient(), { dealId, stageId: target.kettle ? (deal.status === "won" ? targetStage.id : deal.stage_id) : target.id, ownerId: target.kettle ? null : nextDeal.owner_id });
     if (!result.ok) { setColumns(snapshot); setFeedback(result.message); setPending(false); return; }
     setPending(false); setFeedback("Сделка перемещена");
+    router.refresh();
   }
   function claimDeal(dealId: string) { const firstOpen = columns.find((column) => column.kind === "open"); if (firstOpen) void moveDeal(dealId, firstOpen.id, true); }
-  // Догрузка одной колонки без правки SQL: crm_board нумерует сделки внутри
-  // каждой колонки (row_number по partition), и p_page_size режет каждую
-  // колонку отдельно. Просим ту же доску с большим лимитом и забираем
-  // из ответа только нужную колонку (ключ «Отказа» — id этапа, а не "lost").
+  // Догрузка одной колонки: crm_board отдаёт страницу только нужной колонки
+  // (p_column). Страница считается по числу уже загруженных карточек; повторы
+  // из-за переносов между колонками отбрасываем по id. Ключ «Отказа» — id этапа, а не "lost".
   async function showMore(columnId: string) {
     const column = columns.find((item) => item.id === columnId);
     if (!column || loadingMore[columnId] || column.deals.length >= column.total) return;
     setLoadingMore((current) => ({ ...current, [columnId]: true }));
-    setFeedback(null);
+    setLoadFailed((current) => ({ ...current, [columnId]: false }));
+    const key = columnId === "lost" ? (props.query.lostKey ?? "lost") : columnId;
     const result = await createClient().rpc("crm_board", {
-      p_page: 0,
-      p_page_size: column.deals.length + props.query.pageSize,
+      p_page: Math.floor(column.deals.length / props.query.pageSize),
+      p_page_size: props.query.pageSize,
       p_owner: props.query.owner,
       p_project: props.query.project,
-      p_tag: props.query.tag,
+      p_tags: props.query.tags,
+      p_created_from: props.query.createdFrom,
+      p_created_to: props.query.createdTo,
       p_source: props.query.source,
       p_flag: props.query.flag,
       p_sort: props.query.sort,
+      p_column: key,
     });
     setLoadingMore((current) => ({ ...current, [columnId]: false }));
     const payload = (!result.error && result.data ? result.data : null) as { columns: Record<string, { deals: BoardCard[] }> } | null;
-    const key = columnId === "lost" ? (props.query.lostKey ?? "lost") : columnId;
     const fresh = payload?.columns[key]?.deals;
-    if (!fresh) { setFeedback("Не удалось загрузить сделки"); return; }
-    setColumns((current) => current.map((item) => item.id === columnId ? { ...item, deals: fresh } : item));
+    const known = new Set(column.deals.map((deal) => deal.id));
+    const added = fresh?.filter((deal) => !known.has(deal.id)) ?? [];
+    // Пустой или целиком повторный ответ при незаполненной колонке — остановка,
+    // иначе прокрутка запрашивала бы ту же страницу бесконечно.
+    if (!fresh || added.length === 0) { setLoadFailed((current) => ({ ...current, [columnId]: true })); setFeedback("Не удалось загрузить сделки"); return; }
+    setColumns((current) => current.map((item) => item.id === columnId ? { ...item, deals: [...item.deals, ...added.filter((deal) => !item.deals.some((existing) => existing.id === deal.id))] } : item));
   }
   function onDragEnd(event: DragEndEvent) { lastDragAt.current = Date.now(); setActiveId(null); const targetId = event.over?.id ? String(event.over.id) : null; if (targetId) void moveDeal(String(event.active.id), targetId); }
   const openDealFromGate = (id: string) => { setGate(null); startRouteProgress(); router.push(`/deals/${id}`); };
@@ -452,8 +517,8 @@ export function DealsBoard(props: Props) {
   return <>
     <DndContext id="crm-deals-board" sensors={sensors} collisionDetection={rectIntersection} onDragStart={onDragStart} onDragCancel={onDragCancel} onDragEnd={onDragEnd}>
       <div className="board">
-        {visibleColumns.map((column) => <BoardColumn key={column.id} column={column} stages={stageList} onOpen={openDeal} onCreate={createDeal} onClaim={claimDeal} onShowMore={showMore} loadingMore={Boolean(loadingMore[column.id])} />)}
-        {lost && <LostColumn column={lost} stages={stageList} expanded={lostExpanded} onToggle={() => setLostExpanded((expanded) => !expanded)} onOpen={openDeal} onCreate={createDeal} onShowMore={showMore} loadingMore={Boolean(loadingMore[lost.id])} />}
+        {visibleColumns.map((column) => <BoardColumn key={column.id} column={column} stages={stageList} onOpen={openDeal} onCreate={createDeal} onClaim={claimDeal} onShowMore={showMore} loadingMore={Boolean(loadingMore[column.id])} loadFailed={Boolean(loadFailed[column.id])} />)}
+        {lost && <LostColumn column={lost} stages={stageList} expanded={lostExpanded} onToggle={() => setLostExpanded((expanded) => !expanded)} onOpen={openDeal} onCreate={createDeal} onShowMore={showMore} loadingMore={Boolean(loadingMore[lost.id])} loadFailed={Boolean(loadFailed[lost.id])} />}
       </div>
       <DragOverlay>{activeDeal ? <PresentationalCard deal={activeDeal} dragging /> : null}</DragOverlay>
     </DndContext>

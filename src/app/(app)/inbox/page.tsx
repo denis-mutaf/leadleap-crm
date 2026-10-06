@@ -6,7 +6,9 @@ import { Inbox, MessageCircle, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { dbErrorText } from "@/lib/db-errors";
 import { getCurrentProfile } from "@/lib/auth";
+import { initialsOf } from "@/lib/initials";
 import { EmptyState } from "@/components/crm/empty-state";
+import { AutoSubmitForm } from "../auto-submit-form";
 import type { Profile } from "@/lib/types";
 import { ChannelIcon, channelTitle } from "./channel-icon";
 import { RowPending } from "./row-pending";
@@ -32,7 +34,12 @@ type SearchParams = Promise<{
   page?: string;
   view?: string;
   q?: string;
+  channel?: string;
 }>;
+
+// Каналы для фильтра списка: те же, что в панели «Контекст».
+const CHANNEL_FILTERS = ["facebook", "instagram", "whatsapp", "viber", "web_form", "call"] as const;
+const channelLabel = (channel: string) => (channel === "call" ? "Телефония" : channelTitle(channel));
 
 async function loadList(
   profile: Profile,
@@ -40,20 +47,21 @@ async function loadList(
   page: number,
   view: View,
   query: string,
+  channel: string,
 ) {
   const supabase = await createClient();
   const errors: string[] = [];
 
+  // Счётчики вкладок считаются в том же канале, что и список: иначе «Без ответа 12»
+  // над пустым списком читается как ошибка.
+  const counter = () => {
+    const builder = supabase.from("conversations").select("id", { count: "exact", head: true });
+    return channel ? builder.eq("channel", channel) : builder;
+  };
   const counting = Promise.all([
-    supabase.from("conversations").select("id", { count: "exact", head: true }),
-    supabase
-      .from("conversations")
-      .select("id", { count: "exact", head: true })
-      .eq("last_direction", "in"),
-    supabase
-      .from("conversations")
-      .select("id", { count: "exact", head: true })
-      .eq("assigned_to", profile.id),
+    counter(),
+    counter().eq("last_direction", "in"),
+    counter().eq("assigned_to", profile.id),
   ]);
 
   // Поиск идёт по тексту переписки, а не по служебным полям: менеджер ищет
@@ -91,6 +99,7 @@ async function loadList(
       .select(COLUMNS_JOINED, { count: "exact" })
       .order("last_message_at", { ascending: false, nullsFirst: false })
       .order("id", { ascending: true });
+    if (channel) builder = builder.eq("channel", channel);
     if (view === "unanswered") builder = builder.eq("last_direction", "in");
     if (view === "mine") builder = builder.eq("assigned_to", profile.id);
     if (matched)
@@ -158,13 +167,15 @@ export default async function InboxPage({ searchParams }: { searchParams: Search
     ? (params.view as View)
     : "all";
   const query = params.q?.trim() ?? "";
-  const data = await loadList(profile, params.conversation, page, view, query);
+  const channel = (CHANNEL_FILTERS as readonly string[]).includes(params.channel ?? "") ? (params.channel as string) : "";
+  const data = await loadList(profile, params.conversation, page, view, query, channel);
   const selected = data.selected;
   const link = (next: Partial<{ view: string; page: number; conversation: string }>) => {
     const search = new URLSearchParams();
     const nextView = next.view ?? view;
     if (nextView !== "all") search.set("view", nextView);
     if (query) search.set("q", query);
+    if (channel) search.set("channel", channel);
     const nextPage = next.page ?? data.page;
     if (nextPage > 1) search.set("page", String(nextPage));
     if (next.conversation) search.set("conversation", next.conversation);
@@ -217,8 +228,19 @@ export default async function InboxPage({ searchParams }: { searchParams: Search
             </Link>
           ))}
         </nav>
-        <Form className={styles.search} action="/inbox" key={`${view}|${query}`}>
+        <AutoSubmitForm action="/inbox" className={styles.channelFilter} key={`channel|${view}|${query}|${channel}`}>
           {view !== "all" && <input type="hidden" name="view" value={view} />}
+          {query && <input type="hidden" name="q" value={query} />}
+          <select name="channel" defaultValue={channel} aria-label="Канал">
+            <option value="">Все каналы</option>
+            {CHANNEL_FILTERS.map((item) => (
+              <option key={item} value={item}>{channelLabel(item)}</option>
+            ))}
+          </select>
+        </AutoSubmitForm>
+        <Form className={styles.search} action="/inbox" key={`${view}|${query}|${channel}`}>
+          {view !== "all" && <input type="hidden" name="view" value={view} />}
+          {channel && <input type="hidden" name="channel" value={channel} />}
           <Search size={14} />
           <input
             name="q"
@@ -262,7 +284,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Search
                   style={{ "--i": index } as import("react").CSSProperties}
                 >
                   <span className="inbox-avatar-wrap">
-                    <span className="inbox-avatar">{name.slice(0, 2).toUpperCase()}</span>
+                    <span className="inbox-avatar">{initialsOf(name)}</span>
                     <span className="inbox-channel-badge">
                       <ChannelIcon channel={conversation.channel} size={11} />
                     </span>

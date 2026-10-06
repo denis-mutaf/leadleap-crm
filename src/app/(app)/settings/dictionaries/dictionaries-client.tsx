@@ -58,6 +58,16 @@ export function DictionariesClient({
     },
     isSystemTag = (row: Row) =>
       active === "tags" && (row.name === "КВАЛ" || row.name === "неквал");
+  const duplicateText = active === "tags" ? "Такая метка уже есть" : "Такое значение уже есть";
+  // Регистр и пробелы по краям не различают значения: «квал» — это «КВАЛ».
+  // Скрытое значение тоже занимает имя, поэтому подсказываем, где его искать.
+  const assertUnique = (name: string, exceptId?: string) => {
+    const clash = dictionary.rows.find(
+      (item) => item.id !== exceptId && item.name.trim().toLowerCase() === name.trim().toLowerCase(),
+    );
+    if (clash)
+      throw new Error(clash.is_active === false ? `${duplicateText} среди скрытых («${clash.name}») — восстановите её` : `${duplicateText} («${clash.name}»)`);
+  };
   const refresh = async () => {
     const db = createClient(),
       selection =
@@ -96,7 +106,9 @@ export function DictionariesClient({
       await action();
     } catch (cause) {
       setError(
-        dbErrorText(cause, "Не удалось сохранить изменения."),
+        (cause as { code?: string } | null)?.code === "23505"
+          ? duplicateText
+          : dbErrorText(cause, "Не удалось сохранить изменения."),
       );
     } finally {
       busyRef.current = false;
@@ -108,6 +120,7 @@ export function DictionariesClient({
       const value = name.trim();
       if (value.length < 2 || value.length > 80)
         throw new Error("Название должно быть от 2 до 80 символов.");
+      assertUnique(value, row.id);
       const result = await createClient()
         .from(active)
         .update({ name: value })
@@ -123,6 +136,7 @@ export function DictionariesClient({
       const value = name.trim();
       if (value.length < 2 || value.length > 80)
         throw new Error("Название должно быть от 2 до 80 символов.");
+      assertUnique(value);
       const payload: Record<string, string> = { name: value };
       if (["sources", "task_types", "projects"].includes(active))
         payload.code = value.toLowerCase().replace(/[^a-zа-яё0-9]+/gi, "-");
@@ -219,7 +233,7 @@ export function DictionariesClient({
         {canEdit && (
           <button
             className={styles.primary}
-            onClick={() => setAdding(true)}
+            onClick={() => { setError(""); setAdding(true); }}
             disabled={busy}
           >
             <Plus size={15} /> {labels[active]}
@@ -239,7 +253,7 @@ export function DictionariesClient({
             {item.label}
           </button>
         ))}
-        <span className={styles.disabledTab}>Способы оплаты <small>enum</small></span>
+        <span className={styles.disabledTab} title="Список способов оплаты задан в системе и здесь не меняется">Способы оплаты <small>задан в системе</small></span>
       </nav>}
       <section className={styles.card}>
         <div className={styles.tableHead}>
@@ -274,6 +288,7 @@ export function DictionariesClient({
                     <div className={styles.menu}>
                       <button
                         onClick={() => {
+                          setError("");
                           setEditing(row);
                           setMenu(null);
                         }}
@@ -328,6 +343,7 @@ export function DictionariesClient({
           close={() => setAdding(false)}
           submit={add}
           busy={busy}
+          error={error}
         />
       )}
       {editing && (
@@ -337,6 +353,7 @@ export function DictionariesClient({
           submit={(name) => save(editing, name)}
           initial={editing.name}
           busy={busy}
+          error={error}
         />
       )}
       {merge && (
@@ -431,12 +448,14 @@ function FormModal({
   submit,
   initial = "",
   busy,
+  error,
 }: {
   title: string;
   close: () => void;
   submit: (name: string) => void;
   initial?: string;
   busy: boolean;
+  error: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   return (
@@ -448,6 +467,12 @@ function FormModal({
         }}
       >
         <input ref={inputRef} name="name" defaultValue={initial} />
+        {/* Окно закрывает страницу: ошибка снизу страницы за вуалью не видна. */}
+        {error && (
+          <p className={styles.error} role="alert">
+            {error}
+          </p>
+        )}
         <button className={styles.primary} disabled={busy}>
           Сохранить
         </button>

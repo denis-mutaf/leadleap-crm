@@ -69,6 +69,19 @@ const timeName = (value: string) =>
     minute: "2-digit",
   }).format(new Date(value));
 
+// Счётчик — обычный GET с count=exact и одной строкой в теле. HEAD на проде
+// (QA 05.10) стабильно отвечал 503; GET идёт тем же путём, что и список.
+const countNotifications = (
+  supabase: ReturnType<typeof createClient>,
+  unreadOnly: boolean,
+) => {
+  const query = supabase
+    .from("notifications")
+    .select("id", { count: "exact" })
+    .limit(1);
+  return unreadOnly ? query.is("read_at", null) : query;
+};
+
 export function NotificationsPanel({ role }: { role: string }) {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
@@ -85,10 +98,7 @@ export function NotificationsPanel({ role }: { role: string }) {
   const router = useRouter();
   const refreshCount = useCallback(async () => {
     if (role === "builder") return;
-    const result = await supabase
-      .from("notifications")
-      .select("id", { count: "exact", head: true })
-      .is("read_at", null);
+    const result = await countNotifications(supabase, true);
     if (!result.error) setUnread(result.count ?? 0);
   }, [role, supabase]);
   const load = useCallback(
@@ -97,22 +107,11 @@ export function NotificationsPanel({ role }: { role: string }) {
       const request = ++requestRef.current;
       setLoading(true);
       setError(null);
-      const countQuery =
-        filter === "unread"
-          ? supabase
-              .from("notifications")
-              .select("id", { count: "exact", head: true })
-              .is("read_at", null)
-          : supabase
-              .from("notifications")
-              .select("id", { count: "exact", head: true });
-      const unreadQuery = supabase
-        .from("notifications")
-        .select("id", { count: "exact", head: true })
-        .is("read_at", null);
-      const [countResult, unreadResult] = await Promise.all([
-        countQuery,
+      // На вкладке «Непрочитанные» общее число и есть число непрочитанных.
+      const unreadQuery = Promise.resolve(countNotifications(supabase, true));
+      const [unreadResult, countResult] = await Promise.all([
         unreadQuery,
+        filter === "unread" ? unreadQuery : countNotifications(supabase, false),
       ]);
       if (request !== requestRef.current) return;
       if (countResult.error || unreadResult.error) {
