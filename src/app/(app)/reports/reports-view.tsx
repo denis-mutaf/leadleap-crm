@@ -11,12 +11,15 @@ import {
 import type { CSSProperties } from "react";
 import { StageIndicator } from "@/components/crm/stage-indicator";
 import {
+  type CampaignReport,
+  type CampaignRow,
   type CohortRow,
   type ManagerRow,
   type PeriodReport,
   type SegmentRow,
   type StageRow,
   firstResponse,
+  campaignLabel,
   formatDuration,
   managerLabel,
   monthLabel,
@@ -364,6 +367,88 @@ export function ProjectsTable({ rows }: { rows: SegmentRow[] }) {
       rows={rows}
       label={projectLabel}
     />
+  );
+}
+
+function CampaignTable({ title, kind, rows }: { title: string; kind: "utm" | "meta"; rows: CampaignRow[] }) {
+  return (
+    <div className={styles.tableTile}>
+      <div className={styles.scroll}>
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th>{title}</th>
+              <th className={styles.right} title="Сделки, созданные за период">
+                Обращений
+              </th>
+              <th className={styles.right} title="Из обращений периода — с меткой «КВАЛ» сейчас">
+                КВАЛ
+              </th>
+              <th className={styles.right} title="Сделки, вошедшие в этап «Встреча проведена» за период">
+                Встречи
+              </th>
+              <th className={styles.right} title="Сделки, вошедшие в этап «Резервация» за период">
+                Резервации
+              </th>
+              <th
+                className={styles.right}
+                title="Из обращений периода — доля тех, что дошли до «Резервации» в этом же периоде"
+              >
+                Конверсия в резервацию
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.key}>
+                <td
+                  className={row.key === "none" ? styles.muted : undefined}
+                  title={kind === "meta" && row.key !== "none" ? `ID ${row.key}` : undefined}
+                >
+                  {campaignLabel(row, kind)}
+                </td>
+                <td className={`${styles.right} ${styles.nums}`}>{nf.format(row.obr)}</td>
+                <td
+                  className={`${styles.right} ${styles.nums}`}
+                  title={row.obr ? `${share(row.kval, row.obr)} обращений` : undefined}
+                >
+                  {nf.format(row.kval)}
+                </td>
+                <td className={`${styles.right} ${styles.nums}`}>{nf.format(row.met)}</td>
+                <td className={`${styles.right} ${styles.nums}`}>{nf.format(row.resv)}</td>
+                <td
+                  className={`${styles.right} ${styles.nums}`}
+                  title={row.obr ? `${nf.format(row.conv)} из ${nf.format(row.obr)}` : undefined}
+                >
+                  {share(row.conv, row.obr)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+export function Campaigns({ report }: { report: CampaignReport | null }) {
+  return (
+    <section className="report-section">
+      <h2>Кампании</h2>
+      <p className="section-subtitle">
+        По UTM-метке кампании и по кампании Meta. Расходов на рекламу в CRM нет, поэтому стоимости обращения здесь нет
+      </p>
+      {report === null ? (
+        <p className="empty-report">Не удалось посчитать кампании. Остальной отчёт при этом верен.</p>
+      ) : report.utm.length + report.meta.length === 0 ? (
+        <p className="empty-report">За период нет обращений и событий воронки.</p>
+      ) : (
+        <>
+          <CampaignTable title="UTM-метка кампании" kind="utm" rows={report.utm} />
+          <CampaignTable title="Кампания Meta" kind="meta" rows={report.meta} />
+        </>
+      )}
+    </section>
   );
 }
 

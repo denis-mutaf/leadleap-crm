@@ -33,6 +33,7 @@ import { closeOpenTasks, emptyGateForm, loadGateSnapshot, planGate, targetHasGat
 import { startRouteProgress } from "../route-progress";
 import { useDismiss } from "@/lib/use-dismiss";
 import { SourceIcon } from "@/components/crm/source-icon";
+import { PostponedChip, SlaChip, slaRowClass } from "./sla-chip";
 
 type OpenEvent = { metaKey: boolean; ctrlKey: boolean; button: number };
 type OpenDeal = (event?: OpenEvent) => void;
@@ -62,6 +63,9 @@ export type BoardCard = {
   projects: BoardProject[];
   next_task: { title: string; due_at: string } | null;
   last_activity: { kind: string; text: string | null; at: string | null } | null;
+  // Срок первого ответа и остаток в рабочих минутах; приходят, только пока ответа не было.
+  sla_due_at?: string | null;
+  sla_left_min?: number | null;
 };
 export type BoardColumn = {
   id: string;
@@ -222,6 +226,10 @@ function PresentationalCard({
         {deal.tags.map((tag) => <span className="tag tag-grey" key={tag.id ?? tag.name}>{tag.name}</span>)}
       </div>}
       {cardMoney(deal) && <div className="deal-money">{cardMoney(deal)}</div>}
+      {(deal.sla_due_at && deal.sla_left_min != null || deal.status === "postponed" && deal.postponed_until) && <div className={slaRowClass}>
+        {deal.sla_due_at && deal.sla_left_min != null && <SlaChip dueAt={deal.sla_due_at} leftMin={deal.sla_left_min} />}
+        {deal.status === "postponed" && deal.postponed_until && <PostponedChip until={deal.postponed_until} />}
+      </div>}
       <div className="deal-footer">
         <span className="owner-mark">
           <span className="avatar">{deal.owner_name ? initialsOf(deal.owner_name) : "—"}</span>
@@ -250,7 +258,7 @@ function KettleCard({ deal, onOpen, onClaim, index = 0 }: { deal: BoardCard; onO
       <div className="kettle-meta">{deal.source_name && <SourceIcon source={deal.source_name} />}<span>{time(deal.updated_at)}</span></div>
       <strong>{deal.contact_name || deal.phone}</strong>
       {(deal.title || deal.object_text) && <p>{deal.title || deal.object_text}</p>}
-      <div className="kettle-footer"><span>ждёт {relative(deal.updated_at)}</span><button className="btn kettle-claim" type="button" onClick={(event) => { event.stopPropagation(); onClaim(); }}>Взять</button></div>
+      <div className="kettle-footer">{deal.sla_due_at && deal.sla_left_min != null ? <SlaChip dueAt={deal.sla_due_at} leftMin={deal.sla_left_min} /> : <span>ждёт {relative(deal.updated_at)}</span>}<button className="btn kettle-claim" type="button" onClick={(event) => { event.stopPropagation(); onClaim(); }}>Взять</button></div>
     </article>
   );
 }

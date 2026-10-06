@@ -1,0 +1,23 @@
+.body { display: grid; gap: 6px; padding: 0 6px 6px; max-width: 760px; }
+.card { padding: 14px 16px; border-radius: var(--radius-tile); background: var(--module-card); box-shadow: var(--shadow-module); }
+.card h2 { margin: 0; font-size: var(--text-section); font-weight: 500; }
+.hint { margin: 4px 0 0; color: var(--secondary-text); font-size: var(--text-body); line-height: 18px; }
+.minutes { display: flex; align-items: center; gap: 8px; margin-top: 12px; color: var(--secondary-text); font-size: var(--text-body); }
+.minutes input { width: 88px; }
+.field { height: var(--h-control); box-sizing: border-box; border-radius: var(--radius-control); padding: 0 12px; font: inherit; font-size: var(--text-body); }
+.days { margin-top: 8px; }
+.day { min-height: var(--h-row); display: grid; grid-template-columns: 40px 140px 1fr; align-items: center; gap: 12px; border-top: 1px solid var(--border); font-size: var(--text-body); }
+.day:first-child { border-top: 0; }
+.day.off { color: var(--secondary-text); }
+.range { display: flex; align-items: center; gap: 8px; color: var(--secondary-text); }
+.dayOff { color: var(--secondary-text); }
+.holidays { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.holiday { display: inline-flex; align-items: center; gap: 4px; height: var(--h-control-sm); padding: 0 4px 0 10px; border-radius: 999px; background: var(--muted); font-size: var(--text-small); }
+.holiday button { width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--muted-foreground); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.holiday button:hover { background: var(--accent); color: var(--foreground); }
+.addHoliday { display: flex; align-items: center; gap: 6px; margin-top: 12px; }
+.actions { display: flex; align-items: center; gap: 12px; padding: 6px 4px 0; }
+.saved { color: var(--hue-green-tx); font-size: var(--text-small); animation: fade-up var(--motion-slow) var(--ease) both; }
+.readOnly { display: flex; align-items: center; gap: 8px; color: var(--secondary-text); font-size: var(--text-body); }
+@media (max-width: 640px) { .day { grid-template-columns: 40px 1fr; } .day .range, .day .dayOff { grid-column: 1 / -1; padding-bottom: 8px; } }
+.addButton { display: inline-flex; align-items: center; gap: 4px; margin-left: 0; }

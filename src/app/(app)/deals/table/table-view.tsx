@@ -21,6 +21,8 @@ import { createClient } from "@/lib/supabase/client";
 import { dbErrorText } from "@/lib/db-errors";
 import { transitionDeal } from "@/lib/stage-gate";
 import styles from "./table.module.css";
+import { postponedLabel } from "@/lib/postpone-dates";
+
 import { startRouteProgress } from "../../route-progress";
 
 export type TableDeal = {
@@ -39,6 +41,8 @@ export type TableDeal = {
   owner: string;
   ownerId?: string | null;
   stageId?: string;
+  status?: string;
+  postponedUntil?: string | null;
 };
 
 type Option = { id: string; name: string };
@@ -107,6 +111,7 @@ const FLAG_LABELS: Record<string, string> = {
   overdue: "Просрочено",
   today: "На сегодня",
   no_next_step: "Без следующего шага",
+  postponed: "Отложенные",
 };
 
 function href(params: Record<string, string | number | undefined>) {
@@ -419,6 +424,7 @@ export function DealsTableView(p: Props) {
             <X size={12} aria-hidden="true" />
           </Link>
         ) : null}
+        {!p.flag && <Link className="filter-chip" href={href({ ...common, flag: "postponed", page: undefined })}>Отложенные</Link>}
         {(p.query || p.owner || p.stage || p.flag || p.customValue) && <Link href="/deals/table">Сбросить</Link>}
         <span className={styles.sortChip} title="Активная сортировка">
           <ArrowDownUp size={12} aria-hidden="true" />
@@ -475,7 +481,7 @@ export function DealsTableView(p: Props) {
                 >
                   <td className={styles.selectCell} onClick={(event) => event.stopPropagation()}><input type="checkbox" checked={selected.has(row.id)} onChange={() => toggle(row.id)} aria-label={`Выбрать сделку ${row.contact}`} /></td>
                   <td><Link className={styles.contact} href={`/deals/${row.id}`} onClick={(event) => event.stopPropagation()} title={row.title ? `${row.contact} · ${row.title}` : row.contact}><span className={styles.contactCell}><ContactAvatar name={row.contact} /><span className={styles.contactText}><span className={styles.truncate}>{row.contact}</span>{row.title && row.title !== row.contact && <span className={styles.dealTitle}>{row.title}</span>}</span></span></Link></td>
-                  <td title={row.stage}><StageIndicator hue={row.stageHue} name={row.stage} variant="inline" /></td>
+                  <td title={row.stage}><StageIndicator hue={row.stageHue} name={row.stage} variant="inline" />{row.status === "postponed" && <span className={styles.postponed} title="Отложена до даты касания">Отложена{row.postponedUntil ? ` до ${postponedLabel(row.postponedUntil)}` : ""}</span>}</td>
                   <td><TagCell tags={row.tags} /></td>
                   <td className={styles.truncate} title={row.task}>{row.task && <>{row.task} · {displayDate(row.taskDueAt)}</>}</td>
                   <td className={styles.activity} title={row.activity}>{row.activity}{row.activityAt && ` · ${displayDate(row.activityAt)}`}</td>

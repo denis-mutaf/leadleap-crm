@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AlarmClock,
   Bell,
   Calendar,
   CircleAlert,
@@ -36,6 +37,7 @@ const icons = {
   new_lead: Inbox,
   new_message: MessageCircle,
   task_overdue: CircleAlert,
+  sla_breach: AlarmClock,
   postponed_due: Calendar,
   phone_missed: PhoneMissed,
   deal_stage_changed: ArrowRight,

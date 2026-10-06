@@ -672,3 +672,4 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.postponed { display: block; width: fit-content; margin-top: 2px; padding: 0 8px; border-radius: 999px; background: var(--hue-amber-bg); color: var(--hue-amber-tx); font-size: 12px; line-height: 18px; white-space: nowrap; }

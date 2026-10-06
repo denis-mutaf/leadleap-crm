@@ -11,6 +11,12 @@ export type CanonicalField =
   | "utm_campaign"
   | "utm_content"
   | "utm_term"
+  | "utm_id"
+  | "gclid"
+  | "fbclid"
+  | "page_url"
+  | "referrer"
+  | "form"
   | "meta_campaign_id";
 
 const SYNONYMS: Record<CanonicalField, string[]> = {
@@ -63,6 +69,14 @@ const SYNONYMS: Record<CanonicalField, string[]> = {
   utm_campaign: ["utm_campaign"],
   utm_content: ["utm_content"],
   utm_term: ["utm_term"],
+  utm_id: ["utm_id"],
+  gclid: ["gclid"],
+  fbclid: ["fbclid"],
+  // Страница, с которой отправлена форма (Tilda шлёт её как referer или url).
+  page_url: ["page_url", "pageurl", "url", "landing_page", "source_url"],
+  referrer: ["referrer", "referer", "http_referer"],
+  // Имя формы: Tilda — formname, свои формы — form / form_name.
+  form: ["form", "form_name", "formname"],
   meta_campaign_id: ["meta_campaign_id", "fb_campaign_id", "campaign_id", "meta_campaign"],
 };
 
@@ -128,7 +142,19 @@ export function parseFormFields(raw: Record<string, unknown>): ParsedForm {
   }
 
   const utm: Record<string, string> = {};
-  for (const k of ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"] as const) {
+  for (const k of [
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+    "utm_content",
+    "utm_term",
+    "utm_id",
+    "gclid",
+    "fbclid",
+    "page_url",
+    "referrer",
+    "form",
+  ] as const) {
     const v = byCanonical.get(k);
     if (v) utm[k] = v;
   }

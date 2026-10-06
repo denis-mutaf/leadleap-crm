@@ -73,7 +73,7 @@ export default async function DealsTablePage({
   const customValue = customField ? clean(firstString(params.cfv)).slice(0, 120) : "";
 
   const flagParam = firstString(params.flag);
-  const flag = ["overdue", "today", "no_next_step"].includes(flagParam) ? flagParam : "";
+  const flag = ["overdue", "today", "no_next_step", "postponed"].includes(flagParam) ? flagParam : "";
   const offset = page * PAGE_SIZE;
   // Порядок, фильтры и поиск (включая имя контакта и телефон) считает
   // crm_deals_table; здесь только дочитываем строки страницы в её порядке.
@@ -106,7 +106,7 @@ export default async function DealsTablePage({
       ? await supabase
           .from("deals")
           .select(
-            "id, contact_id, owner_id, stage_id, status, title, object_text, created_at, updated_at, contact:contacts!deals_contact_id_fkey(full_name)",
+            "id, contact_id, owner_id, stage_id, status, postponed_until, title, object_text, created_at, updated_at, contact:contacts!deals_contact_id_fkey(full_name)",
           )
           .in("id", orderedIds)
       : { data: [], error: null };
@@ -377,6 +377,8 @@ export default async function DealsTablePage({
       owner: deal.owner_id ? ownerMap.get(deal.owner_id) ?? "" : "",
       ownerId: deal.owner_id,
       stageId: deal.stage_id,
+      status: deal.status,
+      postponedUntil: deal.postponed_until,
     };
   });
   const sortValue = (row: TableDeal): string => {

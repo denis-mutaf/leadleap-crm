@@ -1,6 +1,8 @@
 import {
+  type CampaignRow,
   type PeriodReportData,
   type ReportParams,
+  campaignLabel,
   firstResponse,
   managerLabel,
   monthLabel,
@@ -67,6 +69,35 @@ export function buildReportCsv(params: ReportParams, data: PeriodReportData) {
   for (const row of report.sources) lines.push(csvRow(segment(row, sourceLabel(row))));
   lines.push("", csvRow(["Проекты"]), csvRow(["Проект", ...segmentHead]));
   for (const row of report.projects) lines.push(csvRow(segment(row, projectLabel(row))));
+
+  const campaignHead = [
+    "Обращений",
+    "КВАЛ (метка сейчас)",
+    "КВАЛ, % от обращений",
+    "Встреч проведено",
+    "Резерваций",
+    "Дошли до резервации из обращений периода",
+    "Конверсия в резервацию, %",
+  ];
+  const campaign = (row: CampaignRow, kind: "utm" | "meta"): Cell[] => [
+    campaignLabel(row, kind),
+    row.key !== "none" && kind === "meta" ? row.key : null,
+    row.obr,
+    row.kval,
+    pct(row.kval, row.obr),
+    row.met,
+    row.resv,
+    row.conv,
+    pct(row.conv, row.obr),
+  ];
+  if (data.campaigns === null) {
+    lines.push("", csvRow(["Кампании: не удалось посчитать, в выгрузку не вошли"]));
+  } else {
+    lines.push("", csvRow(["Кампании по UTM-метке"]), csvRow(["Кампания", "", ...campaignHead]));
+    for (const row of data.campaigns.utm) lines.push(csvRow(campaign(row, "utm")));
+    lines.push("", csvRow(["Кампании Meta"]), csvRow(["Кампания", "ID кампании Meta", ...campaignHead]));
+    for (const row of data.campaigns.meta) lines.push(csvRow(campaign(row, "meta")));
+  }
 
   lines.push(
     "",

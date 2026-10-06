@@ -1,0 +1,11 @@
+/* «Отложить до…» в карточке сделки: кнопка, плашка отложенной сделки, быстрые даты. */
+.row { display: flex; padding: 4px 0 0; }
+.banner { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0 2px; padding: 8px 10px; border-radius: var(--radius-control); background: var(--hue-amber-bg); color: var(--hue-amber-tx); font-size: 13px; }
+.bannerText { flex: 1 1 auto; min-width: 0; font-weight: 500; }
+.link { padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }
+.link:disabled { opacity: .6; cursor: default; }
+.quick { display: flex; flex-wrap: wrap; gap: 8px; padding: 6px 0 0; }
+.chip { height: var(--h-control-sm); padding: 0 12px; border: 0; border-radius: 999px; background: var(--module-card); box-shadow: var(--shadow-pill); color: var(--foreground); font: inherit; font-size: var(--text-small); cursor: pointer; transition: background-color var(--motion-fast) var(--ease), transform var(--motion-fast) var(--ease); }
+.chip:hover { background: var(--card); }
+.chip:active { transform: scale(var(--press-scale)); }
+.chipOn { background: var(--surface-select); }

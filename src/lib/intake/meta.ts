@@ -1,7 +1,8 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-const GRAPH = "https://graph.facebook.com/v21.0";
+// Версию можно сменить без выката кода: v21.0 перестаёт работать 21.01.2027.
+const GRAPH = `https://graph.facebook.com/${process.env.META_GRAPH_VERSION ?? "v21.0"}`;
 
 export type MetaChannel = "facebook" | "instagram" | "whatsapp";
 
@@ -87,16 +88,97 @@ export function parseEvents(payload: Json, channel: MetaChannel): MetaEvent[] {
   return events;
 }
 
-// Лид отдаётся только по запросу: в вебхуке приходит один идентификатор.
-async function fetchLead(leadgenId: string, token: string): Promise<Json> {
-  const url = `${GRAPH}/${leadgenId}?fields=id,created_time,field_data,ad_id,form_id&access_token=${encodeURIComponent(token)}`;
-  const res = await fetch(url);
+async function graphGet(path: string, fields: string, token: string, timeoutMs?: number): Promise<Json> {
+  const url = `${GRAPH}/${path}?fields=${fields}&access_token=${encodeURIComponent(token)}`;
+  const res = await fetch(url, timeoutMs ? { signal: AbortSignal.timeout(timeoutMs) } : undefined);
   const body = (await res.json()) as Json;
-  if (!res.ok) {
-    const message = str(obj(body.error).message) ?? `HTTP ${res.status}`;
-    throw new Error(`Не удалось забрать лид ${leadgenId}: ${message}`);
-  }
+  if (!res.ok) throw new Error(str(obj(body.error).message) ?? `HTTP ${res.status}`);
   return body;
+}
+
+// Лид отдаётся только по запросу: в вебхуке приходит один идентификатор.
+// Сначала просим всё сразу (кампания, группа, объявление, площадка). Если Graph
+// отвечает ошибкой на расширенный набор (поле недоступно для этого токена или
+// версии), повторяем с минимальным: сделка важнее подробной атрибуции.
+const LEAD_FIELDS_FULL =
+  "id,created_time,field_data,ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,form_id,platform,is_organic";
+const LEAD_FIELDS_BASE = "id,created_time,field_data,ad_id,form_id";
+
+async function fetchLead(leadgenId: string, token: string): Promise<Json> {
+  try {
+    return await graphGet(leadgenId, LEAD_FIELDS_FULL, token);
+  } catch {
+    try {
+      return await graphGet(leadgenId, LEAD_FIELDS_BASE, token);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Не удалось забрать лид ${leadgenId}: ${message}`);
+    }
+  }
+}
+
+// Откуда пришёл лид в рекламном кабинете Meta. Всё необязательное: нет токена
+// на чтение рекламы или ответа — поле остаётся пустым, сделка всё равно заводится.
+export type MetaAttribution = {
+  campaign_id: string | null;
+  campaign_name: string | null;
+  adset_id: string | null;
+  adset_name: string | null;
+  ad_id: string | null;
+  ad_name: string | null;
+  form_id: string | null;
+  form_name: string | null;
+  platform: string | null;
+  is_organic: boolean | null;
+};
+
+const ENRICH_TIMEOUT_MS = 4000;
+
+export async function resolveAttribution(
+  lead: Json,
+  event: Extract<MetaEvent, { type: "leadgen" }>,
+  token: string,
+): Promise<MetaAttribution> {
+  const result: MetaAttribution = {
+    campaign_id: str(lead.campaign_id),
+    campaign_name: str(lead.campaign_name),
+    adset_id: str(lead.adset_id),
+    adset_name: str(lead.adset_name),
+    ad_id: str(lead.ad_id) ?? event.adId,
+    ad_name: str(lead.ad_name),
+    form_id: str(lead.form_id) ?? event.formId,
+    form_name: null,
+    platform: str(lead.platform),
+    is_organic: typeof lead.is_organic === "boolean" ? lead.is_organic : null,
+  };
+
+  // Лид не отдал кампанию или имена — достраиваем по объявлению.
+  if (result.ad_id && (!result.campaign_id || !result.campaign_name || !result.adset_name || !result.ad_name)) {
+    try {
+      const ad = await graphGet(
+        result.ad_id,
+        "name,adset_id,adset{name},campaign_id,campaign{name}",
+        token,
+        ENRICH_TIMEOUT_MS,
+      );
+      result.ad_name ??= str(ad.name);
+      result.adset_id ??= str(ad.adset_id);
+      result.adset_name ??= str(obj(ad.adset).name);
+      result.campaign_id ??= str(ad.campaign_id);
+      result.campaign_name ??= str(obj(ad.campaign).name);
+    } catch {
+      // нет прав на рекламу или таймаут — остаётся то, что вернул лид
+    }
+  }
+
+  if (result.form_id) {
+    try {
+      result.form_name = str((await graphGet(result.form_id, "name", token, ENRICH_TIMEOUT_MS)).name);
+    } catch {
+      // имя формы не критично, в карточке покажем ID
+    }
+  }
+  return result;
 }
 
 // Имена полей в форме задаёт рекламодатель, поэтому сопоставляем по смыслу.
@@ -118,6 +200,7 @@ export async function processLeadgen(
   token: string,
 ): Promise<string> {
   const lead = await fetchLead(event.leadgenId, token);
+  const attribution = await resolveAttribution(lead, event, token);
   const fields = new Map<string, string>();
   for (const rawField of arr(lead.field_data)) {
     const field = obj(rawField);
@@ -142,8 +225,27 @@ export async function processLeadgen(
     p_phone: phone,
     p_name: pick(fields, NAME_KEYS),
     p_comment: email ? `Почта: ${email}` : null,
-    p_utm: { form_id: event.formId, ad_id: event.adId, leadgen_id: event.leadgenId },
-    p_meta_campaign_id: event.adId,
+    p_utm: Object.fromEntries(
+      Object.entries({
+        form_id: attribution.form_id,
+        form: attribution.form_name,
+        ad_id: attribution.ad_id,
+        leadgen_id: event.leadgenId,
+        platform: attribution.platform,
+        is_organic: attribution.is_organic,
+      }).filter(([, value]) => value !== null),
+    ),
+    p_meta_campaign_id: attribution.campaign_id,
+    p_meta: {
+      campaign_id: attribution.campaign_id,
+      campaign_name: attribution.campaign_name,
+      adset_id: attribution.adset_id,
+      adset_name: attribution.adset_name,
+      ad_id: attribution.ad_id,
+      ad_name: attribution.ad_name,
+      form_id: attribution.form_id,
+      lead_id: event.leadgenId,
+    },
     p_unknown: unknown,
     p_unknown_labels: Object.fromEntries(Object.keys(unknown).map((key) => [key, key])),
     p_source_code: "lead_ads",

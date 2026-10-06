@@ -163,6 +163,16 @@ export type ManagerRow = {
   overdue: number;
   no_next: number;
 };
+export type CampaignRow = {
+  key: string;
+  name: string | null;
+  obr: number;
+  kval: number;
+  met: number;
+  resv: number;
+  conv: number;
+};
+export type CampaignReport = { utm: CampaignRow[]; meta: CampaignRow[] };
 export type ReasonRow = { key: string; name: string | null; n: number };
 export type Pair = { cur: number; prev: number };
 export type PeriodReport = {
@@ -207,6 +217,8 @@ export type PeriodReportData = {
   report: PeriodReport;
   /** null — когорты не посчитались (ошибка или таймаут); остальной отчёт при этом показывается. */
   cohorts: CohortRow[] | null;
+  /** null — блок «Кампании» не посчитался (ошибка, таймаут или миграция ещё не применена). */
+  campaigns: CampaignReport | null;
   sources: Option[];
   projects: Option[];
   managers: Option[];
@@ -222,7 +234,7 @@ export async function loadPeriodReport(
     p_manager: params.manager,
     p_project: params.project,
   };
-  const [reportResult, cohortResult, sourcesResult, projectsResult, managersResult] =
+  const [reportResult, cohortResult, campaignResult, sourcesResult, projectsResult, managersResult] =
     await Promise.all([
       supabase.rpc("crm_report_period", {
         p_from: params.from,
@@ -232,6 +244,7 @@ export async function loadPeriodReport(
         ...rpcFilters,
       }),
       supabase.rpc("crm_report_cohorts", rpcFilters),
+      supabase.rpc("crm_report_campaigns", { p_from: params.from, p_to: params.to, ...rpcFilters }),
       supabase.from("sources").select("id, name").order("name"),
       supabase.from("projects").select("id, name").order("name"),
       supabase
@@ -248,6 +261,7 @@ export async function loadPeriodReport(
   return {
     report: reportResult.data,
     cohorts: cohortResult.error ? null : ((cohortResult.data ?? []) as CohortRow[]),
+    campaigns: campaignResult.error ? null : (campaignResult.data as CampaignReport),
     sources: (sourcesResult.data ?? []) as Option[],
     projects: (projectsResult.data ?? []) as Option[],
     managers: ((managersResult.data ?? []) as { id: string; full_name: string | null }[]).map(
@@ -266,6 +280,12 @@ export const sourceLabel = (row: SegmentRow) =>
   row.key === "none" ? NO_SOURCE : (row.name ?? "Источник удалён");
 export const projectLabel = (row: SegmentRow) =>
   row.key === "none" ? NO_PROJECT : (row.name ?? "Проект удалён");
+export const campaignLabel = (row: CampaignRow, kind: "utm" | "meta") =>
+  row.key === "none"
+    ? kind === "utm"
+      ? "Кампания не указана"
+      : "Без кампании Meta"
+    : (row.name ?? (kind === "meta" ? `Кампания Meta ${row.key}` : row.key));
 export const managerLabel = (row: ManagerRow) =>
   row.key === "none" ? NO_MANAGER : (row.name ?? "Без имени");
 

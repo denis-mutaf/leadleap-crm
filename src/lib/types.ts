@@ -42,6 +42,12 @@ export interface Deal {
   utm: Record<string, unknown>;
   meta_campaign_id: string | null;
   meta_lead_id: string | null;
+  meta_campaign_name: string | null;
+  meta_adset_id: string | null;
+  meta_adset_name: string | null;
+  meta_ad_id: string | null;
+  meta_ad_name: string | null;
+  meta_form_id: string | null;
   budget: string | null;
   budget_currency: string;
   payment: string | null;

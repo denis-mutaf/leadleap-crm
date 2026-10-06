@@ -18,6 +18,7 @@ import {
   Insight,
   ManagersTable,
   Matrix,
+  Campaigns,
   ProjectsTable,
   Reasons,
   SourcesTable,
@@ -71,7 +72,7 @@ async function PeriodView({ params }: { params: ReportParams }) {
       </section>
     );
   }
-  const { report, cohorts } = data;
+  const { report, cohorts, campaigns } = data;
   const funnelNote = funnelInsight(report.stages, report.widgets);
   const sourceNote = sourceInsight(report.sources);
   return (
@@ -90,6 +91,7 @@ async function PeriodView({ params }: { params: ReportParams }) {
       <SourcesTable rows={report.sources} />
       {sourceNote ? <Insight>{sourceNote}</Insight> : null}
       <ProjectsTable rows={report.projects} />
+      <Campaigns report={campaigns} />
       <ManagersTable rows={report.managers} />
       <Cohorts rows={cohorts} />
       <Reasons rows={report.reasons} />
