@@ -16,6 +16,8 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { StageIndicator } from "@/components/crm/stage-indicator";
 import { stageHueVars, type StageHue } from "@/lib/stage-colors";
 import { createClient } from "@/lib/supabase/client";
+import { dbErrorText } from "@/lib/db-errors";
+import { transitionDeal } from "@/lib/stage-gate";
 import styles from "./table.module.css";
 import { startRouteProgress } from "../../route-progress";
 
@@ -178,6 +180,7 @@ export function DealsTableView(p: Props) {
   const [choice, setChoice] = useState("");
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [failedRows, setFailedRows] = useState<{ id: string; contact: string; reason: string }[]>([]);
   const [deleteRow, setDeleteRow] = useState<TableDeal | null>(null);
   const [deletePending, setDeletePending] = useState(false);
   const header = useRef<HTMLInputElement>(null);
@@ -219,44 +222,35 @@ export function DealsTableView(p: Props) {
     if (!action || !choice || pending || count === 0) return;
     setPending(true);
     setMessage(null);
+    setFailedRows([]);
     const db = createClient();
-    const failures: string[] = [];
+    const failures: { id: string; contact: string; reason: string }[] = [];
     let success = 0;
     for (const row of p.rows.filter((item) => selected.has(item.id))) {
       let error: string | null = null;
       if (action === "stage") {
-        const result = await db.rpc("transition_crm_deal", {
-          p_deal_id: row.id,
-          p_stage_id: choice,
-          p_owner_id: row.ownerId ?? null,
-          p_lost_reason_id: null,
-          p_lost_comment: null,
-          p_qualification: null,
-          p_task_title: null,
-          p_task_due_at: null,
-          p_task_type_id: null,
-          p_task_assignee_id: null,
-        });
-        error = result.error?.message ?? null;
+        const result = await transitionDeal(db, { dealId: row.id, stageId: choice, ownerId: row.ownerId ?? null });
+        error = result.ok ? null : result.message;
       } else if (action === "owner") {
         const result = await db.from("deals").update({ owner_id: choice }).eq("id", row.id);
-        error = result.error?.message ?? null;
+        error = result.error ? dbErrorText(result.error, "Не удалось назначить ответственного") : null;
       } else {
         const result = await db
           .from("deal_tags")
           .upsert({ deal_id: row.id, tag_id: choice }, { onConflict: "deal_id,tag_id" });
-        error = result.error?.message ?? null;
+        error = result.error ? dbErrorText(result.error, "Не удалось добавить метку") : null;
       }
-      if (error) failures.push(`${row.contact}: ${error}`);
+      if (error) failures.push({ id: row.id, contact: row.contact, reason: error });
       else success += 1;
     }
     setPending(false);
     setAction(null);
     setChoice("");
     setSelected(new Set());
+    setFailedRows(failures);
     setMessage(
       failures.length
-        ? `Завершено с ошибками: успешно ${success} из ${success + failures.length}`
+        ? `Не прошло ${failures.length} из ${success + failures.length}, остальные обновлены (${success}):`
         : `Готово: ${success} сделок обновлено`,
     );
     router.refresh();
@@ -269,7 +263,8 @@ export function DealsTableView(p: Props) {
       p_entity: "deals",
       p_id: deleteRow.id,
     });
-    if (result.error) setMessage(`Не удалось удалить сделку: ${result.error.message}`);
+    setFailedRows([]);
+    if (result.error) setMessage(`Не удалось удалить сделку: ${dbErrorText(result.error, "попробуйте ещё раз")}`);
     else {
       setDeleteRow(null);
       router.refresh();
@@ -425,7 +420,10 @@ export function DealsTableView(p: Props) {
         </span>
       </nav>
       {count > 0 && <div className={styles.bulkSpacer} aria-hidden="true" />}
-      {message && <div className={styles.message} role="status">{message}</div>}
+      {message && <div className={styles.message} role="status">
+        {message}
+        {failedRows.length > 0 && <ul className={styles.failures}>{failedRows.map((item) => <li key={item.id}><Link href={`/deals/${item.id}`}>{item.contact || "Без имени"}</Link> — {item.reason}</li>)}</ul>}
+      </div>}
       {count > 0 && <div className={styles.bulk} role="toolbar" aria-label="Массовые действия">
         <strong>Выбрано {count}</strong>
         <button type="button" disabled={pending} onClick={() => setAction("stage")}>Этап</button>

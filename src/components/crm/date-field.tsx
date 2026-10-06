@@ -20,6 +20,8 @@ type Props = {
   onChange?: (value: string) => void;
   autoSubmit?: boolean;
   clearable?: boolean;
+  /** Прошлые дни недоступны в календаре (срок задачи, а не день рождения). */
+  disablePast?: boolean;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
@@ -68,6 +70,7 @@ export function DateField({
   onChange,
   autoSubmit = false,
   clearable = false,
+  disablePast = false,
   placeholder = "Дата",
   className,
   disabled,
@@ -139,6 +142,7 @@ export function DateField({
               showOutsideDays
               selected={date}
               defaultMonth={date}
+              disabled={disablePast ? { before: new Date() } : undefined}
               onSelect={pickDay}
             />
             {withTime ? (

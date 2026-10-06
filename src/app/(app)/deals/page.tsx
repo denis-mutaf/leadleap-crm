@@ -33,6 +33,7 @@ type Stage = {
   kind: "open" | "won" | "lost";
   requires_next_step: boolean;
   requires_qualification_tag: boolean;
+  requires_qualification: boolean;
 };
 type Option = { id: string; name: string };
 type Project = Option & { code: string };
@@ -236,7 +237,7 @@ export default async function DealsPage({
       p_flag: flag,
       p_sort: sort,
     }),
-    supabase.from("stages").select("id, name, position, kind, requires_next_step, requires_qualification_tag").eq("is_active", true).order("position"),
+    supabase.from("stages").select("id, name, position, kind, requires_next_step, requires_qualification_tag, requires_qualification").eq("is_active", true).order("position"),
     supabase.from("sources").select("id, name").eq("is_active", true).order("name"),
     supabase.from("projects").select("id, code, name").eq("is_active", true).order("position"),
     supabase.from("tags").select("id, name").eq("is_active", true).order("name"),
@@ -269,6 +270,7 @@ export default async function DealsPage({
       position: stage.position,
       requires_next_step: stage.requires_next_step,
       requires_qualification_tag: stage.requires_qualification_tag,
+      requires_qualification: stage.requires_qualification,
       won: stage.kind === "won",
     })),
   ];

@@ -176,7 +176,7 @@ export default async function DealRecordPage({
       .eq("entity_id", id),
     supabase
       .from("stages")
-      .select("id, name, kind, position, requires_next_step, requires_qualification_tag")
+      .select("id, name, kind, position, requires_next_step, requires_qualification_tag, requires_qualification")
       .eq("is_active", true)
       .order("position"),
     supabase
@@ -200,7 +200,15 @@ export default async function DealRecordPage({
       .order("position")
       .order("name"),
   ]);
+  const [taskTypes, lostReason] = await Promise.all([
+    supabase.from("task_types").select("id, name").eq("is_active", true).order("name"),
+    deal.lost_reason_id
+      ? supabase.from("lost_reasons").select("name").eq("id", deal.lost_reason_id).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+  ]);
   const responses = {
+    taskTypes,
+    lostReason,
     contact,
     phones,
     importedPhones,
@@ -307,6 +315,8 @@ export default async function DealRecordPage({
     allOwners: allOwners.data ?? [],
     allSources: allSources.data ?? [],
     allLostReasons: lostReasons.data ?? [],
+    taskTypes: taskTypes.data ?? [],
+    lostReasonName: (lostReason.data as { name: string } | null)?.name ?? null,
   };
   return (
     <div className="record-page">

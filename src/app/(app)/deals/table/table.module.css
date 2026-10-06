@@ -446,6 +446,16 @@
   animation: fade-up var(--motion-slow) var(--ease) both;
 }
 
+.failures {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  color: var(--foreground);
+}
+
+.failures a {
+  color: var(--info);
+}
+
 /* Плавающая пилюля выбранных строк. */
 .bulk {
   position: fixed;

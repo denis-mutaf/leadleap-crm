@@ -116,6 +116,30 @@
   box-shadow: var(--shadow-pill);
 }
 
+/* Пустые поля квалификации, ошибка базы и чекбокс закрытия задач. */
+.gate-missing {
+  padding: 14px 0 0;
+  color: var(--secondary-text);
+  font-size: 13px;
+}
+
+.gate-missing ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  color: var(--foreground);
+}
+
+.gate-dialog p.gate-error {
+  padding: 10px 0 0;
+  color: var(--destructive);
+}
+
+.gate-dialog label.gate-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
 .gate-dialog footer {
   display: flex;
   justify-content: flex-end;

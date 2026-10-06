@@ -86,6 +86,11 @@ export function TaskEdit({
       setError("Срок указан неверно.");
       return;
     }
+    // Старый срок можно оставить (правят название), новый — только в будущем.
+    if (due !== toLocalInput(initialDueAt) && dueDate.getTime() <= Date.now()) {
+      setError("Срок уже прошёл — выберите время в будущем.");
+      return;
+    }
     setPending(true);
     setError("");
     const supabase = createClient();
@@ -167,6 +172,7 @@ export function TaskEdit({
             <label>Срок</label>
             <DateField
               type="datetime-local"
+              disablePast
               value={due}
               onChange={setDue}
               aria-label="Срок задачи"
